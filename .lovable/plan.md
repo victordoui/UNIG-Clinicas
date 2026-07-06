@@ -1,98 +1,114 @@
-# Fase 5 — Notas & Frequência
+# Fase 6 — Gestão de Espaços (Salas & Reservas)
 
-Implementa lançamento de notas e controle de presença pelo professor, além do boletim consolidado do aluno com cálculo automático de média e situação.
+Implementa o módulo de espaços físicos: cadastro de salas, agenda de reservas, mapa de ocupação e workflow de solicitação/aprovação. Reutiliza os padrões já estabelecidos nas fases anteriores (StaffOnly, ConfirmDeleteDialog, formulários em Dialog, hooks tanstack-query, RLS via `is_staff`).
 
 ## Escopo
 
-### 1. Modelo de dados (nova migração)
-Duas tabelas novas em `public`, ambas com GRANTs completos e RLS:
+### 1. Modelo de dados
 
-**`grades`** — nota por avaliação
-- `id uuid pk`, `enrollment_id uuid fk enrollments`, `assessment text` (AV1/AV2/AV3/REC), `score numeric(5,2)`, `max_score numeric(5,2) default 10`, `weight numeric(4,2) default 1`, `released_at timestamptz`, `released_by uuid`, `notes text`, `created_at/updated_at`.
-- Unique `(enrollment_id, assessment)`.
+As tabelas `rooms` e `room_reservations` **já existem** no banco (15 e 14 colunas, com policies). A fase vai **consumir o schema existente** e adicionar apenas o que faltar via migração leve:
 
-**`attendance_records`** — presença por aula
-- `id uuid pk`, `enrollment_id uuid fk`, `class_date date`, `status text` (`present|absent|justified`), `hours numeric(4,2) default 2`, `notes text`, `recorded_by uuid`, timestamps.
-- Unique `(enrollment_id, class_date)`.
+- Verificar colunas de `rooms`: `name`, `code`, `unit_id`, `building`, `floor`, `capacity`, `type` (sala/laboratório/auditório/etc.), `resources` (jsonb — projetor, ar, quadro), `status` (ativo/manutenção/inativo), `notes`.
+- Verificar colunas de `room_reservations`: `room_id`, `title`, `purpose`, `requester_id`, `class_id` (opcional — vínculo com turma), `starts_at`, `ends_at`, `status` (pending/approved/rejected/cancelled), `approved_by`, `approved_at`, `rejection_reason`, `recurrence` (opcional).
+- Se faltar índice de conflito, criar índice `btree (room_id, starts_at, ends_at)` e **função `check_reservation_conflict(room_id, starts_at, ends_at, exclude_id)`** para validar sobreposição antes do insert/update (chamada pelo hook, não trigger — mensagem amigável).
+- Confirmar policies: staff faz CRUD; professor/aluno criam solicitação própria e leem apenas as próprias; leitura de agenda (calendário) permitida a staff + solicitante.
 
-**RLS**:
-- Aluno lê apenas suas próprias notas/presenças (via `enrollments.student_id → students.profile_id = auth.uid()`).
-- Professor da turma (via `classes.professor_id → professors.profile_id = auth.uid()`) faz CRUD.
-- Staff (`is_staff(auth.uid())`) tem acesso total.
+### 2. Camada compartilhada
 
-**Constantes de negócio** (em `src/lib/grades.ts`):
-- Média = média ponderada AV1+AV2+AV3.
-- Aprovado se média ≥ 6 **e** frequência ≥ 75%.
-- Em recuperação se 4 ≤ média < 6.
-- Reprovado se média < 4 ou frequência < 75%.
-- Após REC, média final = max(média, nota REC) — regra padrão UNIG-A.
+- **`src/lib/rooms.ts`** — labels (tipo, status, situação da reserva), helpers de formato de horário, cores por status, cálculo de conflitos client-side (checagem visual).
+- **`src/hooks/useRooms.ts`** — `useRooms(filters)`, `useRoom(id)`, `useCreateRoom/Update/Delete`, `useReservations(filters)`, `useRoomAgenda(roomId, weekStart)`, `useCreateReservation`, `useApproveReservation`, `useRejectReservation`, `useCancelReservation`, `useMyReservations()`.
 
-### 2. Hooks (`src/hooks/useGrades.ts`)
-- `useClassRoster(classId)` — alunos matriculados + notas + faltas.
-- `useStudentGrades(studentId)` — boletim consolidado (todas as disciplinas do período ativo).
-- `useUpsertGrade()`, `useUpsertAttendance()`, `useBulkAttendance()` — mutations com invalidation.
+### 3. Componentes (`src/components/espacos/`)
 
-### 3. Portal do Professor (rotas reais)
-Substitui os placeholders atuais:
+- `RoomFormDialog` — cadastro/edição de sala (reutiliza padrão de `CourseFormDialog`).
+- `RoomCard` — card na listagem/mapa (capacidade, tipo, status, recursos).
+- `RoomMapGrid` — grid visual agrupado por prédio/andar (reutiliza layout do `WeeklyScheduleGrid` como referência estética).
+- `ReservationFormDialog` — solicitar reserva (sala + data + horário + finalidade + turma opcional).
+- `ReservationCard` — item da lista de solicitações/reservas com badge de status.
+- `ReservationApprovalPanel` — painel lateral com detalhes + aprovar/rejeitar (staff).
+- `RoomWeekAgenda` — agenda semanal de uma sala (visualização de reservas confirmadas + pendentes).
+- `OccupancyHeatmap` — grid de ocupação (sala × faixa horária) para o dashboard operador.
 
-- **`/professor/turmas`** — lista das turmas em que o professor leciona (filtro por período), card com botão "Lançar notas" e "Registrar presença".
-- **`/professor/turmas/:classId/notas`** — tabela editável: linhas = alunos, colunas = AV1/AV2/AV3/REC/Média/Situação. Edição inline com debounce + salvar. Botão "Publicar" (marca `released_at`).
-- **`/professor/turmas/:classId/frequencia`** — seletor de data + grid alunos × status (presente/ausente/justificada). Suporta lote (marcar todos presentes).
-- **`/professor/grade`** — grade semanal reaproveitando `WeeklyScheduleGrid` filtrada pelo professor.
+### 4. Páginas
 
-### 4. Portal do Aluno (upgrade da tela existente)
-- **`/aluno/notas`** — substitui a `GradesTable` placeholder atual pela versão real com dados de `grades` + `attendance_records`, cálculo de média/frequência/situação e badge colorida.
-- Mantém layout atual (Card + Table) para preservar UX.
+**Operador de Espaços / staff** (substitui os placeholders atuais):
 
-### 5. Componentes novos (`src/components/notas/`)
-- `GradeEntryTable` — tabela editável usada pelo professor.
-- `AttendanceGrid` — grid de presença por data.
-- `StudentReportCard` — boletim do aluno (usado em `/aluno/notas` e no drawer de "Ver perfil" no `/academico/alunos`).
-- `SituationBadge` — badge de situação (aprovado/reprovado/em curso/recuperação).
+- `/espacos` — dashboard com KPIs (salas ativas, reservas hoje, solicitações pendentes) + próximas reservas.
+- `/espacos/salas` — CRUD de salas (grid de `RoomCard` + `RoomFormDialog`).
+- `/espacos/mapa` — mapa visual agrupado por unidade → prédio → andar (`RoomMapGrid`).
+- `/espacos/agenda` — agenda consolidada (seletor de sala + `RoomWeekAgenda`).
+- `/espacos/solicitacoes` — fila de solicitações pendentes com `ReservationApprovalPanel`.
+- `/espacos/reservas` — todas as reservas (filtros por status/sala/data).
+- `/espacos/eventos` — mantém placeholder ou pequena listagem de reservas marcadas como evento (fora do escopo o CRUD de eventos institucionais).
 
-### 6. Integrações
-- `App.tsx`: trocar placeholders `/professor/turmas` e `/professor/grade`, adicionar `/professor/turmas/:classId/notas` e `/professor/turmas/:classId/frequencia`.
-- `academico/Alunos.tsx`: no drawer de perfil, incluir aba "Boletim" reutilizando `StudentReportCard`.
+**Solicitante (professor, coordenação, atendimento etc.)**:
+
+- `/espacos/solicitar` — página simplificada com `ReservationFormDialog` inline + lista das próprias solicitações via `useMyReservations()`.
+
+**Relatórios**:
+
+- `/relatorios/ocupacao` — `OccupancyHeatmap` semanal + tabela de ocupação por sala (%).
+
+### 5. Integrações
+
+- `App.tsx`: apontar as rotas acima para os novos componentes (hoje são `Placeholder`). Manter os `allowRoles` já configurados.
+- `Sidebar`/dashboards existentes: nenhum ajuste — os links já apontam para essas rotas.
+- Portal do professor: no `MinhasTurmas`, adicionar botão "Solicitar sala" que abre `ReservationFormDialog` pré-preenchido com `class_id`.
 
 ## Fora de escopo
-- Diário de classe/plano de aula (fase futura).
-- Recuperação paralela / prova substitutiva com regras customizáveis por curso.
-- Exportação de boletim em PDF (fase de Relatórios).
-- Notificação automática ao aluno quando nota é publicada (fase de Comunicação).
+
+- Recorrência automática de reservas (semanal por período letivo) — fase futura.
+- Import de calendário externo (ICS).
+- Notificações por e-mail/push ao aprovar/rejeitar (fica para o módulo de Comunicação).
+- CRUD completo de "eventos institucionais" com público, inscrições e certificados.
+- Cobrança por uso de sala.
 
 ## Permissões
-- **Notas/Presença write**: `professor` (só da própria turma), `secretaria`, `coordenacao`, `administrador`, `super_admin`.
-- **Read (aluno)**: apenas suas próprias.
-- **Read (staff acadêmico)**: tudo.
+
+- **Salas — CRUD**: `super_admin`, `administrador`, `operador_espacos`, `gestor_unidade` (somente da própria unidade).
+- **Solicitar reserva**: qualquer usuário autenticado com papel diferente de `visitante`.
+- **Aprovar/rejeitar**: `super_admin`, `administrador`, `operador_espacos`, `gestor_unidade`.
+- **Ver todas as reservas**: staff (`is_staff`).
+- **Ver próprias reservas**: solicitante.
 
 ## Estrutura técnica
 
 ```text
-supabase/migrations/xxx_grades_attendance.sql   (novo)
-src/lib/grades.ts                                (novo — cálculos + labels)
-src/hooks/useGrades.ts                           (novo)
-src/components/notas/
-  ├── GradeEntryTable.tsx
-  ├── AttendanceGrid.tsx
-  ├── StudentReportCard.tsx
-  └── SituationBadge.tsx
-src/pages/professor/
-  ├── MinhasTurmas.tsx
-  ├── LancarNotas.tsx
-  ├── RegistrarFrequencia.tsx
-  └── GradeSemanal.tsx
-src/pages/aluno/Notas.tsx                        (refatorado — usa StudentReportCard)
-src/App.tsx                                       (rotas)
+supabase/migrations/xxx_rooms_reservations_helpers.sql   (opcional — só se faltar índice/função de conflito)
+src/lib/rooms.ts                                          (novo)
+src/hooks/useRooms.ts                                     (novo)
+src/components/espacos/
+  ├── RoomFormDialog.tsx
+  ├── RoomCard.tsx
+  ├── RoomMapGrid.tsx
+  ├── RoomWeekAgenda.tsx
+  ├── ReservationFormDialog.tsx
+  ├── ReservationCard.tsx
+  ├── ReservationApprovalPanel.tsx
+  └── OccupancyHeatmap.tsx
+src/pages/espacos/
+  ├── Dashboard.tsx
+  ├── Salas.tsx
+  ├── Mapa.tsx
+  ├── Agenda.tsx
+  ├── Solicitacoes.tsx
+  ├── Reservas.tsx
+  └── Solicitar.tsx
+src/pages/relatorios/Ocupacao.tsx                         (novo)
+src/App.tsx                                                (trocar placeholders pelas rotas reais)
 ```
 
 ## Ordem de execução
-1. Migração `grades` + `attendance_records` com GRANTs e policies.
-2. `lib/grades.ts` (cálculos) + `hooks/useGrades.ts`.
-3. Componentes compartilhados (`SituationBadge`, `StudentReportCard`, `GradeEntryTable`, `AttendanceGrid`).
-4. Páginas do professor (4 telas).
-5. Refatorar `aluno/Notas.tsx` para consumir dados reais.
-6. Atualizar `App.tsx`.
-7. Seed mínimo: preencher notas/presenças demo para o aluno `aluno@unig.demo` validarem o boletim end-to-end.
 
-## Próxima fase (Fase 6)
-Espaços — cadastro de salas, agenda de reservas, mapa de ocupação e workflow de solicitação/aprovação.
+1. Ler schema atual de `rooms` e `room_reservations` (colunas + policies) e, se necessário, migração pequena com função `check_reservation_conflict` e índice.
+2. `lib/rooms.ts` + `hooks/useRooms.ts`.
+3. Componentes compartilhados (`RoomCard`, `RoomFormDialog`, `ReservationFormDialog`, `ReservationCard`, `ReservationApprovalPanel`).
+4. Páginas de sala (Dashboard, Salas, Mapa, Agenda).
+5. Fluxo de solicitação/aprovação (Solicitar, Solicitações, Reservas).
+6. Heatmap + `/relatorios/ocupacao`.
+7. Atualizar `App.tsx` e ligar botão "Solicitar sala" em `MinhasTurmas`.
+8. Seed opcional: 3–4 salas demo + 2 reservas aprovadas + 1 pendente para validar telas.
+
+## Próxima fase (Fase 7)
+
+Financeiro — mensalidades, boletos, bolsas e relatórios financeiros para o portal do aluno e área da tesouraria.
