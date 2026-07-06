@@ -16,6 +16,11 @@ import Auth from './pages/Auth';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import Install from './pages/Install';
+import AlunoPerfil from './pages/aluno/Perfil';
+import AlunoDisciplinas from './pages/aluno/Disciplinas';
+import AlunoGrade from './pages/aluno/Grade';
+import AlunoNotas from './pages/aluno/Notas';
+import AlunoDocumentos from './pages/aluno/Documentos';
 import Placeholder from './pages/Placeholder';
 
 const queryClient = new QueryClient();
