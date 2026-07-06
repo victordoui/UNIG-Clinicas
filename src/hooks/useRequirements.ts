@@ -138,7 +138,7 @@ export function useUpdateRequirement() {
     mutationFn: async ({ id, patch }: { id: string; patch: Record<string, any> }) => {
       const finalPatch = { ...patch };
       if (patch.status === 'completed' && !patch.completed_at) finalPatch.completed_at = new Date().toISOString();
-      const { data, error } = await supabase.from('student_requirements').update(finalPatch).eq('id', id).select().single();
+      const { data, error } = await supabase.from('student_requirements').update(finalPatch as any).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
