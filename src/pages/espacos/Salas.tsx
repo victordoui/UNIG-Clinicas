@@ -4,7 +4,6 @@ import { useRooms, useDeleteRoom } from '@/hooks/useRooms';
 import { useUnits } from '@/hooks/useAcademicData';
 import { RoomFormDialog } from '@/components/espacos/RoomFormDialog';
 import { RoomCard } from '@/components/espacos/RoomCard';
-import { ReservationFormDialog } from '@/components/espacos/ReservationFormDialog';
 import { useCanReadAcademic, useCanWriteAcademic } from '@/components/academico/StaffOnly';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,8 +17,6 @@ export default function Salas() {
   const canRead = useCanReadAcademic();
   const canWrite = useCanWriteAcademic();
   const [filters, setFilters] = useState<any>({ search: '', unitId: 'all', status: 'all', roomType: 'all' });
-  const [reserveRoom, setReserveRoom] = useState<any>(null);
-  const [reserveOpen, setReserveOpen] = useState(false);
   const { data: rooms = [], isLoading } = useRooms(filters);
   const { data: units = [] } = useUnits();
   const del = useDeleteRoom();
@@ -61,19 +58,10 @@ export default function Salas() {
          rooms.length === 0 ? <p className="text-sm text-muted-foreground text-center py-10">Nenhuma sala encontrada.</p> :
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {rooms.map((r: any) => (
-              <RoomCard key={r.id} room={r} canWrite={canWrite} onDelete={remove}
-                onReserve={(room) => { setReserveRoom(room); setReserveOpen(true); }} />
+              <RoomCard key={r.id} room={r} canWrite={canWrite} onDelete={remove} />
             ))}
           </div>
         }
-
-        {reserveRoom && (
-          <ReservationFormDialog
-            key={reserveRoom.id + String(reserveOpen)}
-            defaultRoomId={reserveRoom.id}
-            trigger={<button className="hidden" ref={(el) => { if (el && reserveOpen) { el.click(); setReserveOpen(false); } }} />}
-          />
-        )}
       </div>
     </MainLayout>
   );
