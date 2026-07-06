@@ -22,6 +22,11 @@ import AlunoGrade from './pages/aluno/Grade';
 import AlunoNotas from './pages/aluno/Notas';
 import AlunoDocumentos from './pages/aluno/Documentos';
 import Placeholder from './pages/Placeholder';
+import MeusRequerimentos from './pages/requerimentos/MeusRequerimentos';
+import NovoRequerimento from './pages/requerimentos/NovoRequerimento';
+import RequerimentoDetalhe from './pages/requerimentos/RequerimentoDetalhe';
+import FilaRequerimentos from './pages/atendimento/FilaRequerimentos';
+import HistoricoAluno from './pages/atendimento/HistoricoAluno';
 
 const queryClient = new QueryClient();
 
@@ -54,12 +59,13 @@ const App = () => (
             <Route path="/professor/grade" element={P('Grade Semanal','Sua agenda semanal de aulas.', CalendarDays)} />
 
             {/* Requerimentos */}
-            <Route path="/requerimentos" element={P('Requerimentos','Solicitações acadêmicas, financeiras e documentais.', FileText)} />
-            <Route path="/requerimentos/novo" element={P('Novo Requerimento','Abra uma nova solicitação.', FileText)} />
+            <Route path="/requerimentos" element={<ProtectedRoute><MeusRequerimentos /></ProtectedRoute>} />
+            <Route path="/requerimentos/novo" element={<ProtectedRoute><NovoRequerimento /></ProtectedRoute>} />
+            <Route path="/requerimentos/:id" element={<ProtectedRoute><RequerimentoDetalhe /></ProtectedRoute>} />
 
             {/* Atendimento */}
-            <Route path="/atendimento/requerimentos" element={P('Fila de Requerimentos','Atenda solicitações abertas por alunos.', ClipboardList)} />
-            <Route path="/atendimento/historico" element={P('Histórico do Aluno','Consulte todo o histórico de um aluno.', ScrollText)} />
+            <Route path="/atendimento/requerimentos" element={<ProtectedRoute><FilaRequerimentos /></ProtectedRoute>} />
+            <Route path="/atendimento/historico" element={<ProtectedRoute><HistoricoAluno /></ProtectedRoute>} />
 
             {/* Acadêmico */}
             <Route path="/academico/alunos" element={P('Alunos','Gestão dos alunos ativos.', GraduationCap)} />
