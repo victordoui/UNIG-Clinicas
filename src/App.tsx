@@ -38,6 +38,14 @@ import ProfessorTurmas from './pages/professor/MinhasTurmas';
 import ProfessorLancarNotas from './pages/professor/LancarNotas';
 import ProfessorFrequencia from './pages/professor/RegistrarFrequencia';
 import ProfessorGrade from './pages/professor/GradeSemanal';
+import EspacosDashboard from './pages/espacos/Dashboard';
+import EspacosSalas from './pages/espacos/Salas';
+import EspacosMapa from './pages/espacos/Mapa';
+import EspacosAgenda from './pages/espacos/Agenda';
+import EspacosSolicitacoes from './pages/espacos/Solicitacoes';
+import EspacosReservas from './pages/espacos/Reservas';
+import EspacosSolicitar from './pages/espacos/Solicitar';
+import RelatoriosOcupacao from './pages/relatorios/Ocupacao';
 
 const queryClient = new QueryClient();
 
@@ -90,14 +98,15 @@ const App = () => (
             <Route path="/academico/aulas" element={<ProtectedRoute><AcademicoAulas /></ProtectedRoute>} />
 
             {/* Espaços */}
-            <Route path="/espacos" element={P('Dashboard de Espaços','Visão consolidada de reservas e ocupação.', MapPinned)} />
-            <Route path="/espacos/agenda" element={P('Agenda','Calendário de reservas, aulas e eventos.', CalendarDays)} />
-            <Route path="/espacos/salas" element={P('Salas','Cadastro e status das salas físicas.', MapPinned)} />
-            <Route path="/espacos/mapa" element={P('Mapa de Salas','Visualização visual da ocupação.', Map)} />
-            <Route path="/espacos/solicitar" element={P('Solicitar Espaço','Solicite uma sala ou espaço.', FileText)} />
-            <Route path="/espacos/solicitacoes" element={P('Solicitações de Espaço','Analise e aprove pedidos de sala.', FileText)} />
-            <Route path="/espacos/reservas" element={P('Reservas','Reservas confirmadas.', CalendarDays)} />
+            <Route path="/espacos" element={<ProtectedRoute><EspacosDashboard /></ProtectedRoute>} />
+            <Route path="/espacos/agenda" element={<ProtectedRoute><EspacosAgenda /></ProtectedRoute>} />
+            <Route path="/espacos/salas" element={<ProtectedRoute><EspacosSalas /></ProtectedRoute>} />
+            <Route path="/espacos/mapa" element={<ProtectedRoute><EspacosMapa /></ProtectedRoute>} />
+            <Route path="/espacos/solicitar" element={<ProtectedRoute><EspacosSolicitar /></ProtectedRoute>} />
+            <Route path="/espacos/solicitacoes" element={<ProtectedRoute><EspacosSolicitacoes /></ProtectedRoute>} />
+            <Route path="/espacos/reservas" element={<ProtectedRoute><EspacosReservas /></ProtectedRoute>} />
             <Route path="/espacos/eventos" element={P('Eventos','Eventos institucionais da unidade.', Package)} />
+
 
             {/* Comunicação */}
             <Route path="/comunicados" element={P('Comunicados','Comunicados institucionais.', Megaphone)} />
@@ -114,7 +123,7 @@ const App = () => (
             {/* Relatórios */}
             <Route path="/relatorios/academicos" element={P('Relatórios Acadêmicos','Alunos, cursos, turmas, notas e frequência.', BarChart3)} />
             <Route path="/relatorios/operacionais" element={P('Relatórios Operacionais','Atendimento, requerimentos e SLA.', BarChart3)} />
-            <Route path="/relatorios/ocupacao" element={P('Ocupação de Salas','Uso de salas por bloco, turno e período.', BarChart3)} />
+            <Route path="/relatorios/ocupacao" element={<ProtectedRoute><RelatoriosOcupacao /></ProtectedRoute>} />
 
             {/* Administração */}
             <Route path="/admin/usuarios" element={P('Usuários','Gerencie usuários e vínculos.', Users)} />

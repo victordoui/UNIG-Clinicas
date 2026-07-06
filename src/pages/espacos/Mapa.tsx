@@ -3,7 +3,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { useRooms } from '@/hooks/useRooms';
 import { useUnits } from '@/hooks/useAcademicData';
 import { RoomCard } from '@/components/espacos/RoomCard';
-import { ReservationFormDialog } from '@/components/espacos/ReservationFormDialog';
+
 import { useCanReadAcademic } from '@/components/academico/StaffOnly';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
