@@ -1,0 +1,478 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Sistema de Almoxarifado - Design System 
+Cores corporativas profissionais em HSL para máxima flexibilidade
+*/
+
+@layer base {
+  :root {
+    /* Unit tokens (semantic colors per campus) */
+    --unit-default:        220 9% 46%;
+    --unit-unig-ni:        211 89% 45%;
+    --unit-unig-centro:    262 83% 58%;
+    --unit-unig-itaperuna: 199 89% 48%;
+  }
+
+  :root {
+    /* Background System */
+    --background: 210 20% 98%;
+    --background-secondary: 210 17% 95%;
+    --foreground: 215 25% 15%;
+
+    /* Card System */
+    --card: 0 0% 100%;
+    --card-secondary: 210 17% 97%;
+    --card-foreground: 215 25% 15%;
+
+    /* Popover System */
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    /* Primary Corporate Blue */
+    --primary: 211 89% 45%;
+    --primary-light: 211 89% 60%;
+    --primary-dark: 211 89% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary System */
+    --secondary: 210 25% 92%;
+    --secondary-foreground: 215 25% 25%;
+
+    /* Muted System */
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 15% 50%;
+
+    /* Accent System */
+    --accent: 211 89% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Status Colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Action Button Colors */
+    --entry: 142 76% 36%;
+    --entry-foreground: 0 0% 100%;
+    --exit: 0 84% 60%;
+    --exit-foreground: 0 0% 100%;
+    --transfer: 211 89% 45%;
+    --transfer-foreground: 0 0% 100%;
+    --new-product: 45 93% 47%;
+    --new-product-foreground: 0 0% 100%;
+
+    /* Interactive Elements */
+    --border: 214 31% 88%;
+    --input: 214 31% 88%;
+    --ring: 211 89% 45%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(var(--card-secondary)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 76% 45%));
+    --gradient-warning: linear-gradient(135deg, hsl(var(--warning)), hsl(38 92% 60%));
+    
+    /* Shadows */
+    --shadow-card: 0 2px 8px hsl(211 89% 45% / 0.1);
+    --shadow-elevated: 0 8px 32px hsl(211 89% 45% / 0.15);
+    --shadow-glow: 0 0 20px hsl(var(--primary) / 0.3);
+    
+    /* Border radius */
+    --radius: 0.5rem;
+    --radius-large: 1rem;
+
+    /* Category Colors */
+    --category-electronics: 199 89% 75%;
+    --category-electronics-foreground: 199 89% 15%;
+    --category-office: 210 11% 75%;
+    --category-office-foreground: 210 11% 15%;
+    --category-cleaning: 142 76% 75%;
+    --category-cleaning-foreground: 142 76% 15%;
+    --category-maintenance: 24 95% 75%;
+    --category-maintenance-foreground: 24 95% 15%;
+    --category-kitchen: 0 79% 75%;
+    --category-kitchen-foreground: 0 79% 15%;
+    --category-others: 269 90% 77%;
+    --category-others-foreground: 269 90% 15%;
+
+    /* Sidebar tokens — Azul corporativo (estilo ERP) */
+    --sidebar-background: 211 89% 22%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 211 89% 25%;
+    --sidebar-accent: 211 89% 32%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 211 89% 28%;
+    --sidebar-ring: 0 0% 100%;
+
+    /* ========== iOS Tokens (Conselho) ========== */
+    --ios-bg: 240 6% 96%;            /* #F5F5F7 */
+    --ios-card: 0 0% 100%;
+    --ios-text: 222 47% 11%;         /* #111827 */
+    --ios-blue: 211 100% 50%;        /* #007AFF */
+    --ios-green: 142 71% 45%;        /* #34C759 */
+    --ios-red: 4 100% 59%;           /* #FF3B30 */
+    --ios-orange: 32 100% 50%;       /* #FF9500 */
+    --ios-gray: 240 2% 57%;          /* #8E8E93 */
+    --shadow-ios-card: 0 1px 3px hsl(0 0% 0% / 0.06), 0 4px 16px hsl(0 0% 0% / 0.04);
+    --shadow-ios-bar: 0 -4px 16px hsl(0 0% 0% / 0.06);
+  }
+
+  .dark {
+    /* Backgrounds */
+    --background: 222 47% 11%;
+    --background-secondary: 222 47% 13%;
+    --foreground: 210 40% 98%;
+
+    /* Cards */
+    --card: 222 47% 14%;
+    --card-secondary: 222 47% 16%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover */
+    --popover: 222 47% 15%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary */
+    --primary: 211 89% 45%;
+    --primary-light: 211 89% 60%;
+    --primary-dark: 211 89% 35%;
+    --primary-foreground: 210 40% 98%;
+
+    /* Secondary */
+    --secondary: 217 32% 20%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted */
+    --muted: 217 32% 20%;
+    --muted-foreground: 215 20% 70%;
+
+    /* Accent */
+    --accent: 211 89% 50%;
+    --accent-foreground: 210 40% 98%;
+
+    /* Status Colors */
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+
+    /* Action Buttons */
+    --entry: 142 71% 45%;
+    --entry-foreground: 210 40% 98%;
+    
+    --exit: 0 62.8% 50%;
+    --exit-foreground: 210 40% 98%;
+    
+    --transfer: 211 89% 45%;
+    --transfer-foreground: 210 40% 98%;
+    
+    --new-product: 45 93% 47%;
+    --new-product-foreground: 210 40% 98%;
+
+    /* Borders */
+    --border: 217 32% 22%;
+    --input: 217 32% 22%;
+    --ring: 211 89% 45%;
+
+    /* Sidebar — dark mode (azul muito escuro) */
+    --sidebar-background: 211 60% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 211 89% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 211 70% 18%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 211 50% 16%;
+    --sidebar-ring: 211 89% 55%;
+
+    /* Categories */
+    --category-electronics: 199 89% 48%;
+    --category-electronics-foreground: 210 40% 98%;
+    
+    --category-office: 210 11% 55%;
+    --category-office-foreground: 210 40% 98%;
+    
+    --category-cleaning: 142 71% 45%;
+    --category-cleaning-foreground: 210 40% 98%;
+    
+    --category-maintenance: 38 92% 50%;
+    --category-maintenance-foreground: 222 47% 11%;
+    
+    --category-kitchen: 0 62.8% 50%;
+    --category-kitchen-foreground: 210 40% 98%;
+    
+    --category-others: 269 90% 65%;
+    --category-others-foreground: 210 40% 98%;
+
+    /* iOS dark adjustments */
+    --ios-bg: 222 47% 8%;
+    --ios-card: 222 47% 14%;
+    --ios-text: 210 40% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  h1, h2, h3, h4, h5, h6,
+  button, input, select, textarea, optgroup {
+    font-family: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+
+  /* Hierarquia tipográfica baseline (sobrescrita por utilitários font-* explícitos) */
+  h1 { font-weight: 800; }
+  h2, h3 { font-weight: 700; }
+  h4, h5, h6 { font-weight: 700; }
+  button, a[role="button"] { font-weight: 700; }
+  label { font-weight: 600; }
+
+  .text-metric { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .text-metric-strong { font-weight: 900; font-variant-numeric: tabular-nums; }
+
+  /* Transição suave do tema */
+  html {
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  html * {
+    transition: 
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  /* Exceções - elementos que não devem ter transição */
+  .no-theme-transition,
+  .no-theme-transition * {
+    transition: none !important;
+  }
+
+  /* Melhorar contraste de inputs no dark mode */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: hsl(var(--input));
+    border-color: hsl(var(--border));
+    color: hsl(var(--foreground));
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Scrollbar personalizada no dark mode */
+  .dark ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .dark ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+}
+
+/* Button animations and effects */
+@layer components {
+  .btn-ripple {
+    @apply relative overflow-hidden;
+  }
+  
+  .btn-ripple::before {
+    content: '';
+    @apply absolute inset-0 bg-white/20 rounded-full scale-0 transition-transform duration-500;
+  }
+  
+  .btn-ripple:active::before {
+    @apply scale-100;
+  }
+  
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+  
+  .smooth-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Animações de entrada para listas */
+  .list-item-enter {
+    @apply opacity-0 translate-y-2;
+    animation: fade-in 0.3s ease-out forwards;
+  }
+
+  /* Stagger delay para itens de lista */
+  .stagger-1 { animation-delay: 50ms; }
+  .stagger-2 { animation-delay: 100ms; }
+  .stagger-3 { animation-delay: 150ms; }
+  .stagger-4 { animation-delay: 200ms; }
+  .stagger-5 { animation-delay: 250ms; }
+
+  /* Shimmer effect para skeletons */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s linear infinite;
+  }
+
+  /* Hover lift effect */
+  .hover-lift {
+    @apply transition-all duration-200;
+  }
+  
+  .hover-lift:hover {
+    @apply -translate-y-1 shadow-elevated;
+  }
+
+  /* Active press effect */
+  .press-effect {
+    @apply transition-transform duration-100;
+  }
+  
+  .press-effect:active {
+    @apply scale-95;
+  }
+
+  /* Card hover effect */
+  .card-interactive {
+    @apply transition-all duration-200 cursor-pointer;
+  }
+  
+  .card-interactive:hover {
+    @apply shadow-elevated border-primary/20;
+  }
+
+  /* Success flash animation */
+  @keyframes success-flash {
+    0%, 100% { background-color: transparent; }
+    50% { background-color: hsl(var(--success) / 0.1); }
+  }
+  
+  .success-flash {
+    animation: success-flash 0.6s ease-out;
+  }
+
+  /* Error shake animation */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+  
+  .error-shake {
+    animation: shake 0.4s ease-out;
+  }
+}
+
+/* Hide Lovable branding */
+a[href*="lovable.dev"], 
+iframe[src*="lovable.dev"], 
+div[style*="Edit with Lovable"], 
+.lovable-badge {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  z-index: -9999 !important;
+}
+
+/* ========================================
+   PWA Loading Screen Animations
+======================================== */
+
+/* Pulso suave para loading screen */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+/* Glow pulsante */
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2);
+  }
+}
+
+/* Fade in suave */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Classes de animação */
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out;
+}
+
+/* Preload de logos para evitar flash */
+@media (prefers-color-scheme: dark) {
+  body::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    z-index: -1;
+  }
+}

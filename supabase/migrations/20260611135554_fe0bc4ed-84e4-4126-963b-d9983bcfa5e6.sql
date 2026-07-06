@@ -1,0 +1,1 @@
+DELETE FROM public.ci_requests WHERE subject LIKE '[SEED]%';

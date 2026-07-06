@@ -1,0 +1,2 @@
+ALTER TABLE public.comments_threads DROP CONSTRAINT comments_threads_entidade_tipo_check;
+ALTER TABLE public.comments_threads ADD CONSTRAINT comments_threads_entidade_tipo_check CHECK (entidade_tipo = ANY (ARRAY['purchase_request'::text, 'purchase_order'::text, 'purchase_receipt'::text, 'ci_request'::text]));
