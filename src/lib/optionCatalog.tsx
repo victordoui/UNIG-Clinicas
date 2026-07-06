@@ -8,6 +8,7 @@ export type OptionDomain = 'generic' | string;
 export interface OptionMeta {
   icon: LucideIcon;
   className: string;
+  badgeClassName?: string;
   label?: string;
 }
 
