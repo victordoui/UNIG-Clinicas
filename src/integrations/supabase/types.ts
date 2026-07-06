@@ -85,6 +85,50 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_records: {
+        Row: {
+          class_date: string
+          created_at: string
+          enrollment_id: string
+          hours: number
+          id: string
+          notes: string | null
+          recorded_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          class_date: string
+          created_at?: string
+          enrollment_id: string
+          hours?: number
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          class_date?: string
+          created_at?: string
+          enrollment_id?: string
+          hours?: number
+          id?: string
+          notes?: string | null
+          recorded_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -340,6 +384,56 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grades: {
+        Row: {
+          assessment: string
+          created_at: string
+          enrollment_id: string
+          id: string
+          max_score: number
+          notes: string | null
+          released_at: string | null
+          released_by: string | null
+          score: number | null
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          assessment: string
+          created_at?: string
+          enrollment_id: string
+          id?: string
+          max_score?: number
+          notes?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          score?: number | null
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          assessment?: string
+          created_at?: string
+          enrollment_id?: string
+          id?: string
+          max_score?: number
+          notes?: string | null
+          released_at?: string | null
+          released_by?: string | null
+          score?: number | null
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grades_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "enrollments"
             referencedColumns: ["id"]
           },
         ]
@@ -1050,6 +1144,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      enrollment_belongs_to_student: {
+        Args: { _enrollment_id: string; _user_id: string }
+        Returns: boolean
+      }
+      enrollment_taught_by_professor: {
+        Args: { _enrollment_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
