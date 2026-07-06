@@ -198,6 +198,54 @@ export type Database = {
           },
         ]
       }
+      communications: {
+        Row: {
+          channel: string
+          created_at: string
+          created_by: string | null
+          id: string
+          message: string
+          priority: string
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          target_id: string | null
+          target_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message: string
+          priority?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_id?: string | null
+          target_type?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message?: string
+          priority?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target_id?: string | null
+          target_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       courses: {
         Row: {
           code: string
@@ -247,6 +295,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       professors: {
         Row: {
@@ -306,6 +384,8 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          is_super_admin: boolean
+          password_change_required: boolean
           phone: string | null
           status: string
           updated_at: string
@@ -317,6 +397,8 @@ export type Database = {
           email?: string | null
           full_name: string
           id: string
+          is_super_admin?: boolean
+          password_change_required?: boolean
           phone?: string | null
           status?: string
           updated_at?: string
@@ -328,8 +410,46 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          is_super_admin?: boolean
+          password_change_required?: boolean
           phone?: string | null
           status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      requirement_categories: {
+        Row: {
+          code: string
+          created_at: string
+          department: string | null
+          id: string
+          is_active: boolean
+          name: string
+          requires_attachment: boolean
+          sla_days: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          department?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          requires_attachment?: boolean
+          sla_days?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          department?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          requires_attachment?: boolean
+          sla_days?: number
           updated_at?: string
         }
         Relationships: []
@@ -370,35 +490,191 @@ export type Database = {
         }
         Relationships: []
       }
+      room_reservations: {
+        Row: {
+          approval_notes: string | null
+          approved_by: string | null
+          created_at: string
+          description: string | null
+          end_datetime: string
+          event_type: string
+          id: string
+          requester_id: string | null
+          room_id: string
+          start_datetime: string
+          status: string
+          title: string
+          unit_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          approval_notes?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          end_datetime: string
+          event_type?: string
+          id?: string
+          requester_id?: string | null
+          room_id: string
+          start_datetime: string
+          status?: string
+          title: string
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approval_notes?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string | null
+          end_datetime?: string
+          event_type?: string
+          id?: string
+          requester_id?: string | null
+          room_id?: string
+          start_datetime?: string
+          status?: string
+          title?: string
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_reservations_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_reservations_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          block: string | null
+          capacity: number
+          code: string
+          created_at: string
+          floor: string | null
+          has_air_conditioning: boolean
+          has_computer: boolean
+          has_projector: boolean
+          id: string
+          name: string
+          notes: string | null
+          room_type: string
+          status: string
+          unit_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          block?: string | null
+          capacity?: number
+          code: string
+          created_at?: string
+          floor?: string | null
+          has_air_conditioning?: boolean
+          has_computer?: boolean
+          has_projector?: boolean
+          id?: string
+          name: string
+          notes?: string | null
+          room_type?: string
+          status?: string
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          block?: string | null
+          capacity?: number
+          code?: string
+          created_at?: string
+          floor?: string | null
+          has_air_conditioning?: boolean
+          has_computer?: boolean
+          has_projector?: boolean
+          id?: string
+          name?: string
+          notes?: string | null
+          room_type?: string
+          status?: string
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_requirements: {
         Row: {
+          assigned_to: string | null
+          category_id: string | null
+          completed_at: string | null
           created_at: string
+          description: string | null
           due_date: string | null
           id: string
+          priority: string | null
+          protocol_number: string | null
+          response: string | null
           status: string
           student_id: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          assigned_to?: string | null
+          category_id?: string | null
+          completed_at?: string | null
           created_at?: string
+          description?: string | null
           due_date?: string | null
           id?: string
+          priority?: string | null
+          protocol_number?: string | null
+          response?: string | null
           status?: string
           student_id?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          assigned_to?: string | null
+          category_id?: string | null
+          completed_at?: string | null
           created_at?: string
+          description?: string | null
           due_date?: string | null
           id?: string
+          priority?: string | null
+          protocol_number?: string | null
+          response?: string | null
           status?: string
           student_id?: string | null
           title?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "student_requirements_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "requirement_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "student_requirements_student_id_fkey"
             columns: ["student_id"]
@@ -600,28 +876,31 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          course_id: string | null
           created_at: string
           id: string
           is_active: boolean
-          role: string
+          role: Database["public"]["Enums"]["app_role"]
           unit_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          course_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
-          role: string
+          role: Database["public"]["Enums"]["app_role"]
           unit_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          course_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
-          role?: string
+          role?: Database["public"]["Enums"]["app_role"]
           unit_id?: string | null
           updated_at?: string
           user_id?: string
@@ -641,10 +920,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "super_admin"
+        | "administrador"
+        | "secretaria"
+        | "coordenacao"
+        | "professor"
+        | "aluno"
+        | "financeiro"
+        | "atendimento"
+        | "gestor_unidade"
+        | "operador_espacos"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -771,6 +1067,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "super_admin",
+        "administrador",
+        "secretaria",
+        "coordenacao",
+        "professor",
+        "aluno",
+        "financeiro",
+        "atendimento",
+        "gestor_unidade",
+        "operador_espacos",
+      ],
+    },
   },
 } as const
