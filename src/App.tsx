@@ -16,6 +16,11 @@ import Auth from './pages/Auth';
 import Index from './pages/Index';
 import NotFound from './pages/NotFound';
 import Install from './pages/Install';
+import AlunoPerfil from './pages/aluno/Perfil';
+import AlunoDisciplinas from './pages/aluno/Disciplinas';
+import AlunoGrade from './pages/aluno/Grade';
+import AlunoNotas from './pages/aluno/Notas';
+import AlunoDocumentos from './pages/aluno/Documentos';
 import Placeholder from './pages/Placeholder';
 
 const queryClient = new QueryClient();
@@ -37,12 +42,12 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
 
             {/* Portal do Aluno */}
-            <Route path="/aluno/disciplinas" element={P('Minhas Disciplinas','Disciplinas em que você está matriculado.', BookOpen)} />
-            <Route path="/aluno/grade" element={P('Minha Grade','Grade semanal de aulas.', CalendarDays)} />
-            <Route path="/aluno/notas" element={P('Notas e Frequência','Acompanhe seu desempenho acadêmico.', BarChart3)} />
+            <Route path="/aluno/disciplinas" element={<ProtectedRoute><AlunoDisciplinas /></ProtectedRoute>} />
+            <Route path="/aluno/grade" element={<ProtectedRoute><AlunoGrade /></ProtectedRoute>} />
+            <Route path="/aluno/notas" element={<ProtectedRoute><AlunoNotas /></ProtectedRoute>} />
             <Route path="/aluno/financeiro" element={P('Financeiro','Mensalidades, boletos e bolsas.', DollarSign)} />
-            <Route path="/aluno/documentos" element={P('Documentos','Declarações, histórico, certificados e diploma.', FileBadge)} />
-            <Route path="/aluno/perfil" element={P('Meu Perfil','Seus dados pessoais e acadêmicos.', Users)} />
+            <Route path="/aluno/documentos" element={<ProtectedRoute><AlunoDocumentos /></ProtectedRoute>} />
+            <Route path="/aluno/perfil" element={<ProtectedRoute><AlunoPerfil /></ProtectedRoute>} />
 
             {/* Portal do Professor */}
             <Route path="/professor/turmas" element={P('Minhas Turmas','Turmas em que você leciona.', Users)} />

@@ -2,6 +2,8 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { RoleDashboard, RoleQuickAction } from '@/components/dashboard/RoleDashboard';
 import { RoleHomeCta, RoleHomeKpi } from '@/components/dashboard/RoleHomeCover';
+import { AlunoDashboardExtras } from '@/components/aluno/AlunoDashboardExtras';
+import { useStudentProfile, useStudentClasses, useStudentRequirements, useUpcomingEvents } from '@/hooks/useStudentData';
 import {
   BookOpen, CalendarDays, FileText, DollarSign, FileBadge, Megaphone,
   Users, School, Layers3, MapPinned, Map, Building2, Settings, ShieldCheck,
@@ -18,32 +20,42 @@ interface RoleConfig {
   quickActions: RoleQuickAction[];
 }
 
-const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
-  aluno: {
+function useAlunoConfig(): RoleConfig | null {
+  const { data: student } = useStudentProfile();
+  const { data: enrollments = [] } = useStudentClasses(student?.id);
+  const { data: reqs = [] } = useStudentRequirements(student?.id);
+  const { data: events = [] } = useUpcomingEvents(1);
+
+  const openReqs = reqs.filter((r: any) => r.status === 'open' || r.status === 'in_progress').length;
+  const nextEvent = events[0];
+  const nextEventLabel = nextEvent ? new Date(nextEvent.starts_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '—';
+
+  return {
     chipLabel: 'Portal do Aluno',
     description: 'Acompanhe suas disciplinas, notas, financeiro e abra requerimentos em um só lugar.',
     ctas: [
-      { label: 'Novo Requerimento', icon: FileText, to: '/requerimentos/novo', primary: true },
+      { label: 'Novo Requerimento', icon: FileText, to: '/aluno/documentos', primary: true },
       { label: 'Minha Grade', icon: CalendarDays, to: '/aluno/grade' },
     ],
     kpis: [
-      { label: 'Disciplinas', value: '—', icon: BookOpen, tone: 'blue', to: '/aluno/disciplinas' },
-      { label: 'Frequência', value: '—', icon: BarChart3, tone: 'emerald', to: '/aluno/notas' },
-      { label: 'Requerimentos', value: '—', icon: FileText, tone: 'orange', to: '/requerimentos' },
-      { label: 'Boletos', value: '—', icon: DollarSign, tone: 'violet', to: '/aluno/financeiro' },
+      { label: 'Disciplinas', value: String(enrollments.length), icon: BookOpen, tone: 'blue', to: '/aluno/disciplinas' },
+      { label: 'Requerimentos', value: String(openReqs), icon: FileText, tone: 'orange', to: '/aluno/documentos' },
+      { label: 'Próximo evento', value: nextEventLabel, icon: CalendarDays, tone: 'emerald' },
+      { label: 'Financeiro', value: '—', icon: DollarSign, tone: 'violet', to: '/aluno/financeiro' },
     ],
     quickActions: [
       { title: 'Minhas Disciplinas', icon: BookOpen, to: '/aluno/disciplinas', tone: 'blue' },
       { title: 'Minha Grade', icon: CalendarDays, to: '/aluno/grade', tone: 'indigo' },
       { title: 'Notas e Frequência', icon: BarChart3, to: '/aluno/notas', tone: 'emerald' },
-      { title: 'Requerimentos', icon: FileText, to: '/requerimentos', tone: 'amber' },
-      { title: 'Financeiro', icon: DollarSign, to: '/aluno/financeiro', tone: 'violet' },
       { title: 'Documentos', icon: FileBadge, to: '/aluno/documentos', tone: 'sky' },
+      { title: 'Financeiro', icon: DollarSign, to: '/aluno/financeiro', tone: 'violet' },
       { title: 'Comunicados', icon: Megaphone, to: '/comunicados', tone: 'rose' },
       { title: 'Meu Perfil', icon: Users, to: '/aluno/perfil', tone: 'teal' },
     ],
-  },
+  };
+}
 
+const STATIC_CONFIGS: Record<Exclude<UnigRole, 'aluno'>, RoleConfig> = {
   professor: {
     chipLabel: 'Portal do Professor',
     description: 'Acompanhe suas turmas, disciplinas e a agenda semanal de aulas.',
@@ -64,7 +76,6 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
       { title: 'Comunicar Turma', icon: Megaphone, to: '/comunicacao/mensagens', tone: 'rose' },
     ],
   },
-
   secretaria: {
     chipLabel: 'Secretaria Acadêmica',
     description: 'Atenda requerimentos, gerencie alunos, cursos e documentos institucionais.',
@@ -87,7 +98,6 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
       { title: 'Comunicados', icon: Megaphone, to: '/comunicacao/comunicados', tone: 'rose' },
     ],
   },
-
   coordenacao: {
     chipLabel: 'Coordenação de Curso',
     description: 'Gerencie o curso, corpo docente, disciplinas, turmas e o desempenho dos alunos.',
@@ -110,7 +120,6 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
       { title: 'Professores', icon: BookOpen, to: '/academico/professores', tone: 'sky' },
     ],
   },
-
   financeiro: {
     chipLabel: 'Financeiro',
     description: 'Acompanhe mensalidades, boletos, bolsas e a saúde financeira da instituição.',
@@ -131,7 +140,6 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
       { title: 'Relatórios Financeiros', icon: BarChart3, to: '/financeiro/relatorios', tone: 'amber' },
     ],
   },
-
   atendimento: {
     chipLabel: 'Atendimento',
     description: 'Atenda solicitações, requerimentos e dúvidas de alunos e docentes.',
@@ -152,7 +160,6 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
       { title: 'Mensagens', icon: MessageSquare, to: '/comunicacao/mensagens', tone: 'emerald' },
     ],
   },
-
   gestor_unidade: {
     chipLabel: 'Gestor de Unidade',
     description: 'Visão consolidada da sua unidade: indicadores, ocupação, eventos e relatórios.',
@@ -174,7 +181,6 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
       { title: 'Comunicados', icon: Megaphone, to: '/comunicacao/comunicados', tone: 'rose' },
     ],
   },
-
   operador_espacos: {
     chipLabel: 'Operador de Espaços',
     description: 'Gerencie salas, reservas, agenda e eventos institucionais.',
@@ -198,7 +204,6 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
       { title: 'Eventos', icon: Package, to: '/espacos/eventos', tone: 'rose' },
     ],
   },
-
   administrador: {
     chipLabel: 'Administrador',
     description: 'Gerencie usuários, permissões, unidades e configurações do sistema.',
@@ -221,7 +226,6 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
       { title: 'Relatórios', icon: BarChart3, to: '/relatorios/academicos', tone: 'sky' },
     ],
   },
-
   super_admin: {
     chipLabel: 'Super Admin',
     description: 'Acesso total ao UNIG-A. Gerencie tudo: usuários, permissões, dados e configurações.',
@@ -246,7 +250,6 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
       { title: 'Financeiro', icon: DollarSign, to: '/financeiro/mensalidades', tone: 'teal' },
     ],
   },
-
   visitante: {
     chipLabel: 'Acesso limitado',
     description: 'Sua conta ainda não tem um papel atribuído. Entre em contato com o administrador da unidade.',
@@ -265,10 +268,17 @@ const ROLE_CONFIGS: Record<UnigRole, RoleConfig> = {
 
 export default function Index() {
   const { unigRole } = useAuth();
-  const cfg = ROLE_CONFIGS[unigRole] ?? ROLE_CONFIGS.visitante;
+  const alunoCfg = useAlunoConfig();
+
+  const cfg =
+    unigRole === 'aluno'
+      ? alunoCfg!
+      : (STATIC_CONFIGS[unigRole as Exclude<UnigRole, 'aluno'>] ?? STATIC_CONFIGS.visitante);
+
   return (
     <MainLayout>
       <RoleDashboard chipIcon={Sparkles} {...cfg} />
+      {unigRole === 'aluno' && <AlunoDashboardExtras />}
     </MainLayout>
   );
 }
