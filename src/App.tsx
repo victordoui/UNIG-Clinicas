@@ -1,489 +1,103 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "@/components/ui/theme-provider";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
-import { useRealtimeNotifications } from "@/hooks/useRealtimeNotifications";
-import { usePWAUpdate } from "@/hooks/usePWAUpdate";
-import { InstallPrompt } from "@/components/pwa/InstallPrompt";
-import { PWALoadingScreen } from "@/components/pwa/PWALoadingScreen";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
-import { MainLayout } from "@/components/layout/MainLayout";
-import Auth from "./pages/Auth";
-import Index from "./pages/Index";
-import Produtos from "./pages/Produtos";
-import Movimentacoes from "./pages/Movimentacoes";
-import Scanner from "./pages/Scanner";
-import Alertas from "./pages/Alertas";
-import Relatorios from "./pages/Relatorios";
-import RelatoriosCompras from "./pages/RelatoriosCompras";
-import Usuarios from "./pages/Usuarios";
-import Configuracoes from "./pages/Configuracoes";
-import AdminMaster from "./pages/AdminMaster";
-import DashboardSuperAdmin from "./pages/DashboardSuperAdmin";
-import RelatoriosConsolidados from "./pages/RelatoriosConsolidados";
-import Auditoria from "./pages/Auditoria";
-import Install from "./pages/Install";
-import NotFound from "./pages/NotFound";
-import DemandasPainel from "./pages/demandas/DemandasPainel";
-import DemandasLista from "./pages/demandas/DemandasLista";
-import DemandaNova from "./pages/demandas/DemandaNova";
-import DemandaDetalhe from "./pages/demandas/DemandaDetalhe";
-import DemandasRelatorios from "./pages/demandas/DemandasRelatorios";
-import DemandasHistoricoUnidade from "./pages/demandas/DemandasHistoricoUnidade";
-import OrganizationDetails from "./pages/OrganizationDetails";
-import Fornecedores from "./pages/Fornecedores";
-import RankingFornecedores from "./pages/RankingFornecedores";
-import Contratos from "./pages/Contratos";
-import Solicitacoes from "./pages/Solicitacoes";
-import SolicitacaoDetalhe from "./pages/SolicitacaoDetalhe";
-import Pedidos from "./pages/Pedidos";
-import PedidoDetalhe from "./pages/PedidoDetalhe";
-import PainelComprador from "./pages/PainelComprador";
-import ComprasKanban from "./pages/ComprasKanban";
-import Cotacoes from "./pages/Cotacoes";
-import Servicos from "./pages/Servicos";
-import RecebimentosConferencia from "./pages/RecebimentosConferencia";
-import RecebimentosDivergencias from "./pages/RecebimentosDivergencias";
-import RecebimentoFiscal from "./pages/RecebimentoFiscal";
-import ContasAPagar from "./pages/ContasAPagar";
-import FluxoCaixa from "./pages/FluxoCaixa";
-import SugestoesReposicao from "./pages/SugestoesReposicao";
-import PrevisaoDemanda from "./pages/PrevisaoDemanda";
-import Integracoes from "./pages/Integracoes";
-import Insights from "./pages/Insights";
-import RelatoriosSalvos from "./pages/RelatoriosSalvos";
-import Executivo from "./pages/Executivo";
-import Inventario from "./pages/Inventario";
-import InventarioDetalhe from "./pages/InventarioDetalhe";
-import Etiquetas from "./pages/Etiquetas";
-import OperacaoMobile from "./pages/OperacaoMobile";
-import Locais from "./pages/Locais";
-import Lotes from "./pages/Lotes";
-import Transferencias from "./pages/Transferencias";
-import TransferenciaDetalhe from "./pages/TransferenciaDetalhe";
-import ConfiguracaoFiscal from "./pages/ConfiguracaoFiscal";
-import FiscalNotas from "./pages/FiscalNotas";
-import FiscalNotaDetalhe from "./pages/FiscalNotaDetalhe";
-import CompraDevolucao from "./pages/CompraDevolucao";
-import Aprovacoes from "./pages/Aprovacoes";
-import AprovacaoDetalhe from "./pages/AprovacaoDetalhe";
-import ConfiguracaoAprovacoes from "./pages/ConfiguracaoAprovacoes";
-import ConfiguracaoDelegacoes from "./pages/ConfiguracaoDelegacoes";
-import { ForcePasswordChange } from "./components/auth/ForcePasswordChange";
-import SolicitanteLayout from "./components/layout/SolicitanteLayout";
-import CIPublicAcompanhamentos from "./pages/ci/CIPublicAcompanhamentos";
-import CIPublicBaseConhecimento from "./pages/ci/CIPublicBaseConhecimento";
-import CIPublicAvisos from "./pages/ci/CIPublicAvisos";
-import CIPublicHome from "./pages/ci/CIPublicHome";
-import CIPublicChatbot from "./pages/ci/CIPublicChatbot";
-import CIPublicForm from "./pages/ci/CIPublicForm";
-import CIPublicLookup from "./pages/ci/CIPublicLookup";
-import CIDashboard from "./pages/ci/CIDashboard";
-import CIDetail from "./pages/ci/CIDetail";
-import CIKanban from "./pages/ci/CIKanban";
-import CIValidacao from "./pages/ci/CIValidacao";
-import CIChatbotInternal from "./pages/ci/CIChatbotInternal";
-import CIFormInternal from "./pages/ci/CIFormInternal";
-import CIPrintView from "./pages/ci/CIPrintView";
-
-import CaixaEntrada from "./pages/CaixaEntrada";
-import ConselhoLista from "./pages/conselho/ConselhoLista";
-import ConselhoNova from "./pages/conselho/ConselhoNova";
-import ConselhoDetalhe from "./pages/conselho/ConselhoDetalhe";
-import ConselhoHistorico from "./pages/conselho/ConselhoHistorico";
-import ConselhoDashboard from "./pages/conselho/ConselhoDashboard";
-import { SupplierLayout } from "./components/layout/SupplierLayout";
-import PortalDashboard from "./pages/fornecedor/PortalDashboard";
-import PortalLicitacoes from "./pages/fornecedor/PortalLicitacoes";
-import PortalItens from "./pages/fornecedor/PortalItens";
-import PortalPedidos from "./pages/fornecedor/PortalPedidos";
-import PortalPedidoDetalhe from "./pages/fornecedor/PortalPedidoDetalhe";
-import PortalCaixaEntrada from "./pages/fornecedor/PortalCaixaEntrada";
-import PortalMeuCadastro from "./pages/fornecedor/PortalMeuCadastro";
-import PortalDocumentos from "./pages/fornecedor/PortalDocumentos";
-import PortalNotasFiscais from "./pages/fornecedor/PortalNotasFiscais";
-import CadastroFornecedor from "./pages/CadastroFornecedor";
-import ContagemCiclica from "./pages/ContagemCiclica";
-import SeparacaoOndas from "./pages/SeparacaoOndas";
-import PortalSolicitante from "./pages/PortalSolicitante";
-import ExportacoesContabeis from "./pages/ExportacoesContabeis";
-import BIAvancado from "./pages/BIAvancado";
-import AceitarConvite from "./pages/AceitarConvite";
-import Convites from "./pages/admin/Convites";
-import PerfisPermissoes from "./pages/admin/PerfisPermissoes";
-import ConfiguracoesGerais from "./pages/admin/ConfiguracoesGerais";
-import SetoresCentroCusto from "./pages/admin/SetoresCentroCusto";
-import RegrasAprovacao from "./pages/admin/RegrasAprovacao";
-import FiscalRegulatorio from "./pages/admin/FiscalRegulatorio";
-import AuditoriaLogs from "./pages/admin/AuditoriaLogs";
-import ConvitesFornecedores from "./pages/admin/ConvitesFornecedores";
-import Unidades from "./pages/admin/Unidades";
-import ConviteFornecedor from "./pages/ConviteFornecedor";
-import { SupplierAccessGate } from "./components/fornecedor/SupplierAccessGate";
-import PatrimonioLista from "./pages/patrimonio/PatrimonioLista";
-import PatrimonioItens from "./pages/patrimonio/PatrimonioItens";
-import PatrimonioForm from "./pages/patrimonio/PatrimonioForm";
-import PatrimonioDetalhe from "./pages/patrimonio/PatrimonioDetalhe";
-import PatrimonioCategorias from "./pages/patrimonio/PatrimonioCategorias";
-import PatrimonioMovimentacoes from "./pages/patrimonio/PatrimonioMovimentacoes";
-import PatrimonioInventario from "./pages/patrimonio/PatrimonioInventario";
-import PatrimonioEtiquetas from "./pages/patrimonio/PatrimonioEtiquetas";
-import PatrimonioImportacao from "./pages/patrimonio/PatrimonioImportacao";
-import PatrimonioRelatorios from "./pages/patrimonio/PatrimonioRelatorios";
-import PatrimonioPublico from "./pages/patrimonio/PatrimonioPublico";
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as Sonner } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { ThemeProvider } from '@/components/ui/theme-provider';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Routes, Route } from 'react-router-dom';
+import { AuthProvider } from '@/hooks/useAuth';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import {
+  BookOpen, CalendarDays, FileText, DollarSign, FileBadge, Megaphone,
+  Users, School, Layers3, MapPinned, Map, Building2, Settings, ShieldCheck,
+  BarChart3, Bell, ClipboardList, ScrollText, GraduationCap, Package,
+  MessageSquare, Home as HomeIcon,
+} from 'lucide-react';
+import Auth from './pages/Auth';
+import Index from './pages/Index';
+import NotFound from './pages/NotFound';
+import Install from './pages/Install';
+import Placeholder from './pages/Placeholder';
 
 const queryClient = new QueryClient();
 
-const App = () => {
-  useRealtimeNotifications();
-  usePWAUpdate();
-  
-  return (
+const P = (title: string, description: string, icon: any) =>
+  <ProtectedRoute><Placeholder title={title} description={description} icon={icon} /></ProtectedRoute>;
+
+const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="light" storageKey="unig-ops-ui-theme">
+    <ThemeProvider defaultTheme="light" storageKey="uniga-ui-theme">
       <AuthProvider>
         <TooltipProvider>
-          <PWALoadingScreen />
           <Toaster />
           <Sonner />
-          <InstallPrompt />
           <Routes>
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/install" element={<Install />} />
+
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
 
-            {/* Requisição de Compra (CI) — autenticado, dedicado ao Solicitante */}
-            <Route path="/unigops/ci" element={<ProtectedRoute><SolicitanteLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="/unigops/ci/public" replace />} />
-              <Route path="public" element={<CIPublicHome />} />
-              <Route path="chatbot" element={<CIPublicChatbot />} />
-              <Route path="formulario" element={<CIPublicForm />} />
-              <Route path="consulta" element={<CIPublicLookup />} />
-              <Route path="consulta/:protocolo" element={<CIPublicLookup />} />
-              <Route path="acompanhamentos" element={<CIPublicAcompanhamentos />} />
-              <Route path="base-conhecimento" element={<CIPublicBaseConhecimento />} />
-              <Route path="avisos" element={<CIPublicAvisos />} />
-            </Route>
-            <Route path="/unigops/ci/imprimir/:protocolo" element={<ProtectedRoute><CIPrintView mode="public" /></ProtectedRoute>} />
+            {/* Portal do Aluno */}
+            <Route path="/aluno/disciplinas" element={P('Minhas Disciplinas','Disciplinas em que você está matriculado.', BookOpen)} />
+            <Route path="/aluno/grade" element={P('Minha Grade','Grade semanal de aulas.', CalendarDays)} />
+            <Route path="/aluno/notas" element={P('Notas e Frequência','Acompanhe seu desempenho acadêmico.', BarChart3)} />
+            <Route path="/aluno/financeiro" element={P('Financeiro','Mensalidades, boletos e bolsas.', DollarSign)} />
+            <Route path="/aluno/documentos" element={P('Documentos','Declarações, histórico, certificados e diploma.', FileBadge)} />
+            <Route path="/aluno/perfil" element={P('Meu Perfil','Seus dados pessoais e acadêmicos.', Users)} />
 
-            {/* Modo interno CI */}
-            <Route path="/dashboard/ci" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIDashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/ci/minhas" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIDashboard mine /></ProtectedRoute>} />
-            <Route path="/dashboard/ci/chatbot" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIChatbotInternal /></ProtectedRoute>} />
-            <Route path="/dashboard/ci/formulario" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIFormInternal /></ProtectedRoute>} />
-            <Route path="/dashboard/ci/kanban" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIKanban /></ProtectedRoute>} />
-            <Route path="/dashboard/ci/validacao" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","solicitante","visitante","conselho"]}><CIValidacao /></ProtectedRoute>} />
-            <Route path="/dashboard/ci/:id" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","conselho"]}><CIDetail /></ProtectedRoute>} />
-            <Route path="/dashboard/ci/:id/imprimir" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","conselho"]}><CIPrintView mode="auth" /></ProtectedRoute>} />
+            {/* Portal do Professor */}
+            <Route path="/professor/turmas" element={P('Minhas Turmas','Turmas em que você leciona.', Users)} />
+            <Route path="/professor/grade" element={P('Grade Semanal','Sua agenda semanal de aulas.', CalendarDays)} />
 
+            {/* Requerimentos */}
+            <Route path="/requerimentos" element={P('Requerimentos','Solicitações acadêmicas, financeiras e documentais.', FileText)} />
+            <Route path="/requerimentos/novo" element={P('Novo Requerimento','Abra uma nova solicitação.', FileText)} />
 
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/aceitar-convite/:token" element={<AceitarConvite />} />
-            <Route path="/convite-fornecedor/:token" element={<ConviteFornecedor />} />
-            <Route path="/cadastro-fornecedor" element={<CadastroFornecedor />} />
-            <Route path="/cadastro-fornecedor/:token" element={<CadastroFornecedor />} />
+            {/* Atendimento */}
+            <Route path="/atendimento/requerimentos" element={P('Fila de Requerimentos','Atenda solicitações abertas por alunos.', ClipboardList)} />
+            <Route path="/atendimento/historico" element={P('Histórico do Aluno','Consulte todo o histórico de um aluno.', ScrollText)} />
 
-            {/* Portal de Fornecedores */}
-            <Route path="/portal-fornecedor" element={<ProtectedRoute><SupplierLayout /></ProtectedRoute>}>
-              <Route index element={<PortalDashboard />} />
-              <Route path="caixa" element={<PortalCaixaEntrada />} />
-              <Route path="meu-cadastro" element={<PortalMeuCadastro />} />
-              <Route path="documentos" element={<PortalDocumentos />} />
-              <Route path="completar-cadastro" element={<CadastroFornecedor />} />
-              <Route path="licitacoes" element={<SupplierAccessGate><PortalLicitacoes /></SupplierAccessGate>} />
-              <Route path="itens" element={<SupplierAccessGate><PortalItens /></SupplierAccessGate>} />
-              <Route path="pedidos" element={<SupplierAccessGate><PortalPedidos /></SupplierAccessGate>} />
-              <Route path="pedidos/:id" element={<SupplierAccessGate><PortalPedidoDetalhe /></SupplierAccessGate>} />
-              <Route path="notas-fiscais" element={<SupplierAccessGate><PortalNotasFiscais /></SupplierAccessGate>} />
-            </Route>
+            {/* Acadêmico */}
+            <Route path="/academico/alunos" element={P('Alunos','Gestão dos alunos ativos.', GraduationCap)} />
+            <Route path="/academico/professores" element={P('Professores','Gestão do corpo docente.', BookOpen)} />
+            <Route path="/academico/cursos" element={P('Cursos','Cursos oferecidos pela instituição.', School)} />
+            <Route path="/academico/disciplinas" element={P('Disciplinas','Disciplinas vinculadas aos cursos.', Layers3)} />
+            <Route path="/academico/turmas" element={P('Turmas','Grupos de alunos por período.', Users)} />
+            <Route path="/academico/matriz" element={P('Grade Curricular','Matriz curricular dos cursos.', Layers3)} />
+            <Route path="/academico/aulas" element={P('Grade de Aulas','Cronograma semanal de aulas.', CalendarDays)} />
 
-            <Route path="/install" element={<Install />} />
-            <Route path="/change-password" element={<ForcePasswordChange />} />
-            <Route path="/inicio" element={<Navigate to="/dashboard" replace />} />
+            {/* Espaços */}
+            <Route path="/espacos" element={P('Dashboard de Espaços','Visão consolidada de reservas e ocupação.', MapPinned)} />
+            <Route path="/espacos/agenda" element={P('Agenda','Calendário de reservas, aulas e eventos.', CalendarDays)} />
+            <Route path="/espacos/salas" element={P('Salas','Cadastro e status das salas físicas.', MapPinned)} />
+            <Route path="/espacos/mapa" element={P('Mapa de Salas','Visualização visual da ocupação.', Map)} />
+            <Route path="/espacos/solicitar" element={P('Solicitar Espaço','Solicite uma sala ou espaço.', FileText)} />
+            <Route path="/espacos/solicitacoes" element={P('Solicitações de Espaço','Analise e aprove pedidos de sala.', FileText)} />
+            <Route path="/espacos/reservas" element={P('Reservas','Reservas confirmadas.', CalendarDays)} />
+            <Route path="/espacos/eventos" element={P('Eventos','Eventos institucionais da unidade.', Package)} />
 
-            {/* Central de Demandas e Projetos Operacionais */}
-            <Route path="/demandas" element={<ProtectedRoute><MainLayout><DemandasPainel /></MainLayout></ProtectedRoute>} />
-            <Route path="/demandas/lista" element={<ProtectedRoute><MainLayout><DemandasLista /></MainLayout></ProtectedRoute>} />
-            <Route path="/demandas/nova" element={<ProtectedRoute><MainLayout><DemandaNova /></MainLayout></ProtectedRoute>} />
-            <Route path="/demandas/:id" element={<ProtectedRoute><MainLayout><DemandaDetalhe /></MainLayout></ProtectedRoute>} />
-            <Route path="/demandas/relatorios" element={<ProtectedRoute><MainLayout><DemandasRelatorios /></MainLayout></ProtectedRoute>} />
-            <Route path="/demandas/relatorio-mensal" element={<ProtectedRoute><MainLayout><DemandasRelatorios /></MainLayout></ProtectedRoute>} />
-            <Route path="/demandas/historico-unidade" element={<ProtectedRoute><MainLayout><DemandasHistoricoUnidade /></MainLayout></ProtectedRoute>} />
-            <Route path="/admin/unidades" element={<ProtectedRoute><Unidades /></ProtectedRoute>} />
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } />
-            <Route path="/produtos" element={
-              <ProtectedRoute>
-                <Produtos />
-              </ProtectedRoute>
-            } />
-            <Route path="/movimentacoes" element={
-              <ProtectedRoute>
-                <Movimentacoes />
-              </ProtectedRoute>
-            } />
-            <Route path="/scanner" element={
-              <ProtectedRoute>
-                <Scanner />
-              </ProtectedRoute>
-            } />
-            <Route path="/alertas" element={
-              <ProtectedRoute>
-                <Alertas />
-              </ProtectedRoute>
-            } />
-            <Route path="/relatorios" element={
-              <ProtectedRoute>
-                <Relatorios />
-              </ProtectedRoute>
-            } />
-            <Route path="/relatorios/compras" element={
-              <ProtectedRoute>
-                <RelatoriosCompras />
-              </ProtectedRoute>
-            } />
-            <Route path="/usuarios" element={
-              <ProtectedRoute requiredRole="admin">
-                <Usuarios />
-              </ProtectedRoute>
-            } />
-            <Route path="/solicitacoes" element={
-              <ProtectedRoute>
-                <Solicitacoes />
-              </ProtectedRoute>
-            } />
-            <Route path="/solicitacoes/minhas" element={
-              <ProtectedRoute>
-                <Solicitacoes mine />
-              </ProtectedRoute>
-            } />
-            <Route path="/solicitacoes/:id" element={
-              <ProtectedRoute>
-                <SolicitacaoDetalhe />
-              </ProtectedRoute>
-            } />
-            <Route path="/fornecedores" element={
-              <ProtectedRoute>
-                <Fornecedores />
-              </ProtectedRoute>
-            } />
-            <Route path="/fornecedores/ranking" element={
-              <ProtectedRoute>
-                <RankingFornecedores />
-              </ProtectedRoute>
-            } />
-            <Route path="/contratos" element={
-              <ProtectedRoute>
-                <Contratos />
-              </ProtectedRoute>
-            } />
-            <Route path="/recebimento-fiscal" element={
-              <ProtectedRoute>
-                <RecebimentoFiscal />
-              </ProtectedRoute>
-            } />
-            <Route path="/compras/painel" element={
-              <ProtectedRoute><PainelComprador /></ProtectedRoute>
-            } />
-            <Route path="/compras/kanban" element={
-              <ProtectedRoute><ComprasKanban /></ProtectedRoute>
-            } />
-            <Route path="/compras/cotacoes" element={
-              <ProtectedRoute><Cotacoes /></ProtectedRoute>
-            } />
-            <Route path="/servicos" element={
-              <ProtectedRoute><Servicos /></ProtectedRoute>
-            } />
-            <Route path="/recebimentos/conferencia" element={
-              <ProtectedRoute><RecebimentosConferencia /></ProtectedRoute>
-            } />
-            <Route path="/recebimentos/divergencias" element={
-              <ProtectedRoute><RecebimentosDivergencias /></ProtectedRoute>
-            } />
-            <Route path="/pedidos" element={
-              <ProtectedRoute>
-                <Pedidos />
-              </ProtectedRoute>
-            } />
-            <Route path="/pedidos/:id" element={
-              <ProtectedRoute>
-                <PedidoDetalhe />
-              </ProtectedRoute>
-            } />
-            <Route path="/financeiro/contas-a-pagar" element={
-              <ProtectedRoute>
-                <ContasAPagar />
-              </ProtectedRoute>
-            } />
-            <Route path="/financeiro/fluxo-caixa" element={
-              <ProtectedRoute>
-                <FluxoCaixa />
-              </ProtectedRoute>
-            } />
-            <Route path="/inteligencia/sugestoes-reposicao" element={
-              <ProtectedRoute>
-                <SugestoesReposicao />
-              </ProtectedRoute>
-            } />
-            <Route path="/inteligencia/previsao-demanda" element={
-              <ProtectedRoute>
-                <PrevisaoDemanda />
-              </ProtectedRoute>
-            } />
-            <Route path="/integracoes" element={
-              <ProtectedRoute requiredRole="admin">
-                <Integracoes />
-              </ProtectedRoute>
-            } />
-            <Route path="/executivo" element={
-              <ProtectedRoute>
-                <Executivo />
-              </ProtectedRoute>
-            } />
-            <Route path="/insights" element={
-              <ProtectedRoute>
-                <Insights />
-              </ProtectedRoute>
-            } />
-            <Route path="/relatorios/salvos" element={
-              <ProtectedRoute>
-                <RelatoriosSalvos />
-              </ProtectedRoute>
-            } />
-            <Route path="/op" element={
-              <ProtectedRoute>
-                <OperacaoMobile />
-              </ProtectedRoute>
-            } />
-            <Route path="/inventario" element={
-              <ProtectedRoute>
-                <Inventario />
-              </ProtectedRoute>
-            } />
-            <Route path="/inventario/:id" element={
-              <ProtectedRoute>
-                <InventarioDetalhe />
-              </ProtectedRoute>
-            } />
-            <Route path="/etiquetas" element={
-              <ProtectedRoute>
-                <Etiquetas />
-              </ProtectedRoute>
-            } />
-            <Route path="/locais" element={
-              <ProtectedRoute>
-                <Locais />
-              </ProtectedRoute>
-            } />
-            <Route path="/lotes" element={
-              <ProtectedRoute>
-                <Lotes />
-              </ProtectedRoute>
-            } />
-            <Route path="/transferencias" element={
-              <ProtectedRoute>
-                <Transferencias />
-              </ProtectedRoute>
-            } />
-            <Route path="/transferencias/:id" element={
-              <ProtectedRoute>
-                <TransferenciaDetalhe />
-              </ProtectedRoute>
-            } />
-            <Route path="/configuracoes/fiscal" element={<ProtectedRoute requiredRole="admin"><ConfiguracaoFiscal /></ProtectedRoute>} />
-            <Route path="/fiscal/notas" element={<ProtectedRoute><FiscalNotas /></ProtectedRoute>} />
-            <Route path="/fiscal/notas/:id" element={<ProtectedRoute><FiscalNotaDetalhe /></ProtectedRoute>} />
-            <Route path="/pedidos/:id/devolucao" element={<ProtectedRoute><CompraDevolucao /></ProtectedRoute>} />
-            <Route path="/caixa-de-entrada" element={<ProtectedRoute blockUnigRoles={["engenheira","validador_regulatorio","conselho"]}><CaixaEntrada /></ProtectedRoute>} />
-            <Route path="/aprovacoes" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><Aprovacoes /></ProtectedRoute>} />
-            <Route path="/aprovacoes/:id" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><AprovacaoDetalhe /></ProtectedRoute>} />
-            <Route path="/configuracoes/aprovacoes" element={<ProtectedRoute requiredRole="admin"><ConfiguracaoAprovacoes /></ProtectedRoute>} />
-            <Route path="/configuracoes/delegacoes" element={<ProtectedRoute><ConfiguracaoDelegacoes /></ProtectedRoute>} />
-            <Route path="/conselho" element={<ProtectedRoute requireCouncilMember><ConselhoLista /></ProtectedRoute>} />
-            <Route path="/conselho/historico" element={<ProtectedRoute requireCouncilMember><ConselhoHistorico /></ProtectedRoute>} />
-            <Route path="/conselho/dashboard" element={<ProtectedRoute requireCouncilMember><ConselhoDashboard /></ProtectedRoute>} />
-            <Route path="/conselho/nova" element={<ProtectedRoute requireCouncilMember><ConselhoNova /></ProtectedRoute>} />
-            <Route path="/conselho/:id" element={<ProtectedRoute requireCouncilMember><ConselhoDetalhe /></ProtectedRoute>} />
+            {/* Comunicação */}
+            <Route path="/comunicados" element={P('Comunicados','Comunicados institucionais.', Megaphone)} />
+            <Route path="/comunicacao/comunicados" element={P('Gestão de Comunicados','Publique comunicados para alunos, docentes ou unidade.', Megaphone)} />
+            <Route path="/comunicacao/notificacoes" element={P('Notificações','Notificações internas do sistema.', Bell)} />
+            <Route path="/comunicacao/mensagens" element={P('Mensagens','Mensagens diretas.', MessageSquare)} />
 
+            {/* Financeiro */}
+            <Route path="/financeiro/mensalidades" element={P('Mensalidades','Gestão de mensalidades.', DollarSign)} />
+            <Route path="/financeiro/boletos" element={P('Boletos','Boletos ativos e histórico.', FileText)} />
+            <Route path="/financeiro/bolsas" element={P('Bolsas','Programas de bolsas e descontos.', GraduationCap)} />
+            <Route path="/financeiro/relatorios" element={P('Relatórios Financeiros','Indicadores financeiros consolidados.', BarChart3)} />
 
-          <Route path="/super-admin-dashboard" element={
-            <ProtectedRoute requireSuperAdmin={true}>
-              <DashboardSuperAdmin />
-            </ProtectedRoute>
-          } />
-          <Route path="/auditoria" element={
-            <ProtectedRoute requiredRole="admin">
-              <Auditoria />
-            </ProtectedRoute>
-          } />
-            <Route path="/configuracoes" element={
-              <ProtectedRoute>
-                <Configuracoes />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin-master" element={
-              <ProtectedRoute requireSuperAdmin={true}>
-                <AdminMaster />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin-master/organization/:id" element={
-              <ProtectedRoute requireSuperAdmin={true}>
-                <OrganizationDetails />
-              </ProtectedRoute>
-            } />
-            <Route path="/relatorios-consolidados" element={
-              <ProtectedRoute requireSuperAdmin={true}>
-                <RelatoriosConsolidados />
-              </ProtectedRoute>
-            } />
-            <Route path="/contagem-ciclica" element={<ProtectedRoute><ContagemCiclica /></ProtectedRoute>} />
-            <Route path="/separacao-ondas" element={<ProtectedRoute><SeparacaoOndas /></ProtectedRoute>} />
-            <Route path="/portal-solicitante" element={<ProtectedRoute><PortalSolicitante /></ProtectedRoute>} />
-            <Route path="/exportacoes-contabeis" element={<ProtectedRoute><ExportacoesContabeis /></ProtectedRoute>} />
-            <Route path="/bi-avancado" element={<ProtectedRoute><BIAvancado /></ProtectedRoute>} />
+            {/* Relatórios */}
+            <Route path="/relatorios/academicos" element={P('Relatórios Acadêmicos','Alunos, cursos, turmas, notas e frequência.', BarChart3)} />
+            <Route path="/relatorios/operacionais" element={P('Relatórios Operacionais','Atendimento, requerimentos e SLA.', BarChart3)} />
+            <Route path="/relatorios/ocupacao" element={P('Ocupação de Salas','Uso de salas por bloco, turno e período.', BarChart3)} />
 
-            {/* === Rotas-alias da nova sidebar (apontam para componentes existentes) === */}
-            {/* Solicitação de Compra */}
-            <Route path="/solicitacao/nova" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIFormInternal /></ProtectedRoute>} />
-            <Route path="/solicitacao/minhas" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIDashboard mine /></ProtectedRoute>} />
-            {/* Gestão de Requisições */}
-            <Route path="/gestao-requisicoes/todas" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIDashboard /></ProtectedRoute>} />
-            <Route path="/gestao-requisicoes/pendencias" element={<Navigate to="/conselho/pendencias" replace />} />
-            <Route path="/conselho/pendencias" element={<ProtectedRoute><CaixaEntrada title="Pendências do Conselho" /></ProtectedRoute>} />
-            <Route path="/gestao-requisicoes/validacoes" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","solicitante","visitante","conselho"]}><CIValidacao /></ProtectedRoute>} />
-            <Route path="/gestao-requisicoes/aprovacoes" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><Aprovacoes /></ProtectedRoute>} />
-            <Route path="/gestao-requisicoes/kanban" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIKanban /></ProtectedRoute>} />
-            <Route path="/gestao-requisicoes/painel" element={<ProtectedRoute blockUnigRoles={["compras","almoxarifado","engenheira","validador_regulatorio","conselho"]}><CIDashboard /></ProtectedRoute>} />
             {/* Administração */}
-            <Route path="/admin/usuarios" element={<ProtectedRoute requiredRole="admin"><Usuarios /></ProtectedRoute>} />
-            <Route path="/admin/convites" element={<ProtectedRoute requiredRole="admin"><Convites /></ProtectedRoute>} />
-            <Route path="/admin/convites-fornecedores" element={<ProtectedRoute requiredRole="admin"><ConvitesFornecedores /></ProtectedRoute>} />
-            <Route path="/admin/perfis-permissoes" element={<ProtectedRoute requiredRole="admin"><PerfisPermissoes /></ProtectedRoute>} />
-            <Route path="/admin/configuracoes-gerais" element={<ProtectedRoute requiredRole="admin"><ConfiguracoesGerais /></ProtectedRoute>} />
-            <Route path="/admin/setores-centro-custo" element={<ProtectedRoute requiredRole="admin"><SetoresCentroCusto /></ProtectedRoute>} />
-            <Route path="/admin/regras-aprovacao" element={<ProtectedRoute requiredRole="admin"><RegrasAprovacao /></ProtectedRoute>} />
-            <Route path="/admin/fiscal-regulatorio" element={<ProtectedRoute requiredRole="admin"><FiscalRegulatorio /></ProtectedRoute>} />
-            <Route path="/admin/integracoes" element={<ProtectedRoute requiredRole="admin"><Integracoes /></ProtectedRoute>} />
-            <Route path="/admin/auditoria-logs" element={<ProtectedRoute requiredRole="admin"><AuditoriaLogs /></ProtectedRoute>} />
-
-            {/* Patrimônio */}
-            <Route path="/patrimonio" element={<ProtectedRoute><PatrimonioLista /></ProtectedRoute>} />
-            <Route path="/patrimonio/itens" element={<ProtectedRoute><PatrimonioItens /></ProtectedRoute>} />
-            <Route path="/patrimonio/novo" element={<ProtectedRoute><PatrimonioForm /></ProtectedRoute>} />
-
-            <Route path="/patrimonio/categorias" element={<ProtectedRoute><PatrimonioCategorias /></ProtectedRoute>} />
-            <Route path="/patrimonio/inventario" element={<ProtectedRoute><PatrimonioInventario /></ProtectedRoute>} />
-            <Route path="/patrimonio/movimentacoes" element={<ProtectedRoute><PatrimonioMovimentacoes /></ProtectedRoute>} />
-            <Route path="/patrimonio/etiquetas" element={<ProtectedRoute><PatrimonioEtiquetas /></ProtectedRoute>} />
-            <Route path="/patrimonio/importacao" element={<ProtectedRoute><PatrimonioImportacao /></ProtectedRoute>} />
-            <Route path="/patrimonio/relatorios" element={<ProtectedRoute><PatrimonioRelatorios /></ProtectedRoute>} />
-            <Route path="/patrimonio/:id" element={<ProtectedRoute><PatrimonioDetalhe /></ProtectedRoute>} />
-            <Route path="/patrimonio/:id/editar" element={<ProtectedRoute><PatrimonioForm /></ProtectedRoute>} />
-            <Route path="/p/:qr" element={<PatrimonioPublico />} />
+            <Route path="/admin/usuarios" element={P('Usuários','Gerencie usuários e vínculos.', Users)} />
+            <Route path="/admin/permissoes" element={P('Perfis e Permissões','Matriz de permissões por módulo.', ShieldCheck)} />
+            <Route path="/admin/unidades" element={P('Unidades','Cadastro de unidades e campi.', Building2)} />
+            <Route path="/admin/configuracoes" element={P('Configurações Gerais','Configurações do sistema.', Settings)} />
+            <Route path="/admin/logs" element={P('Logs do Sistema','Auditoria e histórico de ações.', ScrollText)} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -491,7 +105,6 @@ const App = () => {
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
-  );
-};
+);
 
 export default App;

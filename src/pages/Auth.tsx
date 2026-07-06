@@ -1,449 +1,200 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, ArrowLeft, Warehouse, ShoppingCart, ShieldCheck, FileSignature, Vote, Eye, EyeOff, Truck, ClipboardList, Briefcase, HardHat, Package } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import vstockLogo from "@/assets/unig-facilities-logo-v2.png";
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { GraduationCap, LogIn, Sparkles, Zap, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import {
+  DEMO_USERS, UNIG_ROLE_LABEL, UNIG_ROLE_TEXT_COLOR, UNIG_ROLE_BADGE, UNIG_ROLE_ICON,
+} from '@/lib/unigRoles';
+import { cn } from '@/lib/utils';
 
 export default function Auth() {
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
   const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
-    async function routeForUser(userId: string) {
-      try {
-        const [{ data: profileData }, { data: orgRow }, { data: supRow }] = await Promise.all([
-          supabase.from("profiles").select("is_super_admin").eq("id", userId).maybeSingle(),
-          supabase
-            .from("organization_members")
-            .select("role")
-            .eq("user_id", userId)
-            .eq("is_active", true)
-            .maybeSingle(),
-          supabase
-            .from("supplier_users")
-            .select("supplier_id")
-            .eq("user_id", userId)
-            .eq("is_active", true)
-            .maybeSingle(),
-        ]);
+    if (!loading && user) navigate('/', { replace: true });
+  }, [user, loading, navigate]);
 
-        if (supRow?.supplier_id) { navigate("/portal-fornecedor", { replace: true }); return; }
-        if (profileData?.is_super_admin) { navigate("/", { replace: true }); return; }
-
-        const role = (orgRow as any)?.role;
-        if (role === "solicitante") navigate("/unigops/ci/public", { replace: true });
-        else if (role === "patrimonio") navigate("/patrimonio", { replace: true });
-        else navigate("/", { replace: true });
-      } catch {
-        navigate("/", { replace: true });
-      }
-    }
-
-    // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) routeForUser(session.user.id);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        // Defer to avoid Supabase deadlock
-        setTimeout(() => routeForUser(session.user.id), 0);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleSignIn = async (e: React.FormEvent) => {
+  const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        setError(error.message);
-        toast({
-          title: "Erro no login",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    } catch (err) {
-      setError("Erro inesperado. Tente novamente.");
-    } finally {
-      setLoading(false);
+    setSubmitting(true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setSubmitting(false);
+    if (error) {
+      toast({ title: 'Erro ao entrar', description: error.message, variant: 'destructive' });
+    } else {
+      navigate('/', { replace: true });
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Check if email is banned before attempting signup (simplified)
-      // Note: This would require a proper database function to be implemented
-      const isBanned = false; // Simplified for now
-
-      if (isBanned) {
-        setError("Este email foi banido do sistema e não pode se cadastrar.");
+  const signInDemo = async (demoEmail: string, demoPassword: string, label: string) => {
+    setDemoLoading(demoEmail);
+    const { error } = await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPassword });
+    if (error) {
+      // Try seeding if user doesn't exist
+      if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credential')) {
         toast({
-          title: "Cadastro bloqueado",
-          description: "Este email foi banido do sistema e não pode se cadastrar.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-
-      if (error) {
-        setError(error.message);
-        toast({
-          title: "Erro no cadastro",
-          description: error.message,
-          variant: "destructive",
+          title: 'Usuários demo não criados',
+          description: 'Clique em "Preparar usuários demo" primeiro.',
+          variant: 'destructive',
         });
       } else {
-        toast({
-          title: "Cadastro realizado!",
-          description: "Verifique seu email para confirmar a conta.",
-        });
-        
-        // Clear form after successful signup
-        setEmail("");
-        setPassword("");
-        setFullName("");
+        toast({ title: `Erro no acesso rápido (${label})`, description: error.message, variant: 'destructive' });
       }
-    } catch (err) {
-      setError("Erro inesperado. Tente novamente.");
+    } else {
+      navigate('/', { replace: true });
+    }
+    setDemoLoading(null);
+  };
+
+  const seedDemoUsers = async () => {
+    setSeeding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('seed-demo-users');
+      if (error) throw error;
       toast({
-        title: "Erro interno",
-        description: "Erro inesperado. Tente novamente.",
-        variant: "destructive",
+        title: 'Usuários demo prontos',
+        description: `${data?.created ?? 0} criados · ${data?.existed ?? 0} já existiam. Use os botões abaixo para entrar.`,
       });
+    } catch (err: any) {
+      toast({ title: 'Erro ao preparar demos', description: err?.message ?? String(err), variant: 'destructive' });
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const quickLogin = async (qEmail: string, qPassword: string) => {
-    setLoading(true);
-    setError(null);
-    setEmail(qEmail);
-    setPassword(qPassword);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email: qEmail, password: qPassword });
-      if (error) {
-        setError(error.message);
-        toast({ title: "Erro no login rápido", description: error.message, variant: "destructive" });
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError("Digite seu email primeiro");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) {
-        setError(error.message);
-      } else {
-        toast({
-          title: "Email enviado!",
-          description: "Verifique seu email para redefinir a senha.",
-        });
-      }
-    } catch (err) {
-      setError("Erro inesperado. Tente novamente.");
-    } finally {
-      setLoading(false);
+      setSeeding(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
-      {/* Botão de Tema no canto superior direito */}
-      <div className="absolute top-4 right-4 md:top-6 md:right-6">
-        <ThemeToggle />
-      </div>
-      
-      <div className="w-full max-w-2xl">
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center mb-4">
-            <img src={vstockLogo} alt="UNIG Facilities Logo" className="h-32 md:h-40 w-auto" />
+    <div className="min-h-screen grid md:grid-cols-2 bg-background">
+      {/* Esquerda: branding */}
+      <div
+        className="relative hidden md:flex flex-col justify-between p-10 text-white overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, hsl(211 89% 30%) 0%, hsl(211 89% 45%) 50%, hsl(211 89% 55%) 100%)' }}
+      >
+        <div className="absolute inset-0 opacity-25 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.25) 0%, transparent 45%)' }} />
+        <div className="relative flex items-center gap-3">
+          <div className="h-12 w-12 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/25">
+            <GraduationCap className="h-7 w-7" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold">UNIG-A</div>
+            <div className="text-xs text-white/80 uppercase tracking-widest">Portal Acadêmico Integrado</div>
           </div>
         </div>
+        <div className="relative space-y-4 max-w-md">
+          <h1 className="text-4xl font-bold leading-tight">
+            Uma central única para toda a vida acadêmica.
+          </h1>
+          <p className="text-white/90 text-sm leading-relaxed">
+            Aluno, professor, coordenação, secretaria e gestão em um único sistema —
+            requerimentos, salas, agendas, financeiro e comunicação institucional integrados.
+          </p>
+        </div>
+        <div className="relative text-xs text-white/70">© {new Date().getFullYear()} UNIG · Todos os direitos reservados</div>
+      </div>
 
-        <Card className="shadow-elevated">
-          <CardHeader>
-            <CardTitle>Acesso ao Sistema</CardTitle>
-            <CardDescription>
-              Entre com suas credenciais para acessar o sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Sua senha"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+      {/* Direita: form + acessos rápidos */}
+      <div className="flex items-center justify-center p-6">
+        <div className="w-full max-w-md space-y-5">
+          <div className="md:hidden flex items-center gap-2 justify-center mb-2">
+            <GraduationCap className="h-7 w-7 text-primary" />
+            <span className="font-bold text-xl text-primary">UNIG-A</span>
+          </div>
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Entrar
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={handleForgotPassword}
-                disabled={loading}
-              >
-                Esqueci minha senha
-              </Button>
-            </form>
-
-            <div className="mt-6 p-4 bg-muted/30 rounded-lg border space-y-4">
-              <h3 className="font-semibold text-sm">Acesso rápido (testes)</h3>
-
-              {/* Administração */}
-              <div className="space-y-1.5">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Administração</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("admin@teste.com", "Teste@123")}>
-                    <ShieldCheck className="h-4 w-4 text-blue-600" /> Admin
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("coord.operacoes@teste.com", "Teste@123")}>
-                    <ClipboardList className="h-4 w-4 text-indigo-600" /> Coordenador de Operações
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("gerente.geral@teste.com", "Teste@123")}>
-                    <Briefcase className="h-4 w-4 text-fuchsia-600" /> Gerente Geral
-                  </Button>
-                </div>
-              </div>
-
-              {/* Conselho */}
-              <div className="space-y-1.5 border-t border-border/60 pt-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Conselho</p>
-                <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <Button
-                      key={n}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="gap-1"
-                      disabled={loading}
-                      onClick={() => quickLogin(`conselho${n}@teste.com`, "Teste@123")}
-                    >
-                      <Vote className="h-3.5 w-3.5 text-primary" /> Membro {n}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle>Entrar</CardTitle>
+              <CardDescription>Acesse com seu e-mail institucional e senha.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="senha">
+                <TabsList className="grid grid-cols-1 mb-4">
+                  <TabsTrigger value="senha"><LogIn className="h-4 w-4 mr-1.5" /> E-mail e senha</TabsTrigger>
+                </TabsList>
+                <TabsContent value="senha">
+                  <form onSubmit={signIn} className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="email">E-mail</Label>
+                      <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@unig.br" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="password">Senha</Label>
+                      <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={submitting}>
+                      {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <LogIn className="h-4 w-4 mr-2" />}
+                      Entrar
                     </Button>
-                  ))}
-                </div>
-              </div>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
 
-              {/* Validação */}
-              <div className="space-y-1.5 border-t border-border/60 pt-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Validação</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("engenheira@teste.com", "Teste@123")}>
-                    <HardHat className="h-4 w-4 text-cyan-600" /> Engenheira
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("validador.regulatorio@teste.com", "Teste@123")}>
-                    <ShieldCheck className="h-4 w-4 text-rose-600" /> Regulatório
-                  </Button>
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-primary" /> Acessos rápidos de teste
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Ambiente de desenvolvimento. Um clique para entrar em cada perfil.
+                  </CardDescription>
                 </div>
+                <Badge variant="secondary" className="shrink-0"><Sparkles className="h-3 w-3 mr-1" /> Demo</Badge>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Alert className="py-2 border-primary/30">
+                <AlertDescription className="text-xs">
+                  Primeira vez? <button onClick={seedDemoUsers} disabled={seeding} className="underline text-primary font-semibold disabled:opacity-50">
+                    {seeding ? 'preparando…' : 'Preparar usuários demo'}
+                  </button> antes de clicar em um perfil.
+                </AlertDescription>
+              </Alert>
 
-              {/* Compras */}
-              <div className="space-y-1.5 border-t border-border/60 pt-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Compras</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("comprador1@teste.com", "Teste@123")}>
-                    <ShoppingCart className="h-4 w-4 text-emerald-700" /> Comprador 1 — Emerson
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("comprador2@teste.com", "Teste@123")}>
-                    <ShoppingCart className="h-4 w-4 text-emerald-700" /> Comprador 2 — Renilson
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("comprador3@teste.com", "Teste@123")}>
-                    <ShoppingCart className="h-4 w-4 text-emerald-700" /> Comprador 3 — Leonardo
-                  </Button>
-                </div>
+              <div className="grid grid-cols-2 gap-2">
+                {DEMO_USERS.map((d) => {
+                  const Icon = UNIG_ROLE_ICON[d.role];
+                  const isLoading = demoLoading === d.email;
+                  return (
+                    <button
+                      key={d.role}
+                      onClick={() => signInDemo(d.email, d.password, UNIG_ROLE_LABEL[d.role])}
+                      disabled={!!demoLoading}
+                      className={cn(
+                        'group rounded-lg border bg-card p-2.5 hover:shadow-md hover:border-primary/40 transition-all flex items-center gap-2 text-left min-w-0 disabled:opacity-60 disabled:pointer-events-none',
+                      )}
+                    >
+                      <div className={cn('h-8 w-8 rounded-md flex items-center justify-center shrink-0 border', UNIG_ROLE_BADGE[d.role])}>
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className={cn('h-4 w-4', UNIG_ROLE_TEXT_COLOR[d.role])} />}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-[12px] font-semibold text-foreground truncate">{UNIG_ROLE_LABEL[d.role]}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">{d.email}</div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-
-              {/* Almoxarifado */}
-              <div className="space-y-1.5 border-t border-border/60 pt-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Almoxarifado</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("almox@teste.com", "Teste@123")}>
-                    <Warehouse className="h-4 w-4 text-amber-600" /> Funcionário Almoxarifado
-                  </Button>
-                </div>
-              </div>
-
-              {/* Patrimônio (teste) */}
-              <div className="space-y-1.5 border-t border-border/60 pt-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Patrimônio</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("teste2.patrimonio@teste.com", "Teste@123")}>
-                    <Package className="h-4 w-4 text-blue-700" /> Teste 2 — Patrimônio
-                  </Button>
-                </div>
-              </div>
-
-              {/* Gestores — Central de Demandas */}
-              <div className="space-y-1.5 border-t border-border/60 pt-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Gestores (Central de Demandas)</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("gestor1@teste.com", "Teste@123")}>
-                    <Briefcase className="h-4 w-4 text-orange-600" /> Gestor 1
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("gestor2@teste.com", "Teste@123")}>
-                    <Briefcase className="h-4 w-4 text-orange-600" /> Gestor 2
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("gestor3@teste.com", "Teste@123")}>
-                    <Briefcase className="h-4 w-4 text-orange-600" /> Gestor 3
-                  </Button>
-                </div>
-              </div>
-
-              {/* CI */}
-              <div className="space-y-1.5 border-t border-border/60 pt-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">CI</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("solicitante@teste.com", "Teste@123")}>
-                    <FileSignature className="h-4 w-4 text-violet-600" /> Solicitante CI
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("odonto@teste.com", "Teste@123")}>
-                    <FileSignature className="h-4 w-4 text-violet-600" /> Solicitante — Odonto
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("contabilidade@teste.com", "Teste@123")}>
-                    <FileSignature className="h-4 w-4 text-violet-600" /> Solicitante — Contabilidade
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("rh@teste.com", "Teste@123")}>
-                    <FileSignature className="h-4 w-4 text-violet-600" /> Solicitante — RH
-                  </Button>
-                </div>
-              </div>
-
-              {/* Fornecedor */}
-              <div className="space-y-1.5 border-t border-border/60 pt-3">
-                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Fornecedor</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" className="gap-2" disabled={loading}
-                    onClick={() => quickLogin("fornecedor@teste.com", "Teste@123")}>
-                    <Truck className="h-4 w-4 text-teal-600" /> Fornecedor (portal)
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 p-4 bg-muted/50 rounded-lg border">
-              <h3 className="font-semibold text-sm mb-2">Precisa de uma conta?</h3>
-              <p className="text-sm text-muted-foreground mb-3">
-                Para obter acesso ao sistema, entre em contato com o administrador.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <strong>Email:</strong> admin@unigops.com.br
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
