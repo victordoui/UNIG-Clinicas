@@ -42,10 +42,11 @@ export function RoomCard({ room, canWrite, onDelete, showReserve = true, compact
         </div>
 
         <div className="flex justify-end gap-1 pt-2 border-t">
-          {onReserve && (
-            <Button size="sm" variant="outline" onClick={() => onReserve(room)}>
-              <CalendarDays className="h-4 w-4 mr-1" />Reservar
-            </Button>
+          {showReserve && room.status !== 'inativa' && (
+            <ReservationFormDialog
+              defaultRoomId={room.id}
+              trigger={<Button size="sm" variant="outline"><CalendarDays className="h-4 w-4 mr-1" />Reservar</Button>}
+            />
           )}
           <Button size="sm" variant="ghost" asChild>
             <Link to={`/espacos/agenda?room=${room.id}`}>Agenda</Link>
