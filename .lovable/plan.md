@@ -1,99 +1,89 @@
-# Fase 3 — Requerimentos Acadêmicos (fluxo completo)
+# Fase 4 — CRUD Acadêmico Completo
 
-Substitui os placeholders dos requerimentos por um módulo real com abertura pelo aluno, fila de atendimento (secretaria/atendimento), comentários, anexos, SLA e histórico. Aproveita `student_requirements` + `requirement_categories` já existentes.
+Substitui os placeholders do menu **Acadêmico** por telas reais de cadastro e gestão. É a base de dados para tudo o que vem depois (grade, financeiro, relatórios).
 
 ## Escopo
 
-### Aluno (papel `aluno`)
-1. **Meus Requerimentos** (`/requerimentos`)
-   - Lista de todos os meus requerimentos (protocolo, categoria, título, status, prioridade, SLA restante).
-   - Filtro por status (abertos / em análise / concluídos / rejeitados) e busca por protocolo/título.
-   - Card visual com badge de prioridade e barra de SLA.
-2. **Novo Requerimento** (`/requerimentos/novo`)
-   - Formulário: categoria (select das 9 seed), título, descrição, prioridade, anexo(s).
-   - Se categoria tem `requires_attachment=true`, força upload.
-   - Gera `protocol_number` automático (formato `REQ-AAMMDD-#####`).
-   - Calcula `due_date` = agora + `sla_days` da categoria.
-3. **Detalhe do Requerimento** (`/requerimentos/:id`)
-   - Cabeçalho: protocolo, status, prioridade, categoria, SLA, datas.
-   - Linha do tempo: aberto → em análise → resposta → concluído.
-   - Comentários (aluno ↔ atendente) em tempo real leve (fetch on focus, sem realtime nesta fase).
-   - Anexos: lista + upload novo.
+### 1. Alunos (`/academico/alunos`)
+- Lista com busca (nome/matrícula/e-mail), filtros (curso, unidade, status de matrícula) e paginação.
+- Colunas: nome, matrícula, curso, unidade, status, ações.
+- Ações: novo aluno, editar, ver perfil completo (drawer), inativar.
+- Modal de criação/edição com todos os campos de `students`.
 
-### Atendimento / Secretaria (`atendimento`, `secretaria`, `administrador`, `super_admin`)
-4. **Fila de Requerimentos** (`/atendimento/requerimentos`)
-   - Tabela com todos os requerimentos (aluno, categoria, protocolo, status, prioridade, SLA restante, atribuído a).
-   - Filtros: status, prioridade, categoria, atrasados (SLA vencido), meus (assigned_to = eu).
-   - Ordenação por vencimento de SLA.
-   - Contadores no topo (abertos, em análise, atrasados, concluídos hoje).
-   - Ações rápidas por linha: atribuir a mim, mudar status, abrir detalhe.
-5. **Detalhe do Requerimento (atendente)** — mesma rota `/requerimentos/:id`, mas com painel de ações:
-   - Alterar status (open → in_progress → completed / rejected).
-   - Atribuir a outro atendente.
-   - Escrever resposta oficial (`response`) que fecha o requerimento e preenche `completed_at`.
-   - Comentários internos + comentários visíveis ao aluno.
+### 2. Professores (`/academico/professores`)
+- Lista com busca, filtro por departamento, unidade.
+- Colunas: nome, titulação, departamento, e-mail, ações.
+- CRUD via modal.
 
-### Histórico do Aluno (`/atendimento/historico`)
-6. Busca de aluno por nome/matrícula → lista de todos os requerimentos daquele aluno + link de detalhe.
+### 3. Cursos (`/academico/cursos`)
+- Grid de cards + lista alternativa.
+- Filtros: unidade, modalidade, tipo (graduação/pós/técnico).
+- CRUD via modal (código, nome, tipo, duração, modalidade, unidade, coordenador).
 
-## O que NÃO entra nesta fase
+### 4. Disciplinas (`/academico/disciplinas`)
+- Lista com busca, filtro por curso e semestre.
+- Colunas: código, nome, carga horária, semestre, curso.
+- CRUD via modal.
 
-- Assinatura digital / emissão de PDF do documento final (Fase futura).
-- Notificação por e-mail / WhatsApp (Fase 7 — Comunicação).
-- Chatbot / atendimento por IA (fora do MVP).
-- Realtime Supabase Channels (fica para depois se necessário).
+### 5. Turmas (`/academico/turmas`)
+- Lista com filtros: período, curso, disciplina, professor, unidade.
+- Colunas: código, disciplina, professor, período, turno, sala, ocupação (matriculados/capacidade).
+- CRUD via modal (inclui vínculo com disciplina, professor, sala, capacidade, período, turno, horários da grade).
+- Editor de horários integrado (dias da semana + start/end) que grava em `classes.schedule` (JSONB já existente).
+- Ação **"Ver matrículas"** — drawer lista alunos matriculados naquela turma com opções de adicionar/remover.
+
+### 6. Matriz Curricular (`/academico/matriz`)
+- Seleciona um curso → mostra disciplinas agrupadas por semestre.
+- Ação: adicionar disciplina existente ao curso (ajustando `subjects.course_id` e `semester`).
+- Somente leitura para papéis não-secretaria/coordenação/admin.
+
+### 7. Grade de Aulas (`/academico/aulas`)
+- Grade semanal consolidada de **todas as turmas** de uma unidade/curso escolhido.
+- Reaproveita o `WeeklyScheduleGrid` do portal do aluno.
+- Filtros: unidade, curso, turno.
+
+## Fora de escopo desta fase
+- Importação em massa (CSV/Excel) — Fase futura.
+- Vincular login (auth.users) ao aluno/professor — Fase de Convites/Usuários.
+- Histórico escolar, notas e frequência — Fase 5 (Notas & Frequência).
+- Gestão de salas — Fase 6 (Espaços).
+
+## Permissões
+- **Leitura**: staff acadêmico (`secretaria`, `coordenacao`, `administrador`, `super_admin`, `gestor_unidade`) — demais papéis não veem menu.
+- **Escrita** (create/update/delete): `secretaria`, `coordenacao`, `administrador`, `super_admin`.
+- Componente `<StaffOnly roles={[...]}>` para gatear botões de ação.
 
 ## Estrutura técnica
 
-**Migração** (1 migração):
-- `requirement_comments(id, requirement_id, author_id, body, is_internal, created_at)` + GRANT + RLS + trigger updated_at
-- `requirement_attachments(id, requirement_id, uploaded_by, file_name, file_path, mime_type, size_bytes, created_at)` + GRANT + RLS
-- **Storage bucket** `requirement-attachments` (privado) + policies (aluno lê seus próprios; staff lê todos; upload por autenticados).
-- Índices em `student_requirements(status, priority, category_id, assigned_to, due_date)` para a fila.
-
 **Hooks** (`src/hooks/`):
-- `useRequirements.ts` — lista com filtros; suporta escopo `mine` (aluno) e `all` (staff).
-- `useRequirementDetail.ts` — item + comentários + anexos.
-- `useRequirementMutations.ts` — create, updateStatus, assign, addComment, uploadAttachment, respond.
+- `useAcademicData.ts` — hooks unificados: `useStudents`, `useProfessors`, `useCourses`, `useSubjects`, `useClasses`, `useClassEnrollments`, e mutations correspondentes (`useUpsertStudent`, `useUpsertProfessor`, `useUpsertCourse`, `useUpsertSubject`, `useUpsertClass`, `useEnrollStudent`, `useUnenrollStudent`, `useDeleteEntity`).
+- Filtros padronizados via objeto de opções.
 
-**Componentes** (`src/components/requerimentos/`):
-- `RequirementStatusBadge`, `RequirementPriorityBadge`, `SLAProgress`
-- `RequirementListCard` (visão aluno) e `RequirementQueueRow` (visão staff)
-- `RequirementFilters` (status, prioridade, categoria, atrasado, "meus")
-- `NewRequirementDialog` (formulário)
-- `RequirementTimeline` (histórico de eventos derivado dos campos)
-- `RequirementCommentThread` (com toggle `is_internal` para staff)
-- `RequirementAttachmentList` (upload + download)
-- `RequirementActionPanel` (staff: status, assign, resposta)
+**Componentes** (`src/components/academico/`):
+- `StudentFormDialog`, `ProfessorFormDialog`, `CourseFormDialog`, `SubjectFormDialog`, `ClassFormDialog` (todos com Zod + react-hook-form).
+- `ClassScheduleEditor` — matriz visual de dias × horários.
+- `ClassEnrollmentsDrawer` — lista alunos + autocomplete para adicionar.
+- `EntityTable` — tabela padrão reutilizável (busca, ordenação, ações).
+- `AcademicFiltersBar` — filtros reutilizáveis (unidade, curso, etc.).
+- `StaffOnly` — wrapper de permissão.
+- `ConfirmDeleteDialog` — reaproveitado nos 6 CRUDs.
 
-**Páginas** (`src/pages/requerimentos/`):
-- `MeusRequerimentos.tsx` (aluno) — `/requerimentos`
-- `NovoRequerimento.tsx` — `/requerimentos/novo`
-- `RequerimentoDetalhe.tsx` — `/requerimentos/:id` (renderiza aluno OU staff conforme papel)
-- `src/pages/atendimento/FilaRequerimentos.tsx` — `/atendimento/requerimentos`
-- `src/pages/atendimento/HistoricoAluno.tsx` — `/atendimento/historico`
+**Páginas** (`src/pages/academico/`):
+- `Alunos.tsx`, `Professores.tsx`, `Cursos.tsx`, `Disciplinas.tsx`, `Turmas.tsx`, `Matriz.tsx`, `Aulas.tsx`.
 
 **Utilitário**:
-- `src/lib/requirements.ts` — labels, cores, helper de SLA (`daysLeft`, `isOverdue`), gerador de protocolo.
+- `src/lib/academic.ts` — labels (turno, modalidade, tipo de curso, status de matrícula), helpers de horário.
 
-## UI/UX
-
-- 100% dentro do padrão atual (paleta azul, Nunito, shadcn, Card, Badge, Dialog, Table, Skeleton).
-- Reaproveita `ModulePlaceholder` (não usado aqui) e mantém `RoleHomeCover` no dashboard.
-- Todos os componentes responsivos (tabela vira lista no mobile).
-- Estados: loading (Skeleton), vazio (mensagem + CTA), erro (toast).
+**Sem migração de banco** — o schema atual (`students`, `professors`, `courses`, `subjects`, `classes`, `enrollments`, `units`) já contém tudo. Apenas garantimos que as políticas RLS existentes permitem escrita para staff (validaremos antes de codar; se faltar, criamos uma micro-migração).
 
 ## Ordem de execução
+1. Validar RLS de escrita (`students`, `professors`, `courses`, `subjects`, `classes`). Se faltar, migração mínima com policies para staff.
+2. `lib/academic.ts` + `hooks/useAcademicData.ts`.
+3. Componentes compartilhados (`EntityTable`, `StaffOnly`, `ConfirmDeleteDialog`, `AcademicFiltersBar`, `ClassScheduleEditor`).
+4. Formulários (5 dialogs) — em paralelo.
+5. Páginas (7 telas) — em paralelo.
+6. Atualizar `App.tsx` para trocar os 7 placeholders pelas rotas reais.
+7. Smoke-test manual: criar 1 registro de cada tipo e vincular aluno demo a nova turma.
 
-1. Migração (`requirement_comments`, `requirement_attachments`, storage bucket + policies).
-2. Seed opcional: 2–3 requerimentos demo para o aluno demo (para a fila não ficar vazia).
-3. `lib/requirements.ts` + hooks.
-4. Componentes reutilizáveis.
-5. Páginas do aluno.
-6. Páginas do staff (fila + histórico).
-7. Atualizar `App.tsx` para trocar Placeholders pelas rotas reais.
-8. Testar: abrir requerimento com `aluno@unig.demo`, atender com `atendimento@unig.demo`, verificar SLA.
-
-## Próxima fase (Fase 4)
-
-CRUD Acadêmico completo: Alunos, Professores, Cursos, Disciplinas, Turmas, Grade Curricular. Base para o resto do sistema.
+## Próxima fase (Fase 5)
+Notas & Frequência: lançamento pelo professor, boletim do aluno, cálculo de média, situação (aprovado / reprovado / em recuperação).
