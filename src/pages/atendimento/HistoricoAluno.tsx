@@ -36,7 +36,7 @@ export default function HistoricoAluno() {
                   <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center"><User className="h-4 w-4" /></div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium truncate">{s.full_name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{s.registration_number} · {s.email}{s.course?.name ? ` · ${s.course.name}` : ''}</div>
+                    <div className="text-xs text-muted-foreground truncate">{s.registration} · {s.email}{s.course?.name ? ` · ${s.course.name}` : ''}</div>
                   </div>
                 </button>
               ))}
@@ -50,7 +50,7 @@ export default function HistoricoAluno() {
               <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center"><User className="h-5 w-5" /></div>
               <div className="min-w-0 flex-1">
                 <div className="font-semibold">{selected.full_name}</div>
-                <div className="text-xs text-muted-foreground">{selected.registration_number} · {selected.email}{selected.course?.name ? ` · ${selected.course.name}` : ''}</div>
+                <div className="text-xs text-muted-foreground">{selected.registration} · {selected.email}{selected.course?.name ? ` · ${selected.course.name}` : ''}</div>
               </div>
               <button className="text-xs text-primary hover:underline" onClick={() => setSelected(null)}>Trocar aluno</button>
             </CardContent></Card>

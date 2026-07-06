@@ -7,7 +7,7 @@ const REQ_SELECT = `
   id, protocol_number, title, description, status, priority, due_date,
   created_at, updated_at, completed_at, response, assigned_to, student_id, category_id,
   category:requirement_categories(id, code, name, department, sla_days, requires_attachment),
-  student:students(id, full_name, registration_number, email, course_id, course:courses(name))
+  student:students(id, full_name, registration, email, course_id, course:courses(name))
 `;
 
 export interface RequirementFilters {
@@ -230,8 +230,8 @@ export function useStudentSearch(q: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('students')
-        .select('id, full_name, registration_number, email, course:courses(name)')
-        .or(`full_name.ilike.%${q}%,registration_number.ilike.%${q}%,email.ilike.%${q}%`)
+        .select('id, full_name, registration, email, course:courses(name)')
+        .or(`full_name.ilike.%${q}%,registration.ilike.%${q}%,email.ilike.%${q}%`)
         .limit(20);
       if (error) throw error;
       return data ?? [];

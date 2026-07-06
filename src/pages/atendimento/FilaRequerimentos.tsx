@@ -95,7 +95,7 @@ export default function FilaRequerimentos() {
                         <TableCell className="font-mono text-xs">{r.protocol_number}</TableCell>
                         <TableCell className="text-sm">
                           <div className="font-medium">{r.student?.full_name ?? '—'}</div>
-                          <div className="text-xs text-muted-foreground">{r.student?.registration_number}</div>
+                          <div className="text-xs text-muted-foreground">{r.student?.registration}</div>
                         </TableCell>
                         <TableCell className="text-sm max-w-[240px] truncate">{r.title}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{r.category?.name ?? '—'}</TableCell>

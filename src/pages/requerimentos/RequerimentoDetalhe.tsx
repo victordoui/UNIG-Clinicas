@@ -37,7 +37,7 @@ export default function RequerimentoDetalhe() {
                 <h1 className="text-xl font-bold flex items-center gap-2"><FileText className="h-5 w-5 text-primary" />{req.title}</h1>
                 {req.category?.name && <div className="text-sm text-muted-foreground mt-0.5">{req.category.name}{req.category.department ? ` · ${req.category.department}` : ''}</div>}
                 {staff && req.student && (
-                  <div className="text-xs text-muted-foreground mt-1">Aluno: <strong>{req.student.full_name}</strong> · {req.student.registration_number}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Aluno: <strong>{req.student.full_name}</strong> · {req.student.registration}</div>
                 )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
