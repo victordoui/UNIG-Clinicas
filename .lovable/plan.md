@@ -1,89 +1,98 @@
-# Fase 4 — CRUD Acadêmico Completo
+# Fase 5 — Notas & Frequência
 
-Substitui os placeholders do menu **Acadêmico** por telas reais de cadastro e gestão. É a base de dados para tudo o que vem depois (grade, financeiro, relatórios).
+Implementa lançamento de notas e controle de presença pelo professor, além do boletim consolidado do aluno com cálculo automático de média e situação.
 
 ## Escopo
 
-### 1. Alunos (`/academico/alunos`)
-- Lista com busca (nome/matrícula/e-mail), filtros (curso, unidade, status de matrícula) e paginação.
-- Colunas: nome, matrícula, curso, unidade, status, ações.
-- Ações: novo aluno, editar, ver perfil completo (drawer), inativar.
-- Modal de criação/edição com todos os campos de `students`.
+### 1. Modelo de dados (nova migração)
+Duas tabelas novas em `public`, ambas com GRANTs completos e RLS:
 
-### 2. Professores (`/academico/professores`)
-- Lista com busca, filtro por departamento, unidade.
-- Colunas: nome, titulação, departamento, e-mail, ações.
-- CRUD via modal.
+**`grades`** — nota por avaliação
+- `id uuid pk`, `enrollment_id uuid fk enrollments`, `assessment text` (AV1/AV2/AV3/REC), `score numeric(5,2)`, `max_score numeric(5,2) default 10`, `weight numeric(4,2) default 1`, `released_at timestamptz`, `released_by uuid`, `notes text`, `created_at/updated_at`.
+- Unique `(enrollment_id, assessment)`.
 
-### 3. Cursos (`/academico/cursos`)
-- Grid de cards + lista alternativa.
-- Filtros: unidade, modalidade, tipo (graduação/pós/técnico).
-- CRUD via modal (código, nome, tipo, duração, modalidade, unidade, coordenador).
+**`attendance_records`** — presença por aula
+- `id uuid pk`, `enrollment_id uuid fk`, `class_date date`, `status text` (`present|absent|justified`), `hours numeric(4,2) default 2`, `notes text`, `recorded_by uuid`, timestamps.
+- Unique `(enrollment_id, class_date)`.
 
-### 4. Disciplinas (`/academico/disciplinas`)
-- Lista com busca, filtro por curso e semestre.
-- Colunas: código, nome, carga horária, semestre, curso.
-- CRUD via modal.
+**RLS**:
+- Aluno lê apenas suas próprias notas/presenças (via `enrollments.student_id → students.profile_id = auth.uid()`).
+- Professor da turma (via `classes.professor_id → professors.profile_id = auth.uid()`) faz CRUD.
+- Staff (`is_staff(auth.uid())`) tem acesso total.
 
-### 5. Turmas (`/academico/turmas`)
-- Lista com filtros: período, curso, disciplina, professor, unidade.
-- Colunas: código, disciplina, professor, período, turno, sala, ocupação (matriculados/capacidade).
-- CRUD via modal (inclui vínculo com disciplina, professor, sala, capacidade, período, turno, horários da grade).
-- Editor de horários integrado (dias da semana + start/end) que grava em `classes.schedule` (JSONB já existente).
-- Ação **"Ver matrículas"** — drawer lista alunos matriculados naquela turma com opções de adicionar/remover.
+**Constantes de negócio** (em `src/lib/grades.ts`):
+- Média = média ponderada AV1+AV2+AV3.
+- Aprovado se média ≥ 6 **e** frequência ≥ 75%.
+- Em recuperação se 4 ≤ média < 6.
+- Reprovado se média < 4 ou frequência < 75%.
+- Após REC, média final = max(média, nota REC) — regra padrão UNIG-A.
 
-### 6. Matriz Curricular (`/academico/matriz`)
-- Seleciona um curso → mostra disciplinas agrupadas por semestre.
-- Ação: adicionar disciplina existente ao curso (ajustando `subjects.course_id` e `semester`).
-- Somente leitura para papéis não-secretaria/coordenação/admin.
+### 2. Hooks (`src/hooks/useGrades.ts`)
+- `useClassRoster(classId)` — alunos matriculados + notas + faltas.
+- `useStudentGrades(studentId)` — boletim consolidado (todas as disciplinas do período ativo).
+- `useUpsertGrade()`, `useUpsertAttendance()`, `useBulkAttendance()` — mutations com invalidation.
 
-### 7. Grade de Aulas (`/academico/aulas`)
-- Grade semanal consolidada de **todas as turmas** de uma unidade/curso escolhido.
-- Reaproveita o `WeeklyScheduleGrid` do portal do aluno.
-- Filtros: unidade, curso, turno.
+### 3. Portal do Professor (rotas reais)
+Substitui os placeholders atuais:
 
-## Fora de escopo desta fase
-- Importação em massa (CSV/Excel) — Fase futura.
-- Vincular login (auth.users) ao aluno/professor — Fase de Convites/Usuários.
-- Histórico escolar, notas e frequência — Fase 5 (Notas & Frequência).
-- Gestão de salas — Fase 6 (Espaços).
+- **`/professor/turmas`** — lista das turmas em que o professor leciona (filtro por período), card com botão "Lançar notas" e "Registrar presença".
+- **`/professor/turmas/:classId/notas`** — tabela editável: linhas = alunos, colunas = AV1/AV2/AV3/REC/Média/Situação. Edição inline com debounce + salvar. Botão "Publicar" (marca `released_at`).
+- **`/professor/turmas/:classId/frequencia`** — seletor de data + grid alunos × status (presente/ausente/justificada). Suporta lote (marcar todos presentes).
+- **`/professor/grade`** — grade semanal reaproveitando `WeeklyScheduleGrid` filtrada pelo professor.
+
+### 4. Portal do Aluno (upgrade da tela existente)
+- **`/aluno/notas`** — substitui a `GradesTable` placeholder atual pela versão real com dados de `grades` + `attendance_records`, cálculo de média/frequência/situação e badge colorida.
+- Mantém layout atual (Card + Table) para preservar UX.
+
+### 5. Componentes novos (`src/components/notas/`)
+- `GradeEntryTable` — tabela editável usada pelo professor.
+- `AttendanceGrid` — grid de presença por data.
+- `StudentReportCard` — boletim do aluno (usado em `/aluno/notas` e no drawer de "Ver perfil" no `/academico/alunos`).
+- `SituationBadge` — badge de situação (aprovado/reprovado/em curso/recuperação).
+
+### 6. Integrações
+- `App.tsx`: trocar placeholders `/professor/turmas` e `/professor/grade`, adicionar `/professor/turmas/:classId/notas` e `/professor/turmas/:classId/frequencia`.
+- `academico/Alunos.tsx`: no drawer de perfil, incluir aba "Boletim" reutilizando `StudentReportCard`.
+
+## Fora de escopo
+- Diário de classe/plano de aula (fase futura).
+- Recuperação paralela / prova substitutiva com regras customizáveis por curso.
+- Exportação de boletim em PDF (fase de Relatórios).
+- Notificação automática ao aluno quando nota é publicada (fase de Comunicação).
 
 ## Permissões
-- **Leitura**: staff acadêmico (`secretaria`, `coordenacao`, `administrador`, `super_admin`, `gestor_unidade`) — demais papéis não veem menu.
-- **Escrita** (create/update/delete): `secretaria`, `coordenacao`, `administrador`, `super_admin`.
-- Componente `<StaffOnly roles={[...]}>` para gatear botões de ação.
+- **Notas/Presença write**: `professor` (só da própria turma), `secretaria`, `coordenacao`, `administrador`, `super_admin`.
+- **Read (aluno)**: apenas suas próprias.
+- **Read (staff acadêmico)**: tudo.
 
 ## Estrutura técnica
 
-**Hooks** (`src/hooks/`):
-- `useAcademicData.ts` — hooks unificados: `useStudents`, `useProfessors`, `useCourses`, `useSubjects`, `useClasses`, `useClassEnrollments`, e mutations correspondentes (`useUpsertStudent`, `useUpsertProfessor`, `useUpsertCourse`, `useUpsertSubject`, `useUpsertClass`, `useEnrollStudent`, `useUnenrollStudent`, `useDeleteEntity`).
-- Filtros padronizados via objeto de opções.
-
-**Componentes** (`src/components/academico/`):
-- `StudentFormDialog`, `ProfessorFormDialog`, `CourseFormDialog`, `SubjectFormDialog`, `ClassFormDialog` (todos com Zod + react-hook-form).
-- `ClassScheduleEditor` — matriz visual de dias × horários.
-- `ClassEnrollmentsDrawer` — lista alunos + autocomplete para adicionar.
-- `EntityTable` — tabela padrão reutilizável (busca, ordenação, ações).
-- `AcademicFiltersBar` — filtros reutilizáveis (unidade, curso, etc.).
-- `StaffOnly` — wrapper de permissão.
-- `ConfirmDeleteDialog` — reaproveitado nos 6 CRUDs.
-
-**Páginas** (`src/pages/academico/`):
-- `Alunos.tsx`, `Professores.tsx`, `Cursos.tsx`, `Disciplinas.tsx`, `Turmas.tsx`, `Matriz.tsx`, `Aulas.tsx`.
-
-**Utilitário**:
-- `src/lib/academic.ts` — labels (turno, modalidade, tipo de curso, status de matrícula), helpers de horário.
-
-**Sem migração de banco** — o schema atual (`students`, `professors`, `courses`, `subjects`, `classes`, `enrollments`, `units`) já contém tudo. Apenas garantimos que as políticas RLS existentes permitem escrita para staff (validaremos antes de codar; se faltar, criamos uma micro-migração).
+```text
+supabase/migrations/xxx_grades_attendance.sql   (novo)
+src/lib/grades.ts                                (novo — cálculos + labels)
+src/hooks/useGrades.ts                           (novo)
+src/components/notas/
+  ├── GradeEntryTable.tsx
+  ├── AttendanceGrid.tsx
+  ├── StudentReportCard.tsx
+  └── SituationBadge.tsx
+src/pages/professor/
+  ├── MinhasTurmas.tsx
+  ├── LancarNotas.tsx
+  ├── RegistrarFrequencia.tsx
+  └── GradeSemanal.tsx
+src/pages/aluno/Notas.tsx                        (refatorado — usa StudentReportCard)
+src/App.tsx                                       (rotas)
+```
 
 ## Ordem de execução
-1. Validar RLS de escrita (`students`, `professors`, `courses`, `subjects`, `classes`). Se faltar, migração mínima com policies para staff.
-2. `lib/academic.ts` + `hooks/useAcademicData.ts`.
-3. Componentes compartilhados (`EntityTable`, `StaffOnly`, `ConfirmDeleteDialog`, `AcademicFiltersBar`, `ClassScheduleEditor`).
-4. Formulários (5 dialogs) — em paralelo.
-5. Páginas (7 telas) — em paralelo.
-6. Atualizar `App.tsx` para trocar os 7 placeholders pelas rotas reais.
-7. Smoke-test manual: criar 1 registro de cada tipo e vincular aluno demo a nova turma.
+1. Migração `grades` + `attendance_records` com GRANTs e policies.
+2. `lib/grades.ts` (cálculos) + `hooks/useGrades.ts`.
+3. Componentes compartilhados (`SituationBadge`, `StudentReportCard`, `GradeEntryTable`, `AttendanceGrid`).
+4. Páginas do professor (4 telas).
+5. Refatorar `aluno/Notas.tsx` para consumir dados reais.
+6. Atualizar `App.tsx`.
+7. Seed mínimo: preencher notas/presenças demo para o aluno `aluno@unig.demo` validarem o boletim end-to-end.
 
-## Próxima fase (Fase 5)
-Notas & Frequência: lançamento pelo professor, boletim do aluno, cálculo de média, situação (aprovado / reprovado / em recuperação).
+## Próxima fase (Fase 6)
+Espaços — cadastro de salas, agenda de reservas, mapa de ocupação e workflow de solicitação/aprovação.
