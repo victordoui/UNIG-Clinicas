@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MapPinned, Users, Building2, Monitor, Wind, Projector, Pencil, CalendarDays } from 'lucide-react';
 import { ROOM_TYPE_LABEL, ROOM_STATUS_LABEL, roomStatusBadgeClass } from '@/lib/rooms';
 import { RoomFormDialog } from './RoomFormDialog';
+import { ReservationFormDialog } from './ReservationFormDialog';
 import { ConfirmDeleteDialog } from '@/components/academico/ConfirmDeleteDialog';
 import { Link } from 'react-router-dom';
 
@@ -11,11 +12,11 @@ interface Props {
   room: any;
   canWrite?: boolean;
   onDelete?: (id: string) => void;
-  onReserve?: (room: any) => void;
+  showReserve?: boolean;
   compact?: boolean;
 }
 
-export function RoomCard({ room, canWrite, onDelete, onReserve, compact }: Props) {
+export function RoomCard({ room, canWrite, onDelete, showReserve = true, compact }: Props) {
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className={compact ? 'p-3 space-y-2' : 'p-4 space-y-3'}>
