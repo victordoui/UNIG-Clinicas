@@ -27,6 +27,13 @@ import NovoRequerimento from './pages/requerimentos/NovoRequerimento';
 import RequerimentoDetalhe from './pages/requerimentos/RequerimentoDetalhe';
 import FilaRequerimentos from './pages/atendimento/FilaRequerimentos';
 import HistoricoAluno from './pages/atendimento/HistoricoAluno';
+import AcademicoAlunos from './pages/academico/Alunos';
+import AcademicoProfessores from './pages/academico/Professores';
+import AcademicoCursos from './pages/academico/Cursos';
+import AcademicoDisciplinas from './pages/academico/Disciplinas';
+import AcademicoTurmas from './pages/academico/Turmas';
+import AcademicoMatriz from './pages/academico/Matriz';
+import AcademicoAulas from './pages/academico/Aulas';
 
 const queryClient = new QueryClient();
 
@@ -68,13 +75,13 @@ const App = () => (
             <Route path="/atendimento/historico" element={<ProtectedRoute><HistoricoAluno /></ProtectedRoute>} />
 
             {/* Acadêmico */}
-            <Route path="/academico/alunos" element={P('Alunos','Gestão dos alunos ativos.', GraduationCap)} />
-            <Route path="/academico/professores" element={P('Professores','Gestão do corpo docente.', BookOpen)} />
-            <Route path="/academico/cursos" element={P('Cursos','Cursos oferecidos pela instituição.', School)} />
-            <Route path="/academico/disciplinas" element={P('Disciplinas','Disciplinas vinculadas aos cursos.', Layers3)} />
-            <Route path="/academico/turmas" element={P('Turmas','Grupos de alunos por período.', Users)} />
-            <Route path="/academico/matriz" element={P('Grade Curricular','Matriz curricular dos cursos.', Layers3)} />
-            <Route path="/academico/aulas" element={P('Grade de Aulas','Cronograma semanal de aulas.', CalendarDays)} />
+            <Route path="/academico/alunos" element={<ProtectedRoute><AcademicoAlunos /></ProtectedRoute>} />
+            <Route path="/academico/professores" element={<ProtectedRoute><AcademicoProfessores /></ProtectedRoute>} />
+            <Route path="/academico/cursos" element={<ProtectedRoute><AcademicoCursos /></ProtectedRoute>} />
+            <Route path="/academico/disciplinas" element={<ProtectedRoute><AcademicoDisciplinas /></ProtectedRoute>} />
+            <Route path="/academico/turmas" element={<ProtectedRoute><AcademicoTurmas /></ProtectedRoute>} />
+            <Route path="/academico/matriz" element={<ProtectedRoute><AcademicoMatriz /></ProtectedRoute>} />
+            <Route path="/academico/aulas" element={<ProtectedRoute><AcademicoAulas /></ProtectedRoute>} />
 
             {/* Espaços */}
             <Route path="/espacos" element={P('Dashboard de Espaços','Visão consolidada de reservas e ocupação.', MapPinned)} />
