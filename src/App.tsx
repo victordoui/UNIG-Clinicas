@@ -34,6 +34,10 @@ import AcademicoDisciplinas from './pages/academico/Disciplinas';
 import AcademicoTurmas from './pages/academico/Turmas';
 import AcademicoMatriz from './pages/academico/Matriz';
 import AcademicoAulas from './pages/academico/Aulas';
+import ProfessorTurmas from './pages/professor/MinhasTurmas';
+import ProfessorLancarNotas from './pages/professor/LancarNotas';
+import ProfessorFrequencia from './pages/professor/RegistrarFrequencia';
+import ProfessorGrade from './pages/professor/GradeSemanal';
 
 const queryClient = new QueryClient();
 
