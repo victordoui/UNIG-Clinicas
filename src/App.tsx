@@ -34,6 +34,10 @@ import AcademicoDisciplinas from './pages/academico/Disciplinas';
 import AcademicoTurmas from './pages/academico/Turmas';
 import AcademicoMatriz from './pages/academico/Matriz';
 import AcademicoAulas from './pages/academico/Aulas';
+import ProfessorTurmas from './pages/professor/MinhasTurmas';
+import ProfessorLancarNotas from './pages/professor/LancarNotas';
+import ProfessorFrequencia from './pages/professor/RegistrarFrequencia';
+import ProfessorGrade from './pages/professor/GradeSemanal';
 
 const queryClient = new QueryClient();
 
@@ -62,8 +66,10 @@ const App = () => (
             <Route path="/aluno/perfil" element={<ProtectedRoute><AlunoPerfil /></ProtectedRoute>} />
 
             {/* Portal do Professor */}
-            <Route path="/professor/turmas" element={P('Minhas Turmas','Turmas em que você leciona.', Users)} />
-            <Route path="/professor/grade" element={P('Grade Semanal','Sua agenda semanal de aulas.', CalendarDays)} />
+            <Route path="/professor/turmas" element={<ProtectedRoute><ProfessorTurmas /></ProtectedRoute>} />
+            <Route path="/professor/turmas/:classId/notas" element={<ProtectedRoute><ProfessorLancarNotas /></ProtectedRoute>} />
+            <Route path="/professor/turmas/:classId/frequencia" element={<ProtectedRoute><ProfessorFrequencia /></ProtectedRoute>} />
+            <Route path="/professor/grade" element={<ProtectedRoute><ProfessorGrade /></ProtectedRoute>} />
 
             {/* Requerimentos */}
             <Route path="/requerimentos" element={<ProtectedRoute><MeusRequerimentos /></ProtectedRoute>} />
