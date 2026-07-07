@@ -84,9 +84,19 @@ export default function ComunicacaoGestao() {
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditing(a); setOpenA(true); }}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setConfirmDel(a)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <ConfirmDeleteDialog
+                        title="Excluir comunicado?"
+                        description={a.title}
+                        onConfirm={async () => {
+                          await del.mutateAsync(a.id);
+                          toast({ title: 'Comunicado excluído' });
+                        }}
+                        trigger={
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        }
+                      />
                     </div>
                   )}
                 />
