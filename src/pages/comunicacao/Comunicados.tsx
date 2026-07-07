@@ -31,7 +31,6 @@ export default function ComunicacaoGestao() {
   const [openA, setOpenA] = useState(false);
   const [openC, setOpenC] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [confirmDel, setConfirmDel] = useState<any>(null);
 
   return (
     <MainLayout>
