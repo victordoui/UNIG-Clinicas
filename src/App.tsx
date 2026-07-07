@@ -52,6 +52,10 @@ import FinanceiroBoletos from './pages/financeiro/Boletos';
 import FinanceiroBolsas from './pages/financeiro/Bolsas';
 import FinanceiroRelatorios from './pages/financeiro/Relatorios';
 import AlunoFinanceiro from './pages/aluno/Financeiro';
+import ComunicadosFeed from './pages/Comunicados';
+import ComunicacaoGestao from './pages/comunicacao/Comunicados';
+import ComunicacaoNotificacoes from './pages/comunicacao/Notificacoes';
+import ComunicacaoMensagens from './pages/comunicacao/Mensagens';
 
 const queryClient = new QueryClient();
 
