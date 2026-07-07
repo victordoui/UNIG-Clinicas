@@ -122,18 +122,6 @@ export default function ComunicacaoGestao() {
 
       <AnnouncementFormDialog open={openA} onOpenChange={setOpenA} initial={editing} />
       <CommunicationFormDialog open={openC} onOpenChange={setOpenC} />
-      <ConfirmDeleteDialog
-        open={!!confirmDel}
-        onOpenChange={(v) => { if (!v) setConfirmDel(null); }}
-        title="Excluir comunicado?"
-        description={confirmDel?.title}
-        onConfirm={async () => {
-          if (!confirmDel) return;
-          await del.mutateAsync(confirmDel.id);
-          toast({ title: 'Comunicado excluído' });
-          setConfirmDel(null);
-        }}
-      />
     </MainLayout>
   );
 }
