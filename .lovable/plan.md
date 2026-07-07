@@ -1,86 +1,73 @@
-## Fase 9 — Relatórios avançados
+## Fase 10 — Administração
 
-Substitui os dois placeholders (`/relatorios/academicos` e `/relatorios/operacionais`) por páginas reais de relatórios agregados, com filtros de período, curso/turma/perfil e unidade. Segue os padrões (StaffOnly leitura, hooks tanstack-query, cards KPI, tabelas simples, sem redesign global).
-
-Já existentes: `/relatorios/ocupacao` (Fase 6) e `/financeiro/relatorios` (Fase 7). Esta fase completa a área.
+Substitui os 5 placeholders em `/admin/*` por páginas reais de administração do sistema, mantendo padrões existentes (StaffOnly, hooks tanstack-query, tabelas simples, sem redesign global).
 
 ### Escopo
 
-**1. Camada compartilhada**
+**1. Camada de dados**
 
-- `src/lib/reports.ts` — período padrão (últimos 30/90 dias / mês atual / ano letivo), formatação, agregações puras (`groupCount`, `avgBy`, `pctBy`), export CSV client-side (`downloadCSV(rows, filename)`).
-- `src/hooks/useReports.ts` — hooks tanstack-query que consomem as tabelas existentes:
-  - **Acadêmicos**: `useEnrollmentStats(filters)`, `useGradeStats(filters)`, `useAttendanceStats(filters)`, `useCourseSummary(filters)`.
-  - **Operacionais**: `useRequirementStats(filters)` (SLA, tempo médio de atendimento, por status/categoria), `useUnitLoad(filters)` (carga por unidade).
+Migração SQL adicionando funções RPC seguras para operações administrativas (todas `SECURITY DEFINER` com checagem `has_role(super_admin/administrador)`):
+- `admin_assign_role(_user_id, _role, _unit_id?)` — adiciona role em `user_roles`.
+- `admin_revoke_role(_user_role_id)` — desativa (`is_active=false`).
+- `admin_set_password_reset(_user_id)` — marca `password_change_required=true` no `profiles`.
+- `admin_upsert_setting(_key, _value, _description?)` — insert/update em `system_settings`.
 
-Todos os hooks aceitam `{ from, to, courseId?, classId?, unitId?, role? }` e fazem `SELECT` no client via Supabase (RLS já cuida do acesso — apenas staff).
+Nenhuma nova tabela — usa as existentes: `profiles`, `user_roles`, `units`, `system_settings`, `audit_logs`, `role_permissions`.
 
-**2. Componentes (`src/components/relatorios/`)**
+**2. Camada de lógica**
 
-- `ReportFilters` — barra reutilizável (período com preset + custom, `courseId`, `classId`, `unitId` opcionais).
-- `MetricCard` — reusa `CoverKpiCard`, wrapper com título/valor/subtítulo/ícone (se um wrapper simples não bastar, cria pequeno stub).
-- `BarList` — lista de barras horizontal (label + valor + barra tailwind), padrão dos relatórios financeiros/ocupação existentes.
-- `BreakdownTable` — tabela genérica (colunas dinâmicas) com export CSV.
-- `ExportCsvButton` — botão "Exportar CSV".
+- `src/lib/admin.ts` — helpers de formatação (data/hora do log, cor por ação, filtros de log).
+- `src/hooks/useAdmin.ts` — hooks tanstack-query:
+  - `useAdminUsers(filters)` — join `profiles` + `user_roles` ativos.
+  - `useAssignRole()`, `useRevokeRole()`, `useResetPassword()` — mutations.
+  - `useAdminUnits()`, `useCreateUnit()`, `useUpdateUnit()`, `useToggleUnitStatus()`.
+  - `useSystemSettings()`, `useUpsertSetting()`.
+  - `useAuditLogs(filters)` — leitura paginada.
+  - `useRolePermissions()` — leitura da matriz `role_permissions`.
 
-**3. Páginas**
+**3. Componentes (`src/components/admin/`)**
 
-- `/relatorios/academicos` — Relatórios Acadêmicos
-  - KPIs: total de matrículas ativas, taxa de aprovação, média geral, frequência média.
-  - Breakdowns: matrículas por curso, aprovação por disciplina, notas por período, frequência por turma.
-  - Filtros: período, curso, turma.
+- `UserRolesTable` — tabela de usuários com roles ativos, ações "Adicionar papel" / "Revogar" / "Resetar senha".
+- `AssignRoleDialog` — seleciona role (enum) e unidade opcional.
+- `UnitFormDialog` — form CRUD de unidades (nome, código, endereço, telefone).
+- `PermissionsMatrixTable` — leitura da matriz (role × module × action) somente-visualização.
+- `SettingsForm` — lista chave/valor de `system_settings` editável inline (JSON).
+- `AuditLogTable` — tabela com filtros (ação, tabela, período, usuário) + paginação.
+- `AuditLogFilters` — barra de filtros reutilizável.
 
-- `/relatorios/operacionais` — Relatórios Operacionais
-  - KPIs: requerimentos abertos, no prazo, tempo médio de resposta, taxa de resolução.
-  - Breakdowns: requerimentos por status, por categoria, por unidade, por atendente; SLA (dentro/fora).
-  - Filtros: período, categoria, unidade, status.
+**4. Páginas (substituem placeholders)**
 
-Cada página tem botão **Exportar CSV** nas tabelas principais.
+- `/admin/usuarios` — lista + gerenciamento de papéis, reset de senha.
+- `/admin/permissoes` — matriz somente-leitura de `role_permissions`.
+- `/admin/unidades` — CRUD de unidades (já usadas por espaços/turmas).
+- `/admin/configuracoes` — editor de `system_settings` (chave/valor).
+- `/admin/logs` — visualização de `audit_logs` com filtros.
 
-**4. Integrações mínimas**
+**5. Integrações**
 
-- Substituir os 2 placeholders em `App.tsx`.
-- Nenhuma alteração em Sidebar, Header, dashboards ou outros módulos.
-- Reusa componentes existentes: `CoverKpiCard`, `SituationBadge`, `Badge`, `Select`, `Popover+Calendar`.
+- Substituir 5 placeholders em `App.tsx`.
+- Acesso restrito a `super_admin` e `administrador` (guard via `ProtectedRoute allowRoles`).
+- Sidebar já expõe `/admin/*` — nada a alterar.
+- Reusa: `Table`, `Dialog`, `Select`, `Input`, `Badge`, `SituationBadge`, `CoverKpiCard`.
 
 ### Fora de escopo
 
-- Gráficos de biblioteca externa (usar barras/listas em Tailwind, como nas fases anteriores).
-- Export PDF / Excel nativo (CSV client-side é suficiente).
-- Agendamento de relatórios por e-mail.
-- Cache/materialized views (agregação client-side com paginação até 1000 linhas por consulta — dados demo cabem).
+- Edição da matriz de permissões (leitura apenas — mudanças exigem migração).
+- Impersonation / login-as-user.
+- Backup/restore.
+- Logs em tempo real (usa polling padrão do tanstack-query).
 
 ### Permissões
 
-- Leitura restrita a `is_staff` (RLS já garante nas tabelas).
-- UI de acesso: qualquer staff (Sidebar já expõe `/relatorios/*` para staff).
-
-### Estrutura técnica
-
-```text
-src/lib/reports.ts
-src/hooks/useReports.ts
-src/components/relatorios/
-  ├── ReportFilters.tsx
-  ├── BarList.tsx
-  ├── BreakdownTable.tsx
-  └── ExportCsvButton.tsx
-src/pages/relatorios/
-  ├── Academicos.tsx
-  └── Operacionais.tsx
-src/App.tsx  (trocar 2 placeholders)
-```
+- Todas as páginas `/admin/*`: `allowRoles={['super_admin','administrador']}`.
+- RPCs verificam `has_role` no servidor (defesa em profundidade).
 
 ### Ordem de execução
 
-1. `lib/reports.ts` (utilitários + CSV) e `hooks/useReports.ts`.
-2. Componentes compartilhados (`ReportFilters`, `BarList`, `BreakdownTable`, `ExportCsvButton`).
-3. Página `/relatorios/academicos`.
-4. Página `/relatorios/operacionais`.
-5. Atualizar `App.tsx` (2 rotas).
+1. Migração SQL (RPCs administrativas).
+2. `lib/admin.ts` + `hooks/useAdmin.ts`.
+3. Componentes compartilhados.
+4. 5 páginas.
+5. `App.tsx` — trocar placeholders + `allowRoles`.
 6. Typecheck.
-7. Atualizar `.lovable/plan.md` marcando Fase 9 concluída e apontando para Fase 10 (Administração).
-
-### Próxima fase (Fase 10)
-
-Administração — usuários, permissões, unidades, configurações gerais, logs (placeholders `/admin/*`).
+7. Atualizar `.lovable/plan.md` marcando Fase 10 concluída.
