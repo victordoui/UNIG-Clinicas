@@ -29,9 +29,9 @@ export default defineConfig(({ mode }) => ({
         'robots.txt'
       ],
       manifest: {
-        name: 'UNIG Ops - Gestão Inteligente de Almoxarifado',
-        short_name: 'UNIG Ops',
-        description: 'Sistema completo para gestão de estoque e almoxarifado com controle inteligente de produtos',
+        name: 'UNIG-A — Portal Acadêmico Integrado',
+        short_name: 'UNIG-A',
+        description: 'Portal Acadêmico Integrado da UNIG: alunos, professores, secretaria, coordenação, financeiro e gestão em um único sistema.',
         theme_color: '#1976D2',
         background_color: '#ffffff',
         display: 'standalone',

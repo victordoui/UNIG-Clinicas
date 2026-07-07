@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LogOut, GraduationCap } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { UNIG_ROLE_LABEL, UNIG_ROLE_BADGE, UNIG_ROLE_ICON } from '@/lib/unigRoles';
 import { NotificationBell } from '@/components/comunicacao/NotificationBell';
 import { cn } from '@/lib/utils';
+import unigLogo from '@/assets/uniga-logo.png.asset.json';
 
 export function Header() {
   const { profile, unigRole, signOut } = useAuth();
@@ -17,7 +18,7 @@ export function Header() {
   return (
     <div className="flex-1 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2 min-w-0">
-        <GraduationCap className="h-5 w-5 text-primary shrink-0" />
+        <img src={unigLogo.url} alt="UNIG-A" className="h-7 w-7 object-contain shrink-0" />
         <span className="font-bold text-primary hidden sm:inline">UNIG-A</span>
         <span className="text-muted-foreground text-sm hidden md:inline">· Portal Acadêmico Integrado</span>
       </div>

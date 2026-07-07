@@ -5,6 +5,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { UnigRole } from '@/lib/unigRoles';
+import unigLogo from '@/assets/uniga-logo.png.asset.json';
 import {
   Home, GraduationCap, BookOpen, FileText, DollarSign, FileBadge, Megaphone,
   ClipboardList, Users, School, Layers3, CalendarDays, MapPinned, Map,
@@ -126,9 +127,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
         <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <GraduationCap className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src={unigLogo.url} alt="UNIG-A" className="h-8 w-8 rounded-lg object-contain shrink-0" />
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-bold text-sm leading-none">UNIG-A</span>
