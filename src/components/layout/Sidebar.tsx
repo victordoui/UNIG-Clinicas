@@ -6,6 +6,8 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { UnigRole } from '@/lib/unigRoles';
 import unigLogo from '@/assets/uniga-logo.png';
+import { cn } from '@/lib/utils';
+
 import {
   Home, GraduationCap, BookOpen, FileText, DollarSign, FileBadge, Megaphone,
   ClipboardList, Users, School, Layers3, CalendarDays, MapPinned, Map,
