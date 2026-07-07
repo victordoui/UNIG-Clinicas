@@ -1,38 +1,84 @@
-# Aplicação da nova logo institucional
+# Próximos passos — UNIG-A pós-MVP
 
-Usar a imagem enviada (cap acadêmico + livro em tons de azul) como marca oficial do sistema em todos os pontos de contato visual. **Sem alterar layouts, cores, tipografia ou funcionalidades** — apenas trocar o ativo de marca nos slots existentes.
+Divido o trabalho em **4 blocos**, do mais urgente (fechar o ciclo do MVP) ao mais estratégico (integrações e app nativo). Cada bloco pode ser aprovado e executado separadamente — recomendo seguir na ordem.
 
-## Escopo
+---
 
-1. **Upload do arquivo como asset CDN** via `lovable-assets` a partir de `/mnt/user-uploads/`, gerando `src/assets/uniga-logo.png.asset.json`. O binário fica na CDN, o repo só guarda o ponteiro.
+## Bloco 1 — QA end-to-end por perfil (fechamento do MVP)
 
-2. **Sidebar / Header** (`src/components/layout/Sidebar.tsx`, `src/components/layout/Header.tsx`)
-   - Substituir o logo/mark atual pelo `<img src={logo.url}>`, mantendo tamanho, espaçamento e comportamento colapsado/expandido já existentes.
+Objetivo: validar cada um dos 10 papéis navegando pelos fluxos reais com os dados semeados (`seed-demo-users` + dados de demo já existentes).
 
-3. **Tela de login** (`src/pages/Auth.tsx`)
-   - Exibir a logo em destaque no topo do card de login, mantendo o layout atual.
+Para cada papel: login via botão de acesso rápido → percorrer telas do menu → executar 1 ação de escrita representativa → conferir permissões (o que aparece / o que é bloqueado) → registrar bugs.
 
-4. **Favicon + meta tags** (`index.html`, `public/`)
-   - Copiar a imagem para `public/favicon.png` (a tag favicon exige caminho servido pela raiz, não CDN).
-   - Substituir `<link rel="icon">` para apontar a `/favicon.png` (type `image/png`).
-   - Remover `public/favicon.ico` padrão.
-   - Atualizar `<meta property="og:image">` e `<meta name="twitter:image">` só se já existirem — sem inventar URL absoluta.
-   - Definir `<link rel="apple-touch-icon" href="/favicon.png">` para iOS.
+| # | Papel | Fluxo mínimo validado |
+|---|---|---|
+| 1 | Aluno | Disciplinas · Grade · Notas · Frequência · Documentos · Financeiro · Novo requerimento |
+| 2 | Professor | Minhas Turmas · Lançar Notas · Registrar Frequência · Grade Semanal |
+| 3 | Secretaria | Alunos · Turmas · Matriz · Requerimentos (fila) · Comunicados |
+| 4 | Coordenação | Cursos · Disciplinas · Matriz · Turmas · Relatórios acadêmicos |
+| 5 | Financeiro | Mensalidades · Boletos · Marcar pago · Bolsas · Dashboard |
+| 6 | Atendimento | Fila de Requerimentos · Histórico do Aluno · Mensagens |
+| 7 | Gestor de Unidade | Unidades · Ocupação · Relatórios operacionais |
+| 8 | Operador de Espaços | Salas · Reservas · Solicitações · Agenda |
+| 9 | Administrador | Usuários · Permissões · Unidades · Configurações · Logs |
+| 10 | Super Admin | Todos os módulos + verificação `is_super_admin` bypass |
 
-5. **PWA / Instalação**
-   - Atualizar `public/manifest.webmanifest` (ou equivalente) para referenciar `/favicon.png` como ícone 512×512 e 192×192 (mesma imagem em ambos os slots — resolução é suficiente).
-   - Atualizar `src/pages/Install.tsx` para mostrar a logo no preview de instalação.
-   - Não recriar service worker nem cache; apenas trocar o ativo referenciado.
+Entrega: **relatório de QA** (arquivo `.lovable/qa-report.md`) listando por papel: telas OK, telas com bug, prints/observações, e correções aplicadas em seguida (patch mínimo).
 
-## Fora de escopo
+Ferramenta: Playwright headless dentro do sandbox — script único parametrizado por papel, screenshots em `/tmp/browser/qa/<role>/`.
 
-- Nenhuma mudança em cores, temas, fontes, componentes shadcn, rotas, hooks ou lógica.
-- Nenhuma alteração no service worker existente (`dev-dist/sw.js`) — só o manifest é tocado.
-- Nenhum redesign de Sidebar/Header/Auth — só troca do `src` da imagem.
+---
 
-## Verificação
+## Bloco 2 — Revisão de segurança (RLS + linter)
 
-- Rodar `bun run build` para garantir que os imports resolvem.
-- Screenshot rápido via Playwright em `/auth` para confirmar a logo renderizada.
+1. Rodar `supabase--linter` e catalogar todos os findings.
+2. Para cada finding: classificar em **crítico / warning / informativo** e aplicar fix via migration.
+3. Rodar `security--run_security_scan` e resolver criticals antes de publicar.
+4. Revisar manualmente as 28 tabelas com foco em:
+   - `GRANT`s presentes para `authenticated` / `service_role`.
+   - Nenhuma policy usando `true` sem justificativa.
+   - Funções `SECURITY DEFINER` com `SET search_path = public`.
+   - Storage bucket `requirement-attachments` com policies por dono.
+5. Atualizar `@security-memory` com decisões tomadas (findings ignorados + justificativa).
 
-Aprovando, entro em build mode e executo na ordem: upload → refs no código → favicon/manifest → verificação.
+Entrega: migration(s) de hardening + relatório curto de findings fechados.
+
+---
+
+## Bloco 3 — Publicação
+
+1. Rodar `security--get_scan_results` — bloquear publicação se houver critical aberto.
+2. Confirmar metadados de `index.html` (título, description, OG) — já feitos na fase da logo.
+3. Publicar via `preview_ui--publish` (URL Lovable primeiro: `u-academy.lovable.app` já ativa; renomear se desejado).
+4. Guiar conexão de **domínio custom** em Project Settings → Domains:
+   - Preciso que você me diga **qual domínio** quer usar (ex.: `portal.unig.br`, `sistema.unig.br`).
+   - Passo a passo dos registros DNS (A → `185.158.133.1` para `@` e `www`, TXT `_lovable`).
+   - Aguardar propagação + SSL automático.
+5. Verificação pós-deploy: abrir URL final, login demo, checar PWA install e favicon.
+
+---
+
+## Bloco 4 — Integrações futuras (fora do MVP, planejar apenas)
+
+Estes são módulos grandes — cada um vira uma **Fase** própria depois de aprovado. Aqui só listo escopo e dependências para você priorizar:
+
+| Integração | Escopo resumido | Dependências / custo |
+|---|---|---|
+| **WhatsApp** | Notificações de boleto, comunicados e requerimentos via WhatsApp Business API | Conta Meta Business + provedor (Twilio/Z-API) + secret · edge function `send-whatsapp` |
+| **Google Calendar** | Sincronizar aulas, reservas de sala e eventos acadêmicos com agendas Google dos usuários | OAuth Google (connector) + escopo Calendar + edge function de sync bidirecional |
+| **UNIG Facilities** | Módulo de manutenção predial (chamados de infra, patrimônio, ordens de serviço) integrado às salas | Novas tabelas (`facility_tickets`, `assets`, `work_orders`) + novo papel `manutencao` + dashboards |
+| **BI avançado** | Data warehouse leve (views materializadas) + dashboards com drill-down, coortes, previsão de evasão | Views/materialized views no Supabase + biblioteca de charts avançada (Recharts já usada, avaliar Tremor) |
+| **App nativo (Capacitor)** | Empacotar como iOS + Android usando Capacitor, com push nativo e câmera para anexos | `@capacitor/*` + export para GitHub + Xcode/Android Studio no lado do usuário |
+
+Não implemento nada disso agora — apenas fica registrado para você escolher a ordem quando quiser abrir a Fase 12.
+
+---
+
+## Ordem sugerida e o que preciso de você
+
+1. **Aprovar Bloco 1** → eu rodo o QA e volto com o relatório e correções.
+2. **Aprovar Bloco 2** → hardening de segurança.
+3. **Aprovar Bloco 3** → me diga o **domínio custom** desejado (ou confirme manter só `u-academy.lovable.app`) e publico.
+4. **Bloco 4** → me diga qual integração quer priorizar primeiro; abro uma Fase dedicada.
+
+Posso começar direto pelo Bloco 1 assim que você aprovar.
