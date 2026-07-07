@@ -119,10 +119,10 @@ const App = () => (
 
 
             {/* Comunicação */}
-            <Route path="/comunicados" element={P('Comunicados','Comunicados institucionais.', Megaphone)} />
-            <Route path="/comunicacao/comunicados" element={P('Gestão de Comunicados','Publique comunicados para alunos, docentes ou unidade.', Megaphone)} />
-            <Route path="/comunicacao/notificacoes" element={P('Notificações','Notificações internas do sistema.', Bell)} />
-            <Route path="/comunicacao/mensagens" element={P('Mensagens','Mensagens diretas.', MessageSquare)} />
+            <Route path="/comunicados" element={<ProtectedRoute><ComunicadosFeed /></ProtectedRoute>} />
+            <Route path="/comunicacao/comunicados" element={<ProtectedRoute><ComunicacaoGestao /></ProtectedRoute>} />
+            <Route path="/comunicacao/notificacoes" element={<ProtectedRoute><ComunicacaoNotificacoes /></ProtectedRoute>} />
+            <Route path="/comunicacao/mensagens" element={<ProtectedRoute><ComunicacaoMensagens /></ProtectedRoute>} />
 
             {/* Financeiro */}
             <Route path="/financeiro" element={<ProtectedRoute><FinanceiroDashboard /></ProtectedRoute>} />
