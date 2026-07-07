@@ -58,6 +58,13 @@ import ComunicadosFeed from './pages/Comunicados';
 import ComunicacaoGestao from './pages/comunicacao/Comunicados';
 import ComunicacaoNotificacoes from './pages/comunicacao/Notificacoes';
 import ComunicacaoMensagens from './pages/comunicacao/Mensagens';
+import AdminUsuarios from './pages/admin/Usuarios';
+import AdminPermissoes from './pages/admin/Permissoes';
+import AdminUnidades from './pages/admin/Unidades';
+import AdminConfiguracoes from './pages/admin/Configuracoes';
+import AdminLogs from './pages/admin/Logs';
+
+const ADMIN_ROLES = ['super_admin', 'administrador'] as const;
 
 const queryClient = new QueryClient();
 
