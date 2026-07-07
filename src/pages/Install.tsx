@@ -8,9 +8,11 @@ export default function Install() {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5 flex items-center justify-center p-4">
       <Card className="max-w-2xl w-full p-8 space-y-6">
         <div className="text-center space-y-4">
-          <div className="mx-auto h-20 w-20 rounded-2xl bg-white border flex items-center justify-center p-2 shadow-sm">
-            <img src={unigLogo} alt="UNIG-A" className="h-full w-full object-contain" />
-          </div>
+          <img
+            src={unigLogo}
+            alt="UNIG-A"
+            className="mx-auto h-20 w-20 object-contain [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.15))]"
+          />
           <h1 className="text-3xl font-bold">Instale o UNIG-A</h1>
           <p className="text-muted-foreground">Tenha acesso rápido ao Portal Acadêmico direto da tela inicial do seu dispositivo.</p>
         </div>
