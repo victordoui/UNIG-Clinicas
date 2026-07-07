@@ -46,6 +46,8 @@ import EspacosSolicitacoes from './pages/espacos/Solicitacoes';
 import EspacosReservas from './pages/espacos/Reservas';
 import EspacosSolicitar from './pages/espacos/Solicitar';
 import RelatoriosOcupacao from './pages/relatorios/Ocupacao';
+import RelatoriosAcademicos from './pages/relatorios/Academicos';
+import RelatoriosOperacionais from './pages/relatorios/Operacionais';
 import FinanceiroDashboard from './pages/financeiro/Dashboard';
 import FinanceiroMensalidades from './pages/financeiro/Mensalidades';
 import FinanceiroBoletos from './pages/financeiro/Boletos';
@@ -132,8 +134,8 @@ const App = () => (
             <Route path="/financeiro/relatorios" element={<ProtectedRoute><FinanceiroRelatorios /></ProtectedRoute>} />
 
             {/* Relatórios */}
-            <Route path="/relatorios/academicos" element={P('Relatórios Acadêmicos','Alunos, cursos, turmas, notas e frequência.', BarChart3)} />
-            <Route path="/relatorios/operacionais" element={P('Relatórios Operacionais','Atendimento, requerimentos e SLA.', BarChart3)} />
+            <Route path="/relatorios/academicos" element={<ProtectedRoute><RelatoriosAcademicos /></ProtectedRoute>} />
+            <Route path="/relatorios/operacionais" element={<ProtectedRoute><RelatoriosOperacionais /></ProtectedRoute>} />
             <Route path="/relatorios/ocupacao" element={<ProtectedRoute><RelatoriosOcupacao /></ProtectedRoute>} />
 
             {/* Administração */}
