@@ -46,6 +46,12 @@ import EspacosSolicitacoes from './pages/espacos/Solicitacoes';
 import EspacosReservas from './pages/espacos/Reservas';
 import EspacosSolicitar from './pages/espacos/Solicitar';
 import RelatoriosOcupacao from './pages/relatorios/Ocupacao';
+import FinanceiroDashboard from './pages/financeiro/Dashboard';
+import FinanceiroMensalidades from './pages/financeiro/Mensalidades';
+import FinanceiroBoletos from './pages/financeiro/Boletos';
+import FinanceiroBolsas from './pages/financeiro/Bolsas';
+import FinanceiroRelatorios from './pages/financeiro/Relatorios';
+import AlunoFinanceiro from './pages/aluno/Financeiro';
 
 const queryClient = new QueryClient();
 
