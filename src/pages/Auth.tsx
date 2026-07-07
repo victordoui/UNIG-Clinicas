@@ -115,9 +115,11 @@ export default function Auth() {
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-5">
           <div className="md:hidden flex flex-col items-center gap-2 justify-center mb-2">
-            <div className="h-20 w-20 rounded-2xl bg-white border border-border shadow-md flex items-center justify-center p-2">
-              <img src={unigLogo} alt="UNIG-A" className="h-full w-full object-contain" />
-            </div>
+            <img
+              src={unigLogo}
+              alt="UNIG-A"
+              className="h-20 w-20 object-contain [filter:drop-shadow(0_2px_4px_rgba(0,0,0,0.15))]"
+            />
             <span className="font-bold text-xl text-primary">UNIG-A</span>
           </div>
 
