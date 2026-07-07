@@ -1,110 +1,86 @@
-## Fase 8 — Comunicação
+## Fase 9 — Relatórios avançados
 
-Módulo institucional de comunicação do UNIG-A. Consome tabelas existentes (`announcements`, `communications`, `notifications`) e adiciona **mensagens diretas** (`direct_messages`) para chat 1:1 entre usuários. Segue os mesmos padrões (StaffOnly, hooks tanstack-query, dialogs de formulário, badges semânticas, RLS via `is_staff`).
+Substitui os dois placeholders (`/relatorios/academicos` e `/relatorios/operacionais`) por páginas reais de relatórios agregados, com filtros de período, curso/turma/perfil e unidade. Segue os padrões (StaffOnly leitura, hooks tanstack-query, cards KPI, tabelas simples, sem redesign global).
 
-### Status do plano geral
-
-Fases concluídas: 1–7 (Auth, Perfis, Acadêmico, Portal Aluno, Portal Professor, Espaços, Financeiro).
-**Agora: Fase 8 — Comunicação.**
-Restam depois: Fase 9 (Relatórios avançados), Fase 10 (Administração — usuários, permissões, unidades, configurações, logs).
+Já existentes: `/relatorios/ocupacao` (Fase 6) e `/financeiro/relatorios` (Fase 7). Esta fase completa a área.
 
 ### Escopo
 
-**1. Migração nova (apenas mensagens diretas + policies faltantes)**
+**1. Camada compartilhada**
 
-As tabelas já existem — vou apenas:
-- Criar **`direct_messages`** (`id`, `sender_id`, `recipient_id`, `subject`, `body`, `read_at`, `parent_id` nullable p/ thread, timestamps) + GRANTs + RLS (remetente e destinatário leem; qualquer usuário autenticado envia; staff full).
-- Função `mark_notification_read(_id)` e `mark_all_notifications_read()` (security definer, escopadas a `auth.uid()`).
-- Função `broadcast_announcement(announcement_id)` → insere `notifications` para todos os usuários do público-alvo (audience = `todos` | `alunos` | `docentes` | `staff`).
-- Realtime: `ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications, public.direct_messages;`
+- `src/lib/reports.ts` — período padrão (últimos 30/90 dias / mês atual / ano letivo), formatação, agregações puras (`groupCount`, `avgBy`, `pctBy`), export CSV client-side (`downloadCSV(rows, filename)`).
+- `src/hooks/useReports.ts` — hooks tanstack-query que consomem as tabelas existentes:
+  - **Acadêmicos**: `useEnrollmentStats(filters)`, `useGradeStats(filters)`, `useAttendanceStats(filters)`, `useCourseSummary(filters)`.
+  - **Operacionais**: `useRequirementStats(filters)` (SLA, tempo médio de atendimento, por status/categoria), `useUnitLoad(filters)` (carga por unidade).
 
-**2. Camada compartilhada**
+Todos os hooks aceitam `{ from, to, courseId?, classId?, unitId?, role? }` e fazem `SELECT` no client via Supabase (RLS já cuida do acesso — apenas staff).
 
-- `src/lib/communication.ts` — labels/cores de audience/priority/status/channel, `formatRelativeTime`, `groupByThread`, helper `audienceMatchesRole`.
-- `src/hooks/useCommunication.ts` — `useAnnouncements(filters)`, `useCreateAnnouncement/Update/Delete`, `useCommunications`, `useCreateCommunication`, `useMyNotifications`, `useUnreadNotificationCount`, `useMarkNotificationRead`, `useMarkAllRead`, `useMyMessages`, `useConversation(otherUserId)`, `useSendMessage`, com Realtime subscription encapsulada (dentro de `useEffect` + `removeChannel` cleanup, conforme regra).
+**2. Componentes (`src/components/relatorios/`)**
 
-**3. Componentes (`src/components/comunicacao/`)**
+- `ReportFilters` — barra reutilizável (período com preset + custom, `courseId`, `classId`, `unitId` opcionais).
+- `MetricCard` — reusa `CoverKpiCard`, wrapper com título/valor/subtítulo/ícone (se um wrapper simples não bastar, cria pequeno stub).
+- `BarList` — lista de barras horizontal (label + valor + barra tailwind), padrão dos relatórios financeiros/ocupação existentes.
+- `BreakdownTable` — tabela genérica (colunas dinâmicas) com export CSV.
+- `ExportCsvButton` — botão "Exportar CSV".
 
-- `AnnouncementFormDialog` — CRUD (título, corpo rich-text simples via textarea, audience select, data de publicação).
-- `AnnouncementCard` — exibição pública (usado no feed do aluno/docente e na página `/comunicados`).
-- `AudienceBadge` / `PriorityBadge` / `ChannelBadge` — badges semânticas.
-- `CommunicationFormDialog` — envio de comunicado direcionado (target_type: curso/turma/unidade/usuário, canal, prioridade, agendamento).
-- `CommunicationListTable` — tabela staff com filtros (status, canal, período).
-- `NotificationBell` — dropdown no Header com badge de não lidas (integrado ao Header existente, sem redesign).
-- `NotificationList` — lista completa (página).
-- `ConversationList` — sidebar de conversas.
-- `MessageThread` — thread de mensagens 1:1 com input.
-- `NewMessageDialog` — nova mensagem (seletor de destinatário via `profiles`).
+**3. Páginas**
 
-**4. Páginas**
+- `/relatorios/academicos` — Relatórios Acadêmicos
+  - KPIs: total de matrículas ativas, taxa de aprovação, média geral, frequência média.
+  - Breakdowns: matrículas por curso, aprovação por disciplina, notas por período, frequência por turma.
+  - Filtros: período, curso, turma.
 
-- `/comunicados` (existente placeholder) → **feed público** de announcements filtrados pelo `unigRole` do usuário.
-- `/comunicacao/comunicados` → **gestão staff** (lista + CRUD de announcements + envio de communications direcionadas).
-- `/comunicacao/notificacoes` → central de notificações do usuário (todas / não lidas / marcar todas como lidas).
-- `/comunicacao/mensagens` → caixa de mensagens diretas (ConversationList + MessageThread + NewMessageDialog).
+- `/relatorios/operacionais` — Relatórios Operacionais
+  - KPIs: requerimentos abertos, no prazo, tempo médio de resposta, taxa de resolução.
+  - Breakdowns: requerimentos por status, por categoria, por unidade, por atendente; SLA (dentro/fora).
+  - Filtros: período, categoria, unidade, status.
 
-**5. Integrações mínimas (sem redesign)**
+Cada página tem botão **Exportar CSV** nas tabelas principais.
 
-- Substituir os 4 placeholders em `App.tsx` pelas páginas reais.
-- Adicionar `<NotificationBell />` no `Header.tsx` (única alteração fora do módulo — reusa espaço já existente ao lado do avatar; sem mudar layout).
-- **Nada mais** é alterado (Sidebar, dashboards, outros módulos permanecem intactos).
+**4. Integrações mínimas**
 
-### Permissões
-
-- **Publicar/editar/apagar announcements**: `super_admin`, `administrador`, `coordenacao`, `secretaria`.
-- **Enviar communications direcionadas**: `super_admin`, `administrador`, `coordenacao`, `secretaria`, `atendimento`.
-- **Ler announcements**: qualquer usuário autenticado (filtrado por audience).
-- **Ler communications**: staff (`is_staff`) + destinatário quando `target_type='usuario'` e `target_id=auth.uid()`.
-- **Notificações**: apenas o próprio usuário lê/marca; staff pode criar via função.
-- **Mensagens diretas**: qualquer usuário envia e lê apenas as próprias (remetente ou destinatário).
+- Substituir os 2 placeholders em `App.tsx`.
+- Nenhuma alteração em Sidebar, Header, dashboards ou outros módulos.
+- Reusa componentes existentes: `CoverKpiCard`, `SituationBadge`, `Badge`, `Select`, `Popover+Calendar`.
 
 ### Fora de escopo
 
-- Rich-text editor completo (usar textarea + quebras de linha).
-- E-mail/SMS/WhatsApp real (canal fica registrado, envio é mock — pronto p/ integração futura).
-- Anexos em mensagens diretas.
-- Grupos/canais multi-usuário.
-- Push notifications no navegador.
+- Gráficos de biblioteca externa (usar barras/listas em Tailwind, como nas fases anteriores).
+- Export PDF / Excel nativo (CSV client-side é suficiente).
+- Agendamento de relatórios por e-mail.
+- Cache/materialized views (agregação client-side com paginação até 1000 linhas por consulta — dados demo cabem).
+
+### Permissões
+
+- Leitura restrita a `is_staff` (RLS já garante nas tabelas).
+- UI de acesso: qualquer staff (Sidebar já expõe `/relatorios/*` para staff).
 
 ### Estrutura técnica
 
 ```text
-supabase/migrations/xxx_comunicacao.sql
-src/lib/communication.ts
-src/hooks/useCommunication.ts
-src/components/comunicacao/
-  ├── AnnouncementFormDialog.tsx
-  ├── AnnouncementCard.tsx
-  ├── AudienceBadge.tsx
-  ├── PriorityBadge.tsx
-  ├── ChannelBadge.tsx
-  ├── CommunicationFormDialog.tsx
-  ├── CommunicationListTable.tsx
-  ├── NotificationBell.tsx
-  ├── NotificationList.tsx
-  ├── ConversationList.tsx
-  ├── MessageThread.tsx
-  └── NewMessageDialog.tsx
-src/pages/comunicacao/
-  ├── Comunicados.tsx        (gestão staff)
-  ├── Notificacoes.tsx
-  └── Mensagens.tsx
-src/pages/Comunicados.tsx    (feed público — rota /comunicados)
-src/components/layout/Header.tsx  (adicionar NotificationBell)
-src/App.tsx                  (4 rotas)
+src/lib/reports.ts
+src/hooks/useReports.ts
+src/components/relatorios/
+  ├── ReportFilters.tsx
+  ├── BarList.tsx
+  ├── BreakdownTable.tsx
+  └── ExportCsvButton.tsx
+src/pages/relatorios/
+  ├── Academicos.tsx
+  └── Operacionais.tsx
+src/App.tsx  (trocar 2 placeholders)
 ```
 
 ### Ordem de execução
 
-1. Migração: `direct_messages` + funções + realtime + GRANTs/RLS.
-2. `lib/communication.ts` + `hooks/useCommunication.ts`.
-3. Componentes compartilhados (dialogs, badges, bell, listas).
-4. Páginas (feed, gestão, notificações, mensagens).
-5. Integrar `NotificationBell` no Header.
-6. Atualizar `App.tsx` (4 rotas).
-7. `tsgo` typecheck.
-8. Atualizar `.lovable/plan.md` marcando Fase 8 concluída e apontando para Fase 9.
+1. `lib/reports.ts` (utilitários + CSV) e `hooks/useReports.ts`.
+2. Componentes compartilhados (`ReportFilters`, `BarList`, `BreakdownTable`, `ExportCsvButton`).
+3. Página `/relatorios/academicos`.
+4. Página `/relatorios/operacionais`.
+5. Atualizar `App.tsx` (2 rotas).
+6. Typecheck.
+7. Atualizar `.lovable/plan.md` marcando Fase 9 concluída e apontando para Fase 10 (Administração).
 
-### Próxima fase (Fase 9)
+### Próxima fase (Fase 10)
 
-Relatórios avançados — consolidar os relatórios acadêmicos/operacionais que ainda são placeholders (`/relatorios/academicos`, `/relatorios/operacionais`).
+Administração — usuários, permissões, unidades, configurações gerais, logs (placeholders `/admin/*`).
