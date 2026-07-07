@@ -5,7 +5,9 @@ import {
 } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { UnigRole } from '@/lib/unigRoles';
-import unigLogo from '@/assets/uniga-logo.png.asset.json';
+import unigLogo from '@/assets/uniga-logo.png';
+import { cn } from '@/lib/utils';
+
 import {
   Home, GraduationCap, BookOpen, FileText, DollarSign, FileBadge, Megaphone,
   ClipboardList, Users, School, Layers3, CalendarDays, MapPinned, Map,
@@ -126,16 +128,25 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <img src={unigLogo.url} alt="UNIG-A" className="h-8 w-8 rounded-lg object-contain shrink-0" />
+        <div className={cn(
+          "flex flex-col items-center gap-2 px-2",
+          collapsed ? "py-2" : "py-4"
+        )}>
+          <div className={cn(
+            "bg-white rounded-xl shadow-sm ring-1 ring-black/5 flex items-center justify-center shrink-0",
+            collapsed ? "h-9 w-9 p-1" : "h-16 w-16 p-2"
+          )}>
+            <img src={unigLogo} alt="UNIG-A" className="h-full w-full object-contain" />
+          </div>
           {!collapsed && (
-            <div className="flex flex-col min-w-0">
+            <div className="flex flex-col items-center min-w-0 text-center">
               <span className="font-bold text-sm leading-none">UNIG-A</span>
-              <span className="text-[10px] text-muted-foreground leading-tight mt-0.5">Portal Acadêmico</span>
+              <span className="text-[10px] text-muted-foreground leading-tight mt-1">Portal Acadêmico</span>
             </div>
           )}
         </div>
       </SidebarHeader>
+
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>

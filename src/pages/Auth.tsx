@@ -15,7 +15,7 @@ import {
   DEMO_USERS, UNIG_ROLE_LABEL, UNIG_ROLE_TEXT_COLOR, UNIG_ROLE_BADGE, UNIG_ROLE_ICON,
 } from '@/lib/unigRoles';
 import { cn } from '@/lib/utils';
-import unigLogo from '@/assets/uniga-logo.png.asset.json';
+import unigLogo from '@/assets/uniga-logo.png';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -87,15 +87,16 @@ export default function Auth() {
         style={{ background: 'linear-gradient(135deg, hsl(211 89% 30%) 0%, hsl(211 89% 45%) 50%, hsl(211 89% 55%) 100%)' }}
       >
         <div className="absolute inset-0 opacity-25 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.25) 0%, transparent 45%)' }} />
-        <div className="relative flex items-center gap-3">
-          <div className="h-14 w-14 rounded-xl bg-white/95 backdrop-blur-md flex items-center justify-center border border-white/40 shadow-lg p-1.5">
-            <img src={unigLogo.url} alt="UNIG-A" className="h-full w-full object-contain" />
+        <div className="relative flex flex-col items-start gap-4">
+          <div className="h-24 w-24 rounded-2xl bg-white/95 backdrop-blur-md flex items-center justify-center border border-white/40 shadow-xl p-3">
+            <img src={unigLogo} alt="UNIG-A" className="h-full w-full object-contain" />
           </div>
           <div>
-            <div className="text-2xl font-bold">UNIG-A</div>
+            <div className="text-3xl font-bold">UNIG-A</div>
             <div className="text-xs text-white/80 uppercase tracking-widest">Portal Acadêmico Integrado</div>
           </div>
         </div>
+
         <div className="relative space-y-4 max-w-md">
           <h1 className="text-4xl font-bold leading-tight">
             Uma central única para toda a vida acadêmica.
@@ -111,10 +112,13 @@ export default function Auth() {
       {/* Direita: form + acessos rápidos */}
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-5">
-          <div className="md:hidden flex items-center gap-2 justify-center mb-2">
-            <img src={unigLogo.url} alt="UNIG-A" className="h-10 w-10 object-contain" />
+          <div className="md:hidden flex flex-col items-center gap-2 justify-center mb-2">
+            <div className="h-20 w-20 rounded-2xl bg-white border border-border shadow-md flex items-center justify-center p-2">
+              <img src={unigLogo} alt="UNIG-A" className="h-full w-full object-contain" />
+            </div>
             <span className="font-bold text-xl text-primary">UNIG-A</span>
           </div>
+
 
           <Card>
             <CardHeader className="pb-4">
