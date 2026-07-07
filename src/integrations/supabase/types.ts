@@ -468,6 +468,75 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_slips: {
+        Row: {
+          amount: number
+          barcode: string | null
+          charge_id: string | null
+          created_at: string
+          digitable_line: string | null
+          due_date: string
+          id: string
+          issued_at: string
+          notes: string | null
+          paid_at: string | null
+          pdf_url: string | null
+          slip_number: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          barcode?: string | null
+          charge_id?: string | null
+          created_at?: string
+          digitable_line?: string | null
+          due_date: string
+          id?: string
+          issued_at?: string
+          notes?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          slip_number: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          barcode?: string | null
+          charge_id?: string | null
+          created_at?: string
+          digitable_line?: string | null
+          due_date?: string
+          id?: string
+          issued_at?: string
+          notes?: string | null
+          paid_at?: string | null
+          pdf_url?: string | null
+          slip_number?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_slips_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "tuition_charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_slips_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professors: {
         Row: {
           created_at: string
@@ -842,6 +911,54 @@ export type Database = {
           },
         ]
       }
+      scholarships: {
+        Row: {
+          active: boolean
+          code: string | null
+          created_at: string
+          created_by: string | null
+          discount_kind: string
+          discount_value: number
+          id: string
+          name: string
+          notes: string | null
+          type: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount_kind?: string
+          discount_value?: number
+          id?: string
+          name: string
+          notes?: string | null
+          type?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          discount_kind?: string
+          discount_value?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          type?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       student_requirements: {
         Row: {
           assigned_to: string | null
@@ -901,6 +1018,60 @@ export type Database = {
           },
           {
             foreignKeyName: "student_requirements_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_scholarships: {
+        Row: {
+          created_at: string
+          ends_at: string | null
+          granted_by: string | null
+          id: string
+          notes: string | null
+          scholarship_id: string
+          starts_at: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at?: string | null
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          scholarship_id: string
+          starts_at?: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string | null
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          scholarship_id?: string
+          starts_at?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_scholarships_scholarship_id_fkey"
+            columns: ["scholarship_id"]
+            isOneToOne: false
+            referencedRelation: "scholarships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_scholarships_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -1056,6 +1227,81 @@ export type Database = {
         }
         Relationships: []
       }
+      tuition_charges: {
+        Row: {
+          base_amount: number
+          course_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          discount_amount: number
+          due_date: string
+          id: string
+          net_amount: number | null
+          notes: string | null
+          paid_amount: number | null
+          paid_at: string | null
+          payment_method: string | null
+          reference_month: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          base_amount?: number
+          course_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_amount?: number
+          due_date: string
+          id?: string
+          net_amount?: number | null
+          notes?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          payment_method?: string | null
+          reference_month: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          base_amount?: number
+          course_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_amount?: number
+          due_date?: string
+          id?: string
+          net_amount?: number | null
+          notes?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          payment_method?: string | null
+          reference_month?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tuition_charges_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tuition_charges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units: {
         Row: {
           address: string | null
@@ -1160,6 +1406,15 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      mark_charge_paid: {
+        Args: {
+          _charge_id: string
+          _method: string
+          _paid_amount: number
+          _paid_at?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:
