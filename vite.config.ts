@@ -195,17 +195,27 @@ export default defineConfig(({ mode }) => ({
                 maxAgeSeconds: 60 * 60 * 24 * 30
               }
             }
+          },
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'html-navigations',
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 30 }
+            }
           }
         ],
         cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true
+        skipWaiting: false,
+        clientsClaim: false
       },
       devOptions: {
-        enabled: true,
+        enabled: false,
         type: 'module'
       }
     })
+
   ].filter(Boolean),
   resolve: {
     alias: {
