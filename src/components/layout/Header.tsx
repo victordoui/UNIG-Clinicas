@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { LogOut, GraduationCap } from 'lucide-react';
 import { UNIG_ROLE_LABEL, UNIG_ROLE_BADGE, UNIG_ROLE_ICON } from '@/lib/unigRoles';
+import { NotificationBell } from '@/components/comunicacao/NotificationBell';
 import { cn } from '@/lib/utils';
 
 export function Header() {
