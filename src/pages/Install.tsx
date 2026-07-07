@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Smartphone, Zap, WifiOff, Bell } from 'lucide-react';
-import unigLogo from '@/assets/uniga-logo.png.asset.json';
+import unigLogo from '@/assets/uniga-logo.png';
 
 export default function Install() {
   return (
@@ -9,7 +9,7 @@ export default function Install() {
       <Card className="max-w-2xl w-full p-8 space-y-6">
         <div className="text-center space-y-4">
           <div className="mx-auto h-20 w-20 rounded-2xl bg-white border flex items-center justify-center p-2 shadow-sm">
-            <img src={unigLogo.url} alt="UNIG-A" className="h-full w-full object-contain" />
+            <img src={unigLogo} alt="UNIG-A" className="h-full w-full object-contain" />
           </div>
           <h1 className="text-3xl font-bold">Instale o UNIG-A</h1>
           <p className="text-muted-foreground">Tenha acesso rápido ao Portal Acadêmico direto da tela inicial do seu dispositivo.</p>

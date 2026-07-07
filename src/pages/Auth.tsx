@@ -15,7 +15,7 @@ import {
   DEMO_USERS, UNIG_ROLE_LABEL, UNIG_ROLE_TEXT_COLOR, UNIG_ROLE_BADGE, UNIG_ROLE_ICON,
 } from '@/lib/unigRoles';
 import { cn } from '@/lib/utils';
-import unigLogo from '@/assets/uniga-logo.png.asset.json';
+import unigLogo from '@/assets/uniga-logo.png';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -89,7 +89,7 @@ export default function Auth() {
         <div className="absolute inset-0 opacity-25 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.25) 0%, transparent 45%)' }} />
         <div className="relative flex items-center gap-3">
           <div className="h-14 w-14 rounded-xl bg-white/95 backdrop-blur-md flex items-center justify-center border border-white/40 shadow-lg p-1.5">
-            <img src={unigLogo.url} alt="UNIG-A" className="h-full w-full object-contain" />
+            <img src={unigLogo} alt="UNIG-A" className="h-full w-full object-contain" />
           </div>
           <div>
             <div className="text-2xl font-bold">UNIG-A</div>
@@ -112,7 +112,7 @@ export default function Auth() {
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-md space-y-5">
           <div className="md:hidden flex items-center gap-2 justify-center mb-2">
-            <img src={unigLogo.url} alt="UNIG-A" className="h-10 w-10 object-contain" />
+            <img src={unigLogo} alt="UNIG-A" className="h-10 w-10 object-contain" />
             <span className="font-bold text-xl text-primary">UNIG-A</span>
           </div>
 
