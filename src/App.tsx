@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/hooks/useAuth';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { UpdateBanner } from '@/components/pwa/UpdateBanner';
+
 import {
   BookOpen, CalendarDays, FileText, DollarSign, FileBadge, Megaphone,
   Users, School, Layers3, MapPinned, Map, Building2, Settings, ShieldCheck,
@@ -78,6 +80,8 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <UpdateBanner />
+
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/install" element={<Install />} />
