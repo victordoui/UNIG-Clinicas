@@ -28,6 +28,8 @@ export function Header() {
           {UNIG_ROLE_LABEL[unigRole]}
         </Badge>
 
+        <NotificationBell />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-9 gap-2 px-2">
