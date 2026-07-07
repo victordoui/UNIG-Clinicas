@@ -343,6 +343,64 @@ export type Database = {
           },
         ]
       }
+      direct_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          read_at: string | null
+          recipient_id: string
+          sender_id: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          read_at?: string | null
+          recipient_id: string
+          sender_id: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          read_at?: string | null
+          recipient_id?: string
+          sender_id?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "direct_messages_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "direct_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "direct_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           class_id: string
@@ -1390,6 +1448,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      broadcast_announcement: {
+        Args: { _announcement_id: string }
+        Returns: number
+      }
       enrollment_belongs_to_student: {
         Args: { _enrollment_id: string; _user_id: string }
         Returns: boolean
@@ -1406,6 +1468,7 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      mark_all_notifications_read: { Args: never; Returns: undefined }
       mark_charge_paid: {
         Args: {
           _charge_id: string
@@ -1415,6 +1478,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_notification_read: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
       app_role:
