@@ -14,6 +14,7 @@ import { AnnouncementFormDialog } from '@/components/comunicacao/AnnouncementFor
 import { CommunicationFormDialog } from '@/components/comunicacao/CommunicationFormDialog';
 import { CommunicationListTable } from '@/components/comunicacao/CommunicationListTable';
 import { ConfirmDeleteDialog } from '@/components/academico/ConfirmDeleteDialog';
+// (ConfirmDeleteDialog is trigger-based)
 import { canWriteAnnouncement, canWriteCommunication } from '@/lib/communication';
 import { toast } from '@/hooks/use-toast';
 
