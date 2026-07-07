@@ -46,6 +46,12 @@ import EspacosSolicitacoes from './pages/espacos/Solicitacoes';
 import EspacosReservas from './pages/espacos/Reservas';
 import EspacosSolicitar from './pages/espacos/Solicitar';
 import RelatoriosOcupacao from './pages/relatorios/Ocupacao';
+import FinanceiroDashboard from './pages/financeiro/Dashboard';
+import FinanceiroMensalidades from './pages/financeiro/Mensalidades';
+import FinanceiroBoletos from './pages/financeiro/Boletos';
+import FinanceiroBolsas from './pages/financeiro/Bolsas';
+import FinanceiroRelatorios from './pages/financeiro/Relatorios';
+import AlunoFinanceiro from './pages/aluno/Financeiro';
 
 const queryClient = new QueryClient();
 
@@ -69,7 +75,7 @@ const App = () => (
             <Route path="/aluno/disciplinas" element={<ProtectedRoute><AlunoDisciplinas /></ProtectedRoute>} />
             <Route path="/aluno/grade" element={<ProtectedRoute><AlunoGrade /></ProtectedRoute>} />
             <Route path="/aluno/notas" element={<ProtectedRoute><AlunoNotas /></ProtectedRoute>} />
-            <Route path="/aluno/financeiro" element={P('Financeiro','Mensalidades, boletos e bolsas.', DollarSign)} />
+            <Route path="/aluno/financeiro" element={<ProtectedRoute><AlunoFinanceiro /></ProtectedRoute>} />
             <Route path="/aluno/documentos" element={<ProtectedRoute><AlunoDocumentos /></ProtectedRoute>} />
             <Route path="/aluno/perfil" element={<ProtectedRoute><AlunoPerfil /></ProtectedRoute>} />
 
@@ -115,10 +121,11 @@ const App = () => (
             <Route path="/comunicacao/mensagens" element={P('Mensagens','Mensagens diretas.', MessageSquare)} />
 
             {/* Financeiro */}
-            <Route path="/financeiro/mensalidades" element={P('Mensalidades','Gestão de mensalidades.', DollarSign)} />
-            <Route path="/financeiro/boletos" element={P('Boletos','Boletos ativos e histórico.', FileText)} />
-            <Route path="/financeiro/bolsas" element={P('Bolsas','Programas de bolsas e descontos.', GraduationCap)} />
-            <Route path="/financeiro/relatorios" element={P('Relatórios Financeiros','Indicadores financeiros consolidados.', BarChart3)} />
+            <Route path="/financeiro" element={<ProtectedRoute><FinanceiroDashboard /></ProtectedRoute>} />
+            <Route path="/financeiro/mensalidades" element={<ProtectedRoute><FinanceiroMensalidades /></ProtectedRoute>} />
+            <Route path="/financeiro/boletos" element={<ProtectedRoute><FinanceiroBoletos /></ProtectedRoute>} />
+            <Route path="/financeiro/bolsas" element={<ProtectedRoute><FinanceiroBolsas /></ProtectedRoute>} />
+            <Route path="/financeiro/relatorios" element={<ProtectedRoute><FinanceiroRelatorios /></ProtectedRoute>} />
 
             {/* Relatórios */}
             <Route path="/relatorios/academicos" element={P('Relatórios Acadêmicos','Alunos, cursos, turmas, notas e frequência.', BarChart3)} />
