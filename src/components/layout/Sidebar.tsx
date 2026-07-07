@@ -137,17 +137,12 @@ export function AppSidebar() {
             alt="UNIG-A"
             className={cn(
               "object-contain shrink-0 [filter:drop-shadow(0_0_1px_#fff)_drop-shadow(0_0_2px_#fff)_drop-shadow(0_1px_3px_rgba(0,0,0,0.25))]",
-              collapsed ? "h-10 w-10" : "h-14 w-14"
+              collapsed ? "h-12 w-12" : "h-24 w-24"
             )}
           />
-          {!collapsed && (
-            <div className="flex flex-col items-center min-w-0 text-center">
-              <span className="font-bold text-sm leading-none">UNIG-A</span>
-              <span className="text-[10px] text-muted-foreground leading-tight mt-1">Portal Acadêmico</span>
-            </div>
-          )}
         </div>
       </SidebarHeader>
+
 
       <SidebarContent>
         <SidebarGroup>
