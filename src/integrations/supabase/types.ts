@@ -1448,6 +1448,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_assign_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _unit_id?: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      admin_revoke_role: { Args: { _user_role_id: string }; Returns: undefined }
+      admin_set_password_reset: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
+      admin_upsert_setting: {
+        Args: { _description?: string; _key: string; _value: Json }
+        Returns: undefined
+      }
       broadcast_announcement: {
         Args: { _announcement_id: string }
         Returns: number
