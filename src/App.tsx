@@ -58,6 +58,13 @@ import ComunicadosFeed from './pages/Comunicados';
 import ComunicacaoGestao from './pages/comunicacao/Comunicados';
 import ComunicacaoNotificacoes from './pages/comunicacao/Notificacoes';
 import ComunicacaoMensagens from './pages/comunicacao/Mensagens';
+import AdminUsuarios from './pages/admin/Usuarios';
+import AdminPermissoes from './pages/admin/Permissoes';
+import AdminUnidades from './pages/admin/Unidades';
+import AdminConfiguracoes from './pages/admin/Configuracoes';
+import AdminLogs from './pages/admin/Logs';
+
+const ADMIN_ROLES = ['super_admin', 'administrador'] as const;
 
 const queryClient = new QueryClient();
 
@@ -139,11 +146,12 @@ const App = () => (
             <Route path="/relatorios/ocupacao" element={<ProtectedRoute><RelatoriosOcupacao /></ProtectedRoute>} />
 
             {/* Administração */}
-            <Route path="/admin/usuarios" element={P('Usuários','Gerencie usuários e vínculos.', Users)} />
-            <Route path="/admin/permissoes" element={P('Perfis e Permissões','Matriz de permissões por módulo.', ShieldCheck)} />
-            <Route path="/admin/unidades" element={P('Unidades','Cadastro de unidades e campi.', Building2)} />
-            <Route path="/admin/configuracoes" element={P('Configurações Gerais','Configurações do sistema.', Settings)} />
-            <Route path="/admin/logs" element={P('Logs do Sistema','Auditoria e histórico de ações.', ScrollText)} />
+            {/* Administração */}
+            <Route path="/admin/usuarios" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminUsuarios /></ProtectedRoute>} />
+            <Route path="/admin/permissoes" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminPermissoes /></ProtectedRoute>} />
+            <Route path="/admin/unidades" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminUnidades /></ProtectedRoute>} />
+            <Route path="/admin/configuracoes" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminConfiguracoes /></ProtectedRoute>} />
+            <Route path="/admin/logs" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminLogs /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
