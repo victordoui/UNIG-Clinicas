@@ -91,8 +91,9 @@ export default function Auth() {
           <img
             src={unigLogo}
             alt="UNIG-A"
-            className="h-24 w-24 object-contain [filter:drop-shadow(0_0_1px_#fff)_drop-shadow(0_0_3px_#fff)_drop-shadow(0_2px_6px_rgba(0,0,0,0.25))]"
+            className="h-40 w-40 object-contain [filter:drop-shadow(0_0_2px_#fff)_drop-shadow(0_0_6px_#fff)_drop-shadow(0_4px_10px_rgba(0,0,0,0.35))]"
           />
+
           <div>
             <div className="text-3xl font-bold">UNIG-A</div>
             <div className="text-xs text-white/80 uppercase tracking-widest">Portal Acadêmico Integrado</div>
@@ -118,8 +119,9 @@ export default function Auth() {
             <img
               src={unigLogo}
               alt="UNIG-A"
-              className="h-20 w-20 object-contain [filter:drop-shadow(0_2px_4px_rgba(0,0,0,0.15))]"
+              className="h-32 w-32 object-contain [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.2))]"
             />
+
             <span className="font-bold text-xl text-primary">UNIG-A</span>
           </div>
 
