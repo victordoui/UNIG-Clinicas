@@ -88,9 +88,11 @@ export default function Auth() {
       >
         <div className="absolute inset-0 opacity-25 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.25) 0%, transparent 45%)' }} />
         <div className="relative flex flex-col items-start gap-4">
-          <div className="h-24 w-24 rounded-2xl bg-white/95 backdrop-blur-md flex items-center justify-center border border-white/40 shadow-xl p-3">
-            <img src={unigLogo} alt="UNIG-A" className="h-full w-full object-contain" />
-          </div>
+          <img
+            src={unigLogo}
+            alt="UNIG-A"
+            className="h-24 w-24 object-contain [filter:drop-shadow(0_0_1px_#fff)_drop-shadow(0_0_3px_#fff)_drop-shadow(0_2px_6px_rgba(0,0,0,0.25))]"
+          />
           <div>
             <div className="text-3xl font-bold">UNIG-A</div>
             <div className="text-xs text-white/80 uppercase tracking-widest">Portal Acadêmico Integrado</div>
