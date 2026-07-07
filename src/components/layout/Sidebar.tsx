@@ -132,12 +132,14 @@ export function AppSidebar() {
           "flex flex-col items-center gap-2 px-2",
           collapsed ? "py-2" : "py-4"
         )}>
-          <div className={cn(
-            "bg-white rounded-xl shadow-sm ring-1 ring-black/5 flex items-center justify-center shrink-0",
-            collapsed ? "h-9 w-9 p-1" : "h-16 w-16 p-2"
-          )}>
-            <img src={unigLogo} alt="UNIG-A" className="h-full w-full object-contain" />
-          </div>
+          <img
+            src={unigLogo}
+            alt="UNIG-A"
+            className={cn(
+              "object-contain shrink-0 [filter:drop-shadow(0_0_1px_#fff)_drop-shadow(0_0_2px_#fff)_drop-shadow(0_1px_3px_rgba(0,0,0,0.25))]",
+              collapsed ? "h-10 w-10" : "h-14 w-14"
+            )}
+          />
           {!collapsed && (
             <div className="flex flex-col items-center min-w-0 text-center">
               <span className="font-bold text-sm leading-none">UNIG-A</span>
