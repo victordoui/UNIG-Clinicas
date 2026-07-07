@@ -15,6 +15,8 @@ export default defineConfig(({ mode }) => ({
     mode === 'development' && componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: null,
+
       includeAssets: [
         'pwa-64x64.png',
         'pwa-72x72.png',
