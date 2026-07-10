@@ -194,8 +194,8 @@ export function useMyMessages() {
 
   useEffect(() => {
     if (!user?.id) return;
-    const channel = supabase
-      .channel(`dm-${user.id}`)
+    const channel = supabase.channel(`dm-${user.id}-${Math.random().toString(36).slice(2)}`);
+    channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages' }, () => {
         qc.invalidateQueries({ queryKey: ['direct-messages', user.id] });
       })
