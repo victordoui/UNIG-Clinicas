@@ -40,3 +40,9 @@ on conflict (id) do update set starts_at = excluded.starts_at, ends_at = exclude
 update public.academic_schedules
 set status = 'published', published_at = now()
 where id = '10000000-0000-0000-0000-000000000007';
+
+insert into public.academic_events (id, unit_id, title, event_type, starts_at, ends_at)
+values
+  ('10000000-0000-0000-0000-000000000011', '10000000-0000-0000-0000-000000000001', 'Início do período letivo - Teste', 'periodo_letivo', '2026-08-03 08:00:00-03', '2026-08-03 18:00:00-03'),
+  ('10000000-0000-0000-0000-000000000012', '10000000-0000-0000-0000-000000000001', 'Avaliação AV1 - Teste', 'avaliacao', '2026-09-21 08:00:00-03', '2026-09-25 22:00:00-03')
+on conflict (id) do update set title = excluded.title, starts_at = excluded.starts_at, ends_at = excluded.ends_at;
