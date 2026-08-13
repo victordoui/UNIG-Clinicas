@@ -18,6 +18,19 @@ type ScheduleRow = {
   meetings: MeetingRow[] | null;
 };
 
+export type AcademicMeeting = {
+  id: string;
+  weekday: number;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  notes: string | null;
+  class: { id: string; code: string; name: string; capacity: number; enrolled_count: number; subject: { name: string } | null } | null;
+  professor: { full_name: string } | null;
+  room: { id: string; code: string; name: string; capacity: number; status: string } | null;
+  schedule: { id: string; name: string; academic_period: string; status: string; course: { name: string } | null } | null;
+};
+
 function toClock(value: string) { return value.slice(0, 5); }
 
 function toInstitutionalSchedule(row: ScheduleRow): InstitutionalSchedule | null {
@@ -53,6 +66,36 @@ export function usePublishedAcademicSchedules() {
       return ((data ?? []) as unknown as ScheduleRow[])
         .map(toInstitutionalSchedule)
         .filter((schedule): schedule is InstitutionalSchedule => schedule !== null);
+    },
+  });
+}
+
+export function useAcademicMeetings() {
+  return useQuery({
+    queryKey: ['academic-meetings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('class_meetings' as never)
+        .select('id, weekday, starts_at, ends_at, status, notes, class:classes(id, code, name, capacity, enrolled_count, subject:subjects(name)), professor:professors(full_name), room:rooms(id, code, name, capacity, status), schedule:academic_schedules(id, name, academic_period, status, course:courses(name))')
+        .neq('status', 'cancelled')
+        .order('weekday')
+        .order('starts_at');
+      if (error) throw error;
+      return (data ?? []) as unknown as AcademicMeeting[];
+    },
+  });
+}
+
+export function useAcademicScheduleVersions() {
+  return useQuery({
+    queryKey: ['academic-schedule-versions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('academic_schedule_versions' as never)
+        .select('id, version, action, created_at, schedule:academic_schedules(name, academic_period, course:courses(name))')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
     },
   });
 }
