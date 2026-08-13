@@ -7,6 +7,8 @@ export const ROOM_TYPE_LABEL: Record<string, string> = {
   biblioteca: 'Biblioteca',
   sala_reuniao: 'Sala de reunião',
   quadra: 'Quadra',
+  sala_metodologia: 'Sala de metodologia',
+  sala_especial: 'Sala especial',
   outro: 'Outro',
 };
 

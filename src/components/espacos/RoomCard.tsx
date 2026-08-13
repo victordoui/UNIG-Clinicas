@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPinned, Users, Building2, Monitor, Wind, Projector, Pencil, CalendarDays } from 'lucide-react';
+import { MapPinned, Users, Building2, Monitor, Wind, Projector, Pencil, CalendarDays, Mic, Tv, PanelsTopLeft } from 'lucide-react';
 import { ROOM_TYPE_LABEL, ROOM_STATUS_LABEL, roomStatusBadgeClass } from '@/lib/rooms';
 import { RoomFormDialog } from './RoomFormDialog';
 import { ReservationFormDialog } from './ReservationFormDialog';
@@ -34,6 +34,10 @@ export function RoomCard({ room, canWrite, onDelete, showReserve = true, compact
           {room.has_projector && <Badge variant="outline" className="gap-1"><Projector className="h-3 w-3" />Projetor</Badge>}
           {room.has_air_conditioning && <Badge variant="outline" className="gap-1"><Wind className="h-3 w-3" />Ar</Badge>}
           {room.has_computer && <Badge variant="outline" className="gap-1"><Monitor className="h-3 w-3" />PC</Badge>}
+          {room.has_audio_system && <Badge variant="outline" className="gap-1"><Mic className="h-3 w-3" />Audio</Badge>}
+          {room.has_tv && <Badge variant="outline" className="gap-1"><Tv className="h-3 w-3" />TV</Badge>}
+          {room.has_interactive_screen && <Badge variant="outline" className="gap-1"><PanelsTopLeft className="h-3 w-3" />Tela interativa</Badge>}
+          {room.quality_tier && <Badge variant="outline">{room.quality_tier === 'semi_premium' ? 'Semi Premium' : room.quality_tier === 'premium' ? 'Premium' : 'Padrao'}</Badge>}
         </div>
 
         <div className="text-xs text-muted-foreground space-y-0.5">
