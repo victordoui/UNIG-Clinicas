@@ -73,3 +73,10 @@ Não aplicar a migration com `supabase db push` enquanto as migrations locais e
 remotas estiverem divergentes. Primeiro é preciso revisar/normalizar esse
 histórico. Depois disso, a migration poderá ser aplicada de forma controlada e
 as páginas de publicação, histórico e ensalamento poderão gravar no banco.
+
+## Dados de teste
+
+- Carga controlada: `supabase/seeds/academic_test_data.sql`.
+- Limpeza controlada: `supabase/seeds/cleanup_academic_test_data.sql`.
+- Todos os registros usam o prefixo `TEST-` e UUIDs reservados; a limpeza não
+  deve ser usada em dados institucionais reais.
