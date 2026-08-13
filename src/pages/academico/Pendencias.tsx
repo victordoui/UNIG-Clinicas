@@ -1,0 +1,2 @@
+import { TriangleAlert } from 'lucide-react'; import AcademicFlowPage from './AcademicFlowPage';
+export default function Pendencias() { return <AcademicFlowPage title="Pendências" icon={TriangleAlert} description="Acompanhe conflitos e informações incompletas encontrados na grade." dependsOn="Validador central de horários" next={{ label: 'Ir para ensalamento', to: '/academico/ensalamento' }} />; }

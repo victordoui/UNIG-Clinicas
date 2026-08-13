@@ -36,6 +36,14 @@ import AcademicoDisciplinas from './pages/academico/Disciplinas';
 import AcademicoTurmas from './pages/academico/Turmas';
 import AcademicoMatriz from './pages/academico/Matriz';
 import AcademicoAulas from './pages/academico/Aulas';
+import AcademicoVisaoGeral from './pages/academico/VisaoGeral';
+import AcademicoCalendario from './pages/academico/Calendario';
+import AcademicoEnsalamento from './pages/academico/Ensalamento';
+import AcademicoPendencias from './pages/academico/Pendencias';
+import AcademicoAnaliseEnsalamento from './pages/academico/AnaliseEnsalamento';
+import AcademicoPublicacao from './pages/academico/Publicacao';
+import AcademicoHistorico from './pages/academico/Historico';
+import AcademicoSalasLivres from './pages/academico/SalasLivres';
 import ProfessorTurmas from './pages/professor/MinhasTurmas';
 import ProfessorLancarNotas from './pages/professor/LancarNotas';
 import ProfessorFrequencia from './pages/professor/RegistrarFrequencia';
@@ -112,6 +120,8 @@ const App = () => (
             <Route path="/atendimento/historico" element={<ProtectedRoute><HistoricoAluno /></ProtectedRoute>} />
 
             {/* Acadêmico */}
+            <Route path="/academico" element={<ProtectedRoute><AcademicoVisaoGeral /></ProtectedRoute>} />
+            <Route path="/academico/calendario" element={<ProtectedRoute><AcademicoCalendario /></ProtectedRoute>} />
             <Route path="/academico/alunos" element={<ProtectedRoute><AcademicoAlunos /></ProtectedRoute>} />
             <Route path="/academico/professores" element={<ProtectedRoute><AcademicoProfessores /></ProtectedRoute>} />
             <Route path="/academico/cursos" element={<ProtectedRoute><AcademicoCursos /></ProtectedRoute>} />
@@ -119,6 +129,12 @@ const App = () => (
             <Route path="/academico/turmas" element={<ProtectedRoute><AcademicoTurmas /></ProtectedRoute>} />
             <Route path="/academico/matriz" element={<ProtectedRoute><AcademicoMatriz /></ProtectedRoute>} />
             <Route path="/academico/aulas" element={<ProtectedRoute><AcademicoAulas /></ProtectedRoute>} />
+            <Route path="/academico/ensalamento" element={<ProtectedRoute><AcademicoEnsalamento /></ProtectedRoute>} />
+            <Route path="/academico/pendencias" element={<ProtectedRoute><AcademicoPendencias /></ProtectedRoute>} />
+            <Route path="/academico/analise-ensalamento" element={<ProtectedRoute><AcademicoAnaliseEnsalamento /></ProtectedRoute>} />
+            <Route path="/academico/publicacao" element={<ProtectedRoute><AcademicoPublicacao /></ProtectedRoute>} />
+            <Route path="/academico/historico" element={<ProtectedRoute><AcademicoHistorico /></ProtectedRoute>} />
+            <Route path="/academico/salas-livres" element={<ProtectedRoute><AcademicoSalasLivres /></ProtectedRoute>} />
 
             {/* Espaços */}
             <Route path="/espacos" element={<ProtectedRoute><EspacosDashboard /></ProtectedRoute>} />

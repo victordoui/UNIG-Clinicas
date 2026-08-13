@@ -1,0 +1,2 @@
+import { CalendarRange } from 'lucide-react'; import AcademicFlowPage from './AcademicFlowPage';
+export default function Calendario() { return <AcademicFlowPage title="Calendário Acadêmico" icon={CalendarRange} description="Concentre períodos, prazos e eventos que impactam a construção da grade." dependsOn="Períodos e eventos acadêmicos" next={{ label: 'Ir para grades', to: '/academico/aulas' }} />; }

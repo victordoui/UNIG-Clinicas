@@ -1,0 +1,2 @@
+import { ChartNoAxesCombined } from 'lucide-react'; import AcademicFlowPage from './AcademicFlowPage';
+export default function AnaliseEnsalamento() { return <AcademicFlowPage title="Análise de Ensalamento" icon={ChartNoAxesCombined} description="Analise capacidade, estabilidade de salas e distribuição das aulas." dependsOn="Aulas alocadas e conflitos calculados" next={{ label: 'Ver pendências', to: '/academico/pendencias' }} />; }

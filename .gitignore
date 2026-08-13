@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Estado e exportações locais do Supabase
+supabase/.temp/
+supabase/remote_schema.sql

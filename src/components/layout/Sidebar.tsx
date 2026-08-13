@@ -53,6 +53,8 @@ const GROUPS: Group[] = [
     label: 'Acadêmico',
     roles: ['super_admin', 'administrador', 'secretaria', 'coordenacao'],
     items: [
+      { title: 'Visão Geral', url: '/academico', icon: CalendarDays },
+      { title: 'Calendário Acadêmico', url: '/academico/calendario', icon: CalendarDays },
       { title: 'Alunos', url: '/academico/alunos', icon: GraduationCap },
       { title: 'Professores', url: '/academico/professores', icon: BookOpen },
       { title: 'Cursos', url: '/academico/cursos', icon: School },
@@ -60,6 +62,12 @@ const GROUPS: Group[] = [
       { title: 'Turmas', url: '/academico/turmas', icon: Users },
       { title: 'Grade Curricular', url: '/academico/matriz', icon: LayoutGrid },
       { title: 'Grade de Aulas', url: '/academico/aulas', icon: CalendarDays },
+      { title: 'Ensalamento', url: '/academico/ensalamento', icon: MapPinned },
+      { title: 'Salas Livres', url: '/academico/salas-livres', icon: MapPinned },
+      { title: 'Pendências', url: '/academico/pendencias', icon: ClipboardList },
+      { title: 'Análise de Ensalamento', url: '/academico/analise-ensalamento', icon: BarChart3 },
+      { title: 'Publicação', url: '/academico/publicacao', icon: FileBadge },
+      { title: 'Histórico', url: '/academico/historico', icon: ScrollText },
     ],
   },
   {
