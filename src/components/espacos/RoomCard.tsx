@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPinned, Users, Building2, Monitor, Wind, Projector, Pencil, CalendarDays, Mic, Tv, PanelsTopLeft } from 'lucide-react';
+import { MapPinned, Users, Building2, Monitor, Wind, Projector, Pencil, CalendarDays, Mic, Tv, PanelsTopLeft, Presentation } from 'lucide-react';
 import { ROOM_TYPE_LABEL, ROOM_STATUS_LABEL, roomStatusBadgeClass } from '@/lib/rooms';
 import { RoomFormDialog } from './RoomFormDialog';
 import { ReservationFormDialog } from './ReservationFormDialog';
@@ -30,12 +30,13 @@ export function RoomCard({ room, canWrite, onDelete, showReserve = true, compact
 
         <div className="flex flex-wrap gap-1 text-xs">
           <Badge variant="secondary">{ROOM_TYPE_LABEL[room.room_type] ?? room.room_type}</Badge>
-          <Badge variant="outline" className="gap-1"><Users className="h-3 w-3" />{room.capacity} lug.</Badge>
+          <Badge variant="outline" className="gap-1"><Users className="h-3 w-3" />{room.seats_count ?? room.capacity} lug.</Badge>
           {room.has_projector && <Badge variant="outline" className="gap-1"><Projector className="h-3 w-3" />Projetor</Badge>}
           {room.has_air_conditioning && <Badge variant="outline" className="gap-1"><Wind className="h-3 w-3" />Ar</Badge>}
           {room.has_computer && <Badge variant="outline" className="gap-1"><Monitor className="h-3 w-3" />PC</Badge>}
           {room.has_audio_system && <Badge variant="outline" className="gap-1"><Mic className="h-3 w-3" />Audio</Badge>}
           {room.has_tv && <Badge variant="outline" className="gap-1"><Tv className="h-3 w-3" />TV</Badge>}
+          {room.has_whiteboard && <Badge variant="outline" className="gap-1"><Presentation className="h-3 w-3" />Quadro</Badge>}
           {room.has_interactive_screen && <Badge variant="outline" className="gap-1"><PanelsTopLeft className="h-3 w-3" />Tela interativa</Badge>}
           {room.quality_tier && <Badge variant="outline">{room.quality_tier === 'semi_premium' ? 'Semi Premium' : room.quality_tier === 'premium' ? 'Premium' : 'Padrao'}</Badge>}
         </div>
@@ -43,6 +44,8 @@ export function RoomCard({ room, canWrite, onDelete, showReserve = true, compact
         <div className="text-xs text-muted-foreground space-y-0.5">
           {(room.block || room.floor) && <div>{room.block && `Bloco ${room.block}`}{room.block && room.floor && ' · '}{room.floor && `Andar ${room.floor}`}</div>}
           {room.unit?.name && <div className="flex items-center gap-1"><Building2 className="h-3 w-3" />{room.unit.name}</div>}
+          {room.furniture_type && <div><span className="font-medium text-foreground">Mobiliário:</span> {room.furniture_type}</div>}
+          {room.usage_restriction && <div><span className="font-medium text-foreground">Uso:</span> {room.usage_restriction}</div>}
         </div>
 
         <div className="flex justify-end gap-1 pt-2 border-t">
@@ -53,11 +56,11 @@ export function RoomCard({ room, canWrite, onDelete, showReserve = true, compact
             />
           )}
           <Button size="sm" variant="ghost" asChild>
-            <Link to={`/espacos/agenda?room=${room.id}`}>Agenda</Link>
+            <Link to={`/espacos/agenda?room=${room.id}`}><CalendarDays className="mr-1 h-4 w-4" />Agenda</Link>
           </Button>
           {canWrite && (
             <>
-              <RoomFormDialog row={room} trigger={<Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>} />
+              <RoomFormDialog row={room} trigger={<Button size="icon" variant="ghost" title={`Editar ${room.name}`} aria-label={`Editar ${room.name}`}><Pencil className="h-4 w-4" /></Button>} />
               {onDelete && <ConfirmDeleteDialog onConfirm={() => onDelete(room.id)} description={`Excluir sala ${room.name}?`} />}
             </>
           )}

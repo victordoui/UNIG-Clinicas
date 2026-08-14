@@ -101,13 +101,13 @@ Cores corporativas profissionais em HSL para máxima flexibilidade
     --category-others-foreground: 269 90% 15%;
 
     /* Sidebar tokens — Azul corporativo (estilo ERP) */
-    --sidebar-background: 211 89% 22%;
+    --sidebar-background: 212 79% 28%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
     --sidebar-primary-foreground: 211 89% 25%;
-    --sidebar-accent: 211 89% 32%;
+    --sidebar-accent: 211 85% 36%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 211 89% 28%;
+    --sidebar-border: 211 80% 33%;
     --sidebar-ring: 0 0% 100%;
 
     /* ========== iOS Tokens (Conselho) ========== */
@@ -304,6 +304,15 @@ Cores corporativas profissionais em HSL para máxima flexibilidade
 
 /* Button animations and effects */
 @layer components {
+  .sidebar-scroll-invisible {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .sidebar-scroll-invisible::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
   .btn-ripple {
     @apply relative overflow-hidden;
   }
@@ -474,5 +483,40 @@ div[style*="Edit with Lovable"],
     height: 0;
     overflow: hidden;
     z-index: -1;
+  }
+}
+
+/* Impressão institucional: exibe somente a grade, sem navegação ou controles. */
+@media print {
+  @page {
+    size: landscape;
+    margin: 9mm;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .schedule-print-area,
+  .schedule-print-area * {
+    visibility: visible !important;
+  }
+
+  .schedule-print-area {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .schedule-print-area table {
+    min-width: 0 !important;
   }
 }

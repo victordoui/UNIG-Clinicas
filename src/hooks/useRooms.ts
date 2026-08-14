@@ -8,6 +8,15 @@ export interface RoomFilters {
   unitId?: string;
   status?: string;
   roomType?: string;
+  minCapacity?: number;
+  hasProjector?: boolean;
+  hasAirConditioning?: boolean;
+  hasComputer?: boolean;
+  hasAudioSystem?: boolean;
+  hasTv?: boolean;
+  hasWhiteboard?: boolean;
+  hasInteractiveScreen?: boolean;
+  qualityTier?: string;
 }
 
 export function useRooms(filters: RoomFilters = {}) {
@@ -18,6 +27,15 @@ export function useRooms(filters: RoomFilters = {}) {
       if (filters.unitId && filters.unitId !== 'all') q = q.eq('unit_id', filters.unitId);
       if (filters.status && filters.status !== 'all') q = q.eq('status', filters.status);
       if (filters.roomType && filters.roomType !== 'all') q = q.eq('room_type', filters.roomType);
+      if (filters.minCapacity && filters.minCapacity > 0) q = q.gte('capacity', filters.minCapacity);
+      if (filters.hasProjector) q = q.eq('has_projector', true);
+      if (filters.hasAirConditioning) q = q.eq('has_air_conditioning', true);
+      if (filters.hasComputer) q = q.eq('has_computer', true);
+      if (filters.hasAudioSystem) q = (q as any).eq('has_audio_system', true);
+      if (filters.hasTv) q = (q as any).eq('has_tv', true);
+      if (filters.hasWhiteboard) q = (q as any).eq('has_whiteboard', true);
+      if (filters.hasInteractiveScreen) q = (q as any).eq('has_interactive_screen', true);
+      if (filters.qualityTier && filters.qualityTier !== 'all') q = (q as any).eq('quality_tier', filters.qualityTier);
       if (filters.search) q = q.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%`);
       const { data, error } = await q.order('code').limit(500);
       if (error) throw error;
