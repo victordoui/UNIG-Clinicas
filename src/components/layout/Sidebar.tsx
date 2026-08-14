@@ -1,3 +1,4 @@
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
@@ -128,37 +129,50 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const { unigRole } = useAuth();
   const { pathname } = useLocation();
+  const contentRef = useRef<HTMLDivElement>(null);
   const collapsed = state === 'collapsed';
 
   const roleAllowed = (rs?: UnigRole[]) => !rs || rs.length === 0 || rs.includes(unigRole);
   const visibleGroups = GROUPS.filter((g) => roleAllowed(g.roles));
+  const saveScrollPosition = () => {
+    if (contentRef.current) sessionStorage.setItem('uniga:sidebar-scroll', String(contentRef.current.scrollTop));
+  };
+
+  useLayoutEffect(() => {
+    const saved = Number(sessionStorage.getItem('uniga:sidebar-scroll') ?? '0');
+    requestAnimationFrame(() => {
+      if (contentRef.current) contentRef.current.scrollTop = saved;
+    });
+  }, []);
+
+  useEffect(() => () => saveScrollPosition(), []);
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
+      <SidebarHeader className="border-b border-sidebar-border/70">
         <div className={cn(
           "flex flex-col items-center gap-2 px-2",
-          collapsed ? "py-2" : "py-4"
+          collapsed ? "py-2" : "py-3"
         )}>
           <img
             src={unigLogo}
             alt="UNIG-A"
             className={cn(
               "object-contain shrink-0 [filter:drop-shadow(0_0_1px_#fff)_drop-shadow(0_0_2px_#fff)_drop-shadow(0_1px_3px_rgba(0,0,0,0.25))]",
-              collapsed ? "h-12 w-12" : "h-24 w-24"
+              collapsed ? "h-10 w-10" : "h-16 w-16"
             )}
           />
         </div>
       </SidebarHeader>
 
 
-      <SidebarContent>
-        <SidebarGroup>
+      <SidebarContent ref={contentRef} onScroll={saveScrollPosition} className="gap-1 px-2 pb-4 pt-2">
+        <SidebarGroup className="px-0 py-0">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === '/'}>
-                  <NavLink to="/">
+                <SidebarMenuButton asChild isActive={pathname === '/'} className="h-9 rounded-lg">
+                  <NavLink to="/" onClick={saveScrollPosition}>
                     <Home className="h-4 w-4" />
                     <span>Início</span>
                   </NavLink>
@@ -169,14 +183,14 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {visibleGroups.map((g) => (
-          <SidebarGroup key={g.label}>
-            <SidebarGroupLabel>{g.label}</SidebarGroupLabel>
+          <SidebarGroup key={g.label} className="px-0 py-1.5">
+            <SidebarGroupLabel className="h-7 px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-foreground/55">{g.label}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {g.items.filter((i) => roleAllowed(i.roles)).map((item) => (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.title}>
-                      <NavLink to={item.url}>
+                    <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.title} className="h-9 rounded-lg px-2.5 data-[active=true]:shadow-sm">
+                      <NavLink to={item.url} onClick={saveScrollPosition}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </NavLink>
