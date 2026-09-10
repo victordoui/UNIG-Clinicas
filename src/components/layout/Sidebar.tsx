@@ -72,7 +72,7 @@ const sidebarScrollMemory = new globalThis.Map<string, number>();
 const NAV_GROUPS: NavGroup[] = [
   {
     id: 'clinical-care', section: 'CLÍNICAS', label: 'Atendimento Clínico', icon: ClipboardList,
-    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento'],
+    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno', 'financeiro'],
     items: [
       { title: 'Pacientes', url: '/pacientes', icon: Users },
       { title: 'Agenda e Fila', url: '/agenda-fila', icon: CalendarDays },
@@ -186,9 +186,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: 'administration', section: 'SISTEMA', label: 'Administração', icon: Settings,
-    roles: ['super_admin', 'administrador'],
+    roles: ['super_admin', 'administrador', 'financeiro'],
     items: [
       { title: 'Clínicas e Serviços', url: '/admin/clinicas', icon: ClipboardList },
+      { title: 'Auditoria', url: '/admin/logs', icon: ScrollText },
     ],
   },
 ];
