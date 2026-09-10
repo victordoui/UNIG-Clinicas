@@ -73,6 +73,7 @@ import AdminPermissoes from './pages/admin/Permissoes';
 import AdminConfiguracoes from './pages/admin/Configuracoes';
 import AdminLogs from './pages/admin/Logs';
 import AdminClinicas from './pages/admin/Clinicas';
+import Pacientes from './pages/patients/Pacientes';
 
 const ADMIN_ROLES = ['super_admin', 'administrador'] as const;
 
@@ -95,6 +96,7 @@ const App = () => (
             <Route path="/install" element={<Install />} />
 
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+            <Route path="/pacientes" element={<ProtectedRoute><Pacientes /></ProtectedRoute>} />
 
             {/* Portal do Aluno */}
             <Route path="/aluno/disciplinas" element={<ProtectedRoute><AlunoDisciplinas /></ProtectedRoute>} />

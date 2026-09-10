@@ -68,6 +68,13 @@ const sidebarScrollMemory = new globalThis.Map<string, number>();
 
 const NAV_GROUPS: NavGroup[] = [
   {
+    id: 'clinical-care', section: 'CLÍNICAS', label: 'Atendimento Clínico', icon: ClipboardList,
+    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento'],
+    items: [
+      { title: 'Pacientes', url: '/pacientes', icon: Users },
+    ],
+  },
+  {
     id: 'student', section: 'PORTAL', label: 'Área do Aluno', icon: GraduationCap, roles: ['aluno'],
     items: [
       { title: 'Minhas Disciplinas', url: '/aluno/disciplinas', icon: BookOpen },
