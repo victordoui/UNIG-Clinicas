@@ -69,4 +69,4 @@ Antes de publicar, configure no Netlify (em **Site configuration → Environment
 - `VITE_SUPABASE_URL`: URL do projeto Supabase.
 - `VITE_SUPABASE_PUBLISHABLE_KEY`: chave pública/publicável do projeto Supabase.
 
-Use `.env.example` como referência. Essas variáveis são incorporadas no build; após cadastrá-las, execute um novo deploy.
+Use `.env.example` como referência. Essas variáveis são incorporadas no build; após cadastrá-las, execute um novo deploy. O frontend também possui a URL e a chave **publishable** do projeto como configuração pública padrão, permitindo que o deploy Git → Netlify funcione mesmo sem variáveis cadastradas. Nunca coloque uma chave `service_role` no frontend.
