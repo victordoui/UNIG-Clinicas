@@ -191,6 +191,7 @@ Deno.serve(async (req) => {
 
     let created = 0;
     let existed = 0;
+    const userIdByRole = new Map<string, string>();
     for (const [code, label] of ROLES) {
       const email = `${code.replace(/_/g, '-')}@unig.demo`;
       const { data: createdUser, error: createError } = await admin.auth.admin.createUser({ email, password: DEMO_PASSWORD, email_confirm: true });
@@ -213,6 +214,47 @@ Deno.serve(async (req) => {
       if (!assignment) {
         const { error } = await admin.from('user_roles').insert({ user_id: userId, organization_id: organizationId, role_id: roleId, is_active: true });
         if (error) throw error;
+      }
+      userIdByRole.set(code, userId);
+    }
+
+    // Keep one academic supervision available in the quick-access environment
+    // so supervisors and students can validate the workflow immediately.
+    const demoStudentId = userIdByRole.get('student');
+    const demoSupervisorId = userIdByRole.get('academic_supervisor');
+    if (demoStudentId && demoSupervisorId) {
+      const { data: demoClinic, error: demoClinicError } = await admin.from('clinics')
+        .select('id').eq('organization_id', organizationId).eq('code', 'ODONTO').single();
+      if (demoClinicError) throw demoClinicError;
+      const { data: existingSupervision, error: supervisionLookupError } = await admin.from('student_supervisions')
+        .select('id').eq('organization_id', organizationId).eq('clinic_id', demoClinic.id)
+        .eq('student_user_id', demoStudentId).maybeSingle();
+      if (supervisionLookupError) throw supervisionLookupError;
+      let supervisionId = existingSupervision?.id;
+      if (!supervisionId) {
+        const { data: createdSupervision, error: supervisionInsertError } = await admin.from('student_supervisions').insert({
+          organization_id: organizationId,
+          clinic_id: demoClinic.id,
+          student_user_id: demoStudentId,
+          supervisor_user_id: demoSupervisorId,
+          status: 'in_progress',
+          started_at: new Date().toISOString(),
+        }).select('id').single();
+        if (supervisionInsertError) throw supervisionInsertError;
+        supervisionId = createdSupervision.id;
+      }
+      const { data: existingEvaluation, error: evaluationLookupError } = await admin.from('evaluations')
+        .select('id').eq('supervision_id', supervisionId).eq('evaluator_user_id', demoSupervisorId).maybeSingle();
+      if (evaluationLookupError) throw evaluationLookupError;
+      if (!existingEvaluation) {
+        const { error: evaluationInsertError } = await admin.from('evaluations').insert({
+          supervision_id: supervisionId,
+          evaluator_user_id: demoSupervisorId,
+          score: 92,
+          feedback: 'Bom acolhimento e registro clínico consistente.',
+          rubric: { acolhimento: 'adequado', registro: 'adequado' },
+        });
+        if (evaluationInsertError) throw evaluationInsertError;
       }
     }
     return json({ ok: true, created, existed, total: ROLES.length });
