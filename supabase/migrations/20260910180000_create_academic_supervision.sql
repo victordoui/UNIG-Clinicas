@@ -1,0 +1,22 @@
+-- Academic supervision is independent from the legacy academic schema.
+create table public.student_supervisions (
+ id uuid primary key default gen_random_uuid(), organization_id uuid not null references public.organizations(id), clinic_id uuid not null references public.clinics(id), encounter_id uuid references public.encounters(id),
+ student_user_id uuid not null references auth.users(id), supervisor_user_id uuid not null references auth.users(id), status text not null default 'planned' check(status in ('planned','in_progress','completed','cancelled')),
+ started_at timestamptz, completed_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), created_by uuid references auth.users(id), updated_by uuid references auth.users(id)
+);
+create table public.evaluations (
+ id uuid primary key default gen_random_uuid(), supervision_id uuid not null references public.student_supervisions(id), evaluator_user_id uuid not null references auth.users(id), score numeric(5,2) check(score between 0 and 100), rubric jsonb not null default '{}'::jsonb, feedback text, submitted_at timestamptz, created_at timestamptz not null default now(), updated_at timestamptz not null default now(), unique(supervision_id,evaluator_user_id)
+);
+create index supervisions_student_idx on public.student_supervisions(student_user_id,status); create index supervisions_supervisor_idx on public.student_supervisions(supervisor_user_id,status); create index evaluations_supervision_idx on public.evaluations(supervision_id);
+create trigger supervisions_updated_at before update on public.student_supervisions for each row execute function private.set_updated_at(); create trigger evaluations_updated_at before update on public.evaluations for each row execute function private.set_updated_at();
+insert into public.permissions(code,name,description) values('supervision.read','Consultar supervisões','Permite consultar supervisões clínicas.'),('supervision.manage','Gerir supervisões','Permite criar e concluir supervisões clínicas.'),('evaluation.manage','Avaliar estudantes','Permite registrar avaliações clínicas.') on conflict(code) do nothing;
+insert into public.role_permissions(role_id,permission_id) select r.id,p.id from public.roles r join public.permissions p on p.code in ('supervision.read','supervision.manage','evaluation.manage') where r.code in ('super_admin','organization_admin','clinic_manager','academic_supervisor') on conflict do nothing;
+insert into public.role_permissions(role_id,permission_id) select r.id,p.id from public.roles r join public.permissions p on p.code='supervision.read' where r.code in ('student','clinician','auditor') on conflict do nothing;
+grant select,insert,update on public.student_supervisions,public.evaluations to authenticated;
+alter table public.student_supervisions enable row level security; alter table public.evaluations enable row level security;
+create policy supervisions_read on public.student_supervisions for select to authenticated using(student_user_id=(select auth.uid()) or supervisor_user_id=(select auth.uid()) or private.has_permission(organization_id,'supervision.read'));
+create policy supervisions_insert on public.student_supervisions for insert to authenticated with check(private.has_permission(organization_id,'supervision.manage'));
+create policy supervisions_update on public.student_supervisions for update to authenticated using(private.has_permission(organization_id,'supervision.manage')) with check(private.has_permission(organization_id,'supervision.manage'));
+create policy evaluations_read on public.evaluations for select to authenticated using(exists(select 1 from public.student_supervisions s where s.id=evaluations.supervision_id and (s.student_user_id=(select auth.uid()) or s.supervisor_user_id=(select auth.uid()) or private.has_permission(s.organization_id,'supervision.read'))));
+create policy evaluations_write on public.evaluations for insert to authenticated with check(evaluator_user_id=(select auth.uid()) and exists(select 1 from public.student_supervisions s where s.id=evaluations.supervision_id and private.has_permission(s.organization_id,'evaluation.manage')));
+create policy evaluations_update on public.evaluations for update to authenticated using(evaluator_user_id=(select auth.uid()) and exists(select 1 from public.student_supervisions s where s.id=evaluations.supervision_id and private.has_permission(s.organization_id,'evaluation.manage'))) with check(evaluator_user_id=(select auth.uid()));
