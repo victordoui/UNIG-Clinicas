@@ -70,9 +70,9 @@ import ComunicacaoNotificacoes from './pages/comunicacao/Notificacoes';
 import ComunicacaoMensagens from './pages/comunicacao/Mensagens';
 import AdminUsuarios from './pages/admin/Usuarios';
 import AdminPermissoes from './pages/admin/Permissoes';
-import AdminUnidades from './pages/admin/Unidades';
 import AdminConfiguracoes from './pages/admin/Configuracoes';
 import AdminLogs from './pages/admin/Logs';
+import AdminClinicas from './pages/admin/Clinicas';
 
 const ADMIN_ROLES = ['super_admin', 'administrador'] as const;
 
@@ -169,7 +169,8 @@ const App = () => (
             {/* Administração */}
             <Route path="/admin/usuarios" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminUsuarios /></ProtectedRoute>} />
             <Route path="/admin/permissoes" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminPermissoes /></ProtectedRoute>} />
-            <Route path="/admin/unidades" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminUnidades /></ProtectedRoute>} />
+            <Route path="/admin/unidades" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminClinicas /></ProtectedRoute>} />
+            <Route path="/admin/clinicas" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminClinicas /></ProtectedRoute>} />
             <Route path="/admin/configuracoes" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminConfiguracoes /></ProtectedRoute>} />
             <Route path="/admin/logs" element={<ProtectedRoute allowRoles={[...ADMIN_ROLES]}><AdminLogs /></ProtectedRoute>} />
 

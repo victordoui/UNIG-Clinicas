@@ -174,6 +174,7 @@ const NAV_GROUPS: NavGroup[] = [
       { title: 'Usuários', url: '/admin/usuarios', icon: Users },
       { title: 'Permissões', url: '/admin/permissoes', icon: ShieldCheck },
       { title: 'Unidades', url: '/admin/unidades', icon: Building2 },
+      { title: 'Clínicas e Serviços', url: '/admin/clinicas', icon: ClipboardList },
       { title: 'Configurações', url: '/admin/configuracoes', icon: Settings },
       { title: 'Logs do Sistema', url: '/admin/logs', icon: ScrollText },
     ],
