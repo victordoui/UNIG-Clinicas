@@ -72,6 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
     roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento'],
     items: [
       { title: 'Pacientes', url: '/pacientes', icon: Users },
+      { title: 'Agenda e Fila', url: '/agenda-fila', icon: CalendarDays },
     ],
   },
   {
