@@ -87,6 +87,72 @@ Deno.serve(async (req) => {
       }
     }
 
+    const demoPatients = [
+      ['DEMO-001', 'Ana Souza', 'demo-001'],
+      ['DEMO-002', 'Bruno Oliveira', 'demo-002'],
+      ['DEMO-003', 'Carla Santos', 'demo-003'],
+      ['DEMO-004', 'Diego Lima', 'demo-004'],
+    ] as const;
+    const patientByCode = new Map<string, string>();
+    for (const [recordNumber, fullName, documentNumber] of demoPatients) {
+      const { data: existingPerson, error: personLookupError } = await admin.from('persons')
+        .select('id').eq('organization_id', organizationId).eq('document_number', documentNumber).maybeSingle();
+      if (personLookupError) throw personLookupError;
+      let personId = existingPerson?.id;
+      if (!personId) {
+        const { data, error } = await admin.from('persons').insert({ organization_id: organizationId, full_name: fullName, document_number: documentNumber, email: `${documentNumber}@example.invalid` }).select('id').single();
+        if (error) throw error;
+        personId = data.id;
+      }
+      const { data: existingPatient, error: patientLookupError } = await admin.from('patients')
+        .select('id').eq('organization_id', organizationId).eq('record_number', recordNumber).maybeSingle();
+      if (patientLookupError) throw patientLookupError;
+      let patientId = existingPatient?.id;
+      if (!patientId) {
+        const { data, error } = await admin.from('patients').insert({ organization_id: organizationId, person_id: personId, record_number: recordNumber, status: 'active' }).select('id').single();
+        if (error) throw error;
+        patientId = data.id;
+      }
+      patientByCode.set(documentNumber, patientId);
+    }
+
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    tomorrow.setHours(9, 0, 0, 0);
+    const scheduledAt = tomorrow.toISOString();
+    const today = new Date().toISOString().slice(0, 10);
+    for (const [index, [code]] of demoClinics.entries()) {
+      const { data: clinic } = await admin.from('clinics').select('id').eq('organization_id', organizationId).eq('code', code).single();
+      const { data: service } = await admin.from('clinic_services').select('id').eq('clinic_id', clinic.id).eq('code', 'AVALIACAO').single();
+      const patientId = patientByCode.get(demoPatients[index][2])!;
+      const { data: existingAppointment, error: appointmentLookupError } = await admin.from('appointments')
+        .select('id').eq('organization_id', organizationId).eq('patient_id', patientId).eq('reason', 'Consulta de demonstração').maybeSingle();
+      if (appointmentLookupError) throw appointmentLookupError;
+      let appointmentId = existingAppointment?.id;
+      if (!appointmentId) {
+        const { data, error } = await admin.from('appointments').insert({ organization_id: organizationId, clinic_id: clinic.id, patient_id: patientId, clinic_service_id: service.id, scheduled_at: scheduledAt, duration_minutes: 30, status: 'scheduled', reason: 'Consulta de demonstração' }).select('id').single();
+        if (error) throw error;
+        appointmentId = data.id;
+      }
+      const { data: existingSession, error: sessionLookupError } = await admin.from('queue_sessions')
+        .select('id').eq('clinic_id', clinic.id).eq('service_date', today).maybeSingle();
+      if (sessionLookupError) throw sessionLookupError;
+      let sessionId = existingSession?.id;
+      if (!sessionId) {
+        const { data, error } = await admin.from('queue_sessions').insert({ organization_id: organizationId, clinic_id: clinic.id, service_date: today, status: 'open' }).select('id').single();
+        if (error) throw error;
+        sessionId = data.id;
+      }
+      const { data: existingTicket, error: ticketLookupError } = await admin.from('queue_tickets')
+        .select('id').eq('queue_session_id', sessionId).eq('appointment_id', appointmentId).maybeSingle();
+      if (ticketLookupError) throw ticketLookupError;
+      if (!existingTicket) {
+        const { data: lastTicket, error: lastTicketError } = await admin.from('queue_tickets').select('ticket_number').eq('queue_session_id', sessionId).order('ticket_number', { ascending: false }).limit(1).maybeSingle();
+        if (lastTicketError) throw lastTicketError;
+        const { error } = await admin.from('queue_tickets').insert({ queue_session_id: sessionId, patient_id: patientId, appointment_id: appointmentId, ticket_number: (lastTicket?.ticket_number ?? 0) + 1, status: 'waiting', priority: index === 0 ? 'priority' : 'normal' });
+        if (error) throw error;
+      }
+    }
+
     const { data: roleRows, error: rolesError } = await admin.from('roles').select('id, code').in('code', ROLES.map(([code]) => code));
     if (rolesError) throw rolesError;
     const roleByCode = new Map(roleRows.map((role) => [role.code, role.id]));
