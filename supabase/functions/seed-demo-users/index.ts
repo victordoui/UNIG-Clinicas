@@ -116,6 +116,25 @@ Deno.serve(async (req) => {
       patientByCode.set(documentNumber, patientId);
     }
 
+    const guardianId = patientByCode.get('demo-003');
+    if (guardianId) {
+      const { data: guardianPerson } = await admin.from('persons').select('id').eq('organization_id', organizationId).eq('document_number', 'demo-003').single();
+      const { data: existingAnimal, error: animalLookupError } = await admin.from('animals').select('id').eq('organization_id', organizationId).eq('microchip_number', 'DEMO-MICROCHIP').maybeSingle();
+      if (animalLookupError) throw animalLookupError;
+      let animalId = existingAnimal?.id;
+      if (!animalId) {
+        const { data, error } = await admin.from('animals').insert({ organization_id: organizationId, name: 'Luna', species: 'Canina', breed: 'SRD', sex: 'female', microchip_number: 'DEMO-MICROCHIP' }).select('id').single();
+        if (error) throw error;
+        animalId = data.id;
+      }
+      const { data: guardianLink, error: guardianLookupError } = await admin.from('animal_guardians').select('id').eq('animal_id', animalId).eq('person_id', guardianPerson.id).maybeSingle();
+      if (guardianLookupError) throw guardianLookupError;
+      if (!guardianLink) {
+        const { error } = await admin.from('animal_guardians').insert({ animal_id: animalId, person_id: guardianPerson.id, relationship: 'tutora', is_primary: true });
+        if (error) throw error;
+      }
+    }
+
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
     tomorrow.setHours(9, 0, 0, 0);
     const scheduledAt = tomorrow.toISOString();
