@@ -50,6 +50,43 @@ Deno.serve(async (req) => {
       organizationId = data.id;
     }
 
+    const { data: existingUnit, error: unitLookupError } = await admin.from('units')
+      .select('id').eq('organization_id', organizationId).eq('code', 'DEMO').maybeSingle();
+    if (unitLookupError) throw unitLookupError;
+    let unitId = existingUnit?.id;
+    if (!unitId) {
+      const { data, error } = await admin.from('units').insert({
+        organization_id: organizationId, code: 'DEMO', name: 'Unidade de Demonstração', city: 'Nova Iguaçu', state: 'RJ', is_active: true,
+      }).select('id').single();
+      if (error) throw error;
+      unitId = data.id;
+    }
+
+    const demoClinics = [
+      ['ODONTO', 'Clínica de Odontologia', 'Odontologia'],
+      ['FISIO', 'Clínica de Fisioterapia', 'Fisioterapia'],
+      ['VET', 'Clínica Veterinária', 'Veterinária'],
+      ['ESTETICA', 'Clínica de Estética', 'Estética'],
+    ] as const;
+    for (const [code, name, specialty] of demoClinics) {
+      const { data: clinic, error: clinicLookupError } = await admin.from('clinics')
+        .select('id').eq('organization_id', organizationId).eq('code', code).maybeSingle();
+      if (clinicLookupError) throw clinicLookupError;
+      let clinicId = clinic?.id;
+      if (!clinicId) {
+        const { data, error } = await admin.from('clinics').insert({ organization_id: organizationId, unit_id: unitId, code, name, specialty, is_active: true }).select('id').single();
+        if (error) throw error;
+        clinicId = data.id;
+      }
+      const { data: service, error: serviceLookupError } = await admin.from('clinic_services')
+        .select('id').eq('clinic_id', clinicId).eq('code', 'AVALIACAO').maybeSingle();
+      if (serviceLookupError) throw serviceLookupError;
+      if (!service) {
+        const { error } = await admin.from('clinic_services').insert({ clinic_id: clinicId, code: 'AVALIACAO', name: 'Avaliação inicial', duration_minutes: 30, is_active: true });
+        if (error) throw error;
+      }
+    }
+
     const { data: roleRows, error: rolesError } = await admin.from('roles').select('id, code').in('code', ROLES.map(([code]) => code));
     if (rolesError) throw rolesError;
     const roleByCode = new Map(roleRows.map((role) => [role.code, role.id]));
