@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LogIn, Sparkles, Zap, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,7 +24,6 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
-  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     if (!loading && user) navigate('/', { replace: true });
@@ -50,8 +48,8 @@ export default function Auth() {
       // Try seeding if user doesn't exist
       if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credential')) {
         toast({
-          title: 'Usuários demo não criados',
-          description: 'Clique em "Preparar usuários demo" primeiro.',
+          title: 'Acesso de teste indisponível',
+          description: 'As contas de teste ainda estão sendo preparadas.',
           variant: 'destructive',
         });
       } else {
@@ -61,22 +59,6 @@ export default function Auth() {
       navigate('/', { replace: true });
     }
     setDemoLoading(null);
-  };
-
-  const seedDemoUsers = async () => {
-    setSeeding(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('seed-demo-users');
-      if (error) throw error;
-      toast({
-        title: 'Usuários demo prontos',
-        description: `${data?.created ?? 0} criados · ${data?.existed ?? 0} já existiam. Use os botões abaixo para entrar.`,
-      });
-    } catch (err: any) {
-      toast({ title: 'Erro ao preparar demos', description: err?.message ?? String(err), variant: 'destructive' });
-    } finally {
-      setSeeding(false);
-    }
   };
 
   return (
@@ -171,14 +153,6 @@ export default function Auth() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Alert className="py-2 border-primary/30">
-                <AlertDescription className="text-xs">
-                  Primeira vez? <button onClick={seedDemoUsers} disabled={seeding} className="underline text-primary font-semibold disabled:opacity-50">
-                    {seeding ? 'preparando…' : 'Preparar usuários demo'}
-                  </button> antes de clicar em um perfil.
-                </AlertDescription>
-              </Alert>
-
               <div className="grid grid-cols-2 gap-2">
                 {DEMO_USERS.map((d) => {
                   const Icon = UNIG_ROLE_ICON[d.role];
@@ -186,7 +160,7 @@ export default function Auth() {
                   return (
                     <button
                       key={d.role}
-                      onClick={() => signInDemo(d.email, d.password, UNIG_ROLE_LABEL[d.role])}
+                      onClick={() => signInDemo(d.email, d.password, d.label ?? UNIG_ROLE_LABEL[d.role])}
                       disabled={!!demoLoading}
                       className={cn(
                         'group rounded-lg border bg-card p-2.5 hover:shadow-md hover:border-primary/40 transition-all flex items-center gap-2 text-left min-w-0 disabled:opacity-60 disabled:pointer-events-none',
@@ -196,7 +170,7 @@ export default function Auth() {
                         {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className={cn('h-4 w-4', UNIG_ROLE_TEXT_COLOR[d.role])} />}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-[12px] font-semibold text-foreground truncate">{UNIG_ROLE_LABEL[d.role]}</div>
+                        <div className="text-[12px] font-semibold text-foreground truncate">{d.label ?? UNIG_ROLE_LABEL[d.role]}</div>
                         <div className="text-[10px] text-muted-foreground truncate">{d.email}</div>
                       </div>
                     </button>

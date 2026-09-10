@@ -105,6 +105,17 @@ export function isStaff(role: UnigRole | null | undefined) {
 export function mapDbRoleToUnig(dbRole: string | null | undefined, isSuperAdmin = false): UnigRole {
   if (isSuperAdmin) return 'super_admin';
   if (!dbRole) return 'visitante';
+  const clinicalRoleMap: Record<string, UnigRole> = {
+    super_admin: 'super_admin',
+    organization_admin: 'administrador',
+    clinic_manager: 'gestor_unidade',
+    clinician: 'professor',
+    academic_supervisor: 'coordenacao',
+    student: 'aluno',
+    receptionist: 'atendimento',
+    auditor: 'financeiro',
+  };
+  if (clinicalRoleMap[dbRole]) return clinicalRoleMap[dbRole];
   if ((ALL_UNIG_ROLES as string[]).includes(dbRole)) return dbRole as UnigRole;
   return 'visitante';
 }
@@ -114,12 +125,23 @@ export interface DemoUser {
   role: UnigRole;
   email: string;
   password: string;
+  label?: string;
 }
 
 export const DEMO_PASSWORD = 'unig1234';
 
-export const DEMO_USERS: DemoUser[] = ALL_UNIG_ROLES.map((role) => ({
-  role,
-  email: `${role.replace(/_/g, '-')}@unig.demo`,
+export const DEMO_USERS: DemoUser[] = [
+  ['super_admin', 'Super Admin'],
+  ['organization_admin', 'Administração da organização'],
+  ['clinic_manager', 'Gestão da clínica'],
+  ['clinician', 'Profissional clínico'],
+  ['academic_supervisor', 'Supervisor acadêmico'],
+  ['student', 'Estudante'],
+  ['receptionist', 'Recepção'],
+  ['auditor', 'Auditoria'],
+].map(([databaseRole, label]) => ({
+  role: mapDbRoleToUnig(databaseRole),
+  email: `${databaseRole.replace(/_/g, '-')}@unig.demo`,
   password: DEMO_PASSWORD,
+  label,
 }));

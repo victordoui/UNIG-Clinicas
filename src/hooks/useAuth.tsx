@@ -52,17 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
       supabase
         .from('user_roles')
-        .select('role')
+        .select('role:roles(code)')
         .eq('user_id', userId)
         .eq('is_active', true)
-        .order('created_at', { ascending: true })
+        .order('assigned_at', { ascending: true })
         .limit(1)
         .maybeSingle(),
     ]);
     const p = profileRes.data as any;
     setProfile(p ?? null);
-    setIsSuperAdmin(!!p?.is_super_admin);
-    setDbRole((roleRes.data as any)?.role ?? null);
+    setIsSuperAdmin(false);
+    setDbRole((roleRes.data as any)?.role?.code ?? null);
   };
 
   useEffect(() => {
