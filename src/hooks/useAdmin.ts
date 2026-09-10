@@ -11,34 +11,38 @@ export interface AdminUserRow {
   is_super_admin: boolean;
   password_change_required: boolean;
   created_at: string;
-  roles: { id: string; role: string; unit_id: string | null; is_active: boolean }[];
+  roles: { id: string; role: string; organization_id: string; is_active: boolean }[];
 }
 
 export function useAdminUsers(search?: string) {
   return useQuery({
     queryKey: ['admin-users', search ?? ''],
     queryFn: async (): Promise<AdminUserRow[]> => {
-      let q = supabase
-        .from('profiles')
-        .select('id, email, full_name, status, is_super_admin, password_change_required, created_at, user_roles(id, role, unit_id, is_active)')
-        .order('full_name')
-        .limit(500);
-      if (search && search.trim()) {
-        const s = `%${search.trim()}%`;
-        q = q.or(`full_name.ilike.${s},email.ilike.${s}`);
+      const [profiles, assignments] = await Promise.all([
+        supabase.from('profiles').select('id, email, full_name, created_at').order('full_name').limit(500),
+        supabase.from('user_roles').select('id, user_id, organization_id, is_active, role:roles(code)').limit(2000),
+      ]);
+      if (profiles.error) throw profiles.error;
+      if (assignments.error) throw assignments.error;
+      const rolesByUser = new Map<string, any[]>();
+      for (const role of (assignments.data ?? []) as any[]) {
+        const rows = rolesByUser.get(role.user_id) ?? [];
+        if (role.is_active) rows.push({ ...role, role: role.role?.code ?? 'visitante' });
+        rolesByUser.set(role.user_id, rows);
       }
-      const { data, error } = await q;
-      if (error) throw error;
-      return (data ?? []).map((p: any) => ({
+      const normalized = (profiles.data ?? []).map((p: any) => ({
         id: p.id,
         email: p.email,
         full_name: p.full_name,
-        status: p.status,
-        is_super_admin: p.is_super_admin,
-        password_change_required: p.password_change_required,
+        status: 'ativo',
+        is_super_admin: false,
+        password_change_required: false,
         created_at: p.created_at,
-        roles: (p.user_roles ?? []).filter((r: any) => r.is_active),
+        roles: rolesByUser.get(p.id) ?? [],
       }));
+      if (!search?.trim()) return normalized;
+      const term = search.trim().toLowerCase();
+      return normalized.filter((user) => `${user.full_name} ${user.email ?? ''}`.toLowerCase().includes(term));
     },
   });
 }
@@ -47,9 +51,14 @@ export function useAssignRole() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ userId, role, unitId }: { userId: string; role: UnigRole; unitId?: string | null }) => {
-      const { data, error } = await supabase.rpc('admin_assign_role', {
-        _user_id: userId, _role: role as any, _unit_id: unitId ?? null,
-      });
+      const dbRoleByUi: Record<string, string> = { super_admin: 'super_admin', administrador: 'organization_admin', gestor_unidade: 'clinic_manager', professor: 'clinician', coordenacao: 'academic_supervisor', aluno: 'student', atendimento: 'receptionist', financeiro: 'auditor' };
+      const dbCode = dbRoleByUi[role] ?? role;
+      const [{ data: roleRow, error: roleError }, { data: unitRows, error: unitError }] = await Promise.all([
+        supabase.from('roles').select('id').eq('code', dbCode).single(),
+        unitId ? supabase.from('units').select('organization_id').eq('id', unitId).single() : supabase.from('units').select('organization_id').limit(1).single(),
+      ]);
+      if (roleError) throw roleError; if (unitError) throw unitError;
+      const { data, error } = await (supabase.from('user_roles') as any).upsert({ user_id: userId, role_id: roleRow.id, organization_id: unitRows.organization_id, is_active: true }, { onConflict: 'user_id,organization_id,role_id' }).select().single();
       if (error) throw error;
       return data;
     },
@@ -61,7 +70,7 @@ export function useRevokeRole() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (userRoleId: string) => {
-      const { error } = await supabase.rpc('admin_revoke_role', { _user_role_id: userRoleId });
+      const { error } = await (supabase.from('user_roles') as any).update({ is_active: false }).eq('id', userRoleId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
@@ -72,8 +81,7 @@ export function useResetPassword() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.rpc('admin_set_password_reset', { _user_id: userId });
-      if (error) throw error;
+      throw new Error('Redefinição de senha deve ser feita pelo fluxo seguro de recuperação do Auth.');
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
   });
@@ -207,12 +215,10 @@ export function useRolePermissions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('role_permissions')
-        .select('*')
-        .order('role')
-        .order('module')
+        .select('role:roles(code,name), permission:permissions(code,name,description)')
         .limit(1000);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).map((row: any) => ({ role: row.role?.code ?? '—', role_name: row.role?.name ?? '—', permission: row.permission?.code ?? '—', permission_name: row.permission?.name ?? '—', description: row.permission?.description ?? null }));
     },
   });
 }

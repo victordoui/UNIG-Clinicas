@@ -3,8 +3,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { KeyRound, Plus, X, Search } from 'lucide-react';
-import { useAdminUsers, useResetPassword, useRevokeRole, type AdminUserRow } from '@/hooks/useAdmin';
+import { Plus, X, Search } from 'lucide-react';
+import { useAdminUsers, useRevokeRole, type AdminUserRow } from '@/hooks/useAdmin';
 import { UNIG_ROLE_BADGE, UNIG_ROLE_LABEL, type UnigRole } from '@/lib/unigRoles';
 import { AssignRoleDialog } from './AssignRoleDialog';
 import { toast } from '@/hooks/use-toast';
@@ -14,16 +14,10 @@ export function UserRolesTable() {
   const [assignFor, setAssignFor] = useState<AdminUserRow | null>(null);
   const { data: users = [], isLoading } = useAdminUsers(search);
   const revoke = useRevokeRole();
-  const reset = useResetPassword();
 
   const onRevoke = async (id: string, label: string) => {
     if (!confirm(`Revogar papel "${label}"?`)) return;
     try { await revoke.mutateAsync(id); toast({ title: 'Papel revogado' }); }
-    catch (e: any) { toast({ title: 'Erro', description: e?.message, variant: 'destructive' }); }
-  };
-  const onReset = async (u: AdminUserRow) => {
-    if (!confirm(`Solicitar troca de senha para ${u.full_name}?`)) return;
-    try { await reset.mutateAsync(u.id); toast({ title: 'Troca de senha solicitada' }); }
     catch (e: any) { toast({ title: 'Erro', description: e?.message, variant: 'destructive' }); }
   };
 
@@ -41,7 +35,7 @@ export function UserRolesTable() {
               <TableHead>Usuário</TableHead>
               <TableHead>Papéis ativos</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-[220px] text-right">Ações</TableHead>
+              <TableHead className="w-[140px] text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -76,7 +70,6 @@ export function UserRolesTable() {
                 </TableCell>
                 <TableCell className="text-right space-x-1">
                   <Button size="sm" variant="outline" onClick={() => setAssignFor(u)}><Plus className="h-3 w-3 mr-1" />Papel</Button>
-                  <Button size="sm" variant="ghost" onClick={() => onReset(u)}><KeyRound className="h-3 w-3 mr-1" />Reset</Button>
                 </TableCell>
               </TableRow>
             ))}

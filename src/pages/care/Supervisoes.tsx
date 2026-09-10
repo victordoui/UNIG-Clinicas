@@ -15,14 +15,16 @@ import { toast } from '@/hooks/use-toast';
 export default function Supervisoes() {
   const qc = useQueryClient(); const [clinicId, setClinicId] = useState(''); const [studentId, setStudentId] = useState(''); const [supervisionId, setSupervisionId] = useState(''); const [score, setScore] = useState(''); const [feedback, setFeedback] = useState('');
   const data = useQuery({ queryKey: ['clinical-supervisions'], queryFn: async () => {
-    const [clinics, assignments, supervisions, evaluations] = await Promise.all([
+    const [clinics, assignments, profiles, supervisions, evaluations] = await Promise.all([
       supabase.from('clinics').select('id,organization_id,name').eq('is_active', true),
-      supabase.from('user_roles').select('user_id,role:roles(code),profile:profiles(full_name,email)').eq('is_active', true),
+      supabase.from('user_roles').select('user_id,role:roles(code)').eq('is_active', true),
+      supabase.from('profiles').select('id,full_name,email').limit(500),
       supabase.from('student_supervisions').select('id,clinic_id,student_user_id,supervisor_user_id,status,started_at,created_at,clinic:clinics(name)').order('created_at', { ascending: false }).limit(40),
       supabase.from('evaluations').select('id,supervision_id,score,feedback,submitted_at').order('created_at', { ascending: false }).limit(40),
     ]);
-    for (const result of [clinics, assignments, supervisions, evaluations]) if (result.error) throw result.error;
-    return { clinics: clinics.data ?? [], students: (assignments.data ?? []).filter((item: any) => item.role?.code === 'student'), supervisions: supervisions.data ?? [], evaluations: evaluations.data ?? [] };
+    for (const result of [clinics, assignments, profiles, supervisions, evaluations]) if (result.error) throw result.error;
+    const profileById = new Map((profiles.data ?? []).map((profile: any) => [profile.id, profile]));
+    return { clinics: clinics.data ?? [], students: (assignments.data ?? []).filter((item: any) => item.role?.code === 'student').map((item: any) => ({ ...item, profile: profileById.get(item.user_id) })), supervisions: supervisions.data ?? [], evaluations: evaluations.data ?? [] };
   }});
   const refresh = () => qc.invalidateQueries({ queryKey: ['clinical-supervisions'] });
   const create = useMutation({ mutationFn: async () => {
