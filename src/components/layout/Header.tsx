@@ -1,9 +1,11 @@
+import { FormEvent, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { LogOut } from 'lucide-react';
+import { LogOut, Search } from 'lucide-react';
 import { UNIG_ROLE_LABEL, UNIG_ROLE_BADGE, UNIG_ROLE_ICON } from '@/lib/unigRoles';
 import { NotificationBell } from '@/components/comunicacao/NotificationBell';
 import { cn } from '@/lib/utils';
@@ -11,9 +13,16 @@ import unigSymbol from '@/assets/unig-clinicas-symbol.png';
 
 export function Header() {
   const { profile, unigRole, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
   const name = profile?.full_name || profile?.email || 'Usuário';
   const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
   const RoleIcon = UNIG_ROLE_ICON[unigRole];
+  const submitSearch = (event: FormEvent) => {
+    event.preventDefault();
+    const value = search.trim();
+    if (value) navigate(`/pacientes?search=${encodeURIComponent(value)}`);
+  };
 
   return (
     <div className="flex-1 flex items-center justify-between gap-3">
@@ -24,6 +33,10 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-2">
+        <form onSubmit={submitSearch} className="relative hidden lg:block">
+          <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <input aria-label="Busca global" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar paciente, CPF ou prontuário" className="h-9 w-[240px] rounded-lg border border-border bg-background pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" />
+        </form>
         <Badge variant="outline" className={cn('gap-1.5 hidden sm:inline-flex', UNIG_ROLE_BADGE[unigRole])}>
           <RoleIcon className="h-3.5 w-3.5" />
           {UNIG_ROLE_LABEL[unigRole]}

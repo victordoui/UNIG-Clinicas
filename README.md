@@ -46,9 +46,11 @@ contas ou a senha em produção.
 ## Operação por clínica
 
 - `/agenda-fila`: agenda e fila operacional com clínica selecionável.
+- `/fila/qr/<token>`: entrada pública por QR de uma sessão específica; o token é validado no Supabase antes da identificação.
 - `/painel-tv?clinic=<clinic_id>`: painel de chamada dedicado para uma clínica,
   com atualização automática e sem nomes ou conteúdo de prontuário.
 - `/indicadores-clinicos`: indicadores agregados ou filtrados por clínica.
+- `/portal/paciente` e `/portal/tutor`: shells de portal protegidos por papel e vínculo de identidade.
 
 ## Supabase
 
@@ -58,4 +60,5 @@ role; a aplicação web deve usar somente a chave publishable.
 
 Consulte [supabase/README.md](supabase/README.md),
 [docs/PRODUCAO_CHECKLIST.md](docs/PRODUCAO_CHECKLIST.md) e os
-[ADRs](docs/adr/) antes de promover o ambiente.
+[ADRs](docs/adr/) antes de promover o ambiente. O acompanhamento detalhado do
+Plano Mestre está em [docs/PLANO_MESTRE_STATUS.md](docs/PLANO_MESTRE_STATUS.md).

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Activity, ArrowRight, Clock3, Info, Megaphone, RefreshCw, UsersRound } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,6 +25,7 @@ function formatDate(date: Date) {
 }
 
 export default function PainelTV() {
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [clinicId, setClinicId] = useState(searchParams.get('clinic') ?? '');
   const [now, setNow] = useState(() => new Date());
@@ -64,6 +65,13 @@ export default function PainelTV() {
   useEffect(() => {
     if (selectedClinicId && selectedClinicId !== searchParams.get('clinic')) setSearchParams({ clinic: selectedClinicId }, { replace: true });
   }, [selectedClinicId, searchParams, setSearchParams]);
+  useEffect(() => {
+    if (!selectedClinicId) return;
+    const channel = supabase.channel(`queue-events-tv-${selectedClinicId}`).on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'queue_events', filter: `clinic_id=eq.${selectedClinicId}`,
+    }, () => { void queryClient.invalidateQueries({ queryKey: ['queue-tv', TODAY] }); }).subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [queryClient, selectedClinicId]);
 
   return (
     <main className="min-h-screen bg-[#003E3A] px-4 py-4 text-white sm:px-6 lg:px-7 lg:py-5">
@@ -99,7 +107,7 @@ export default function PainelTV() {
           </section>
         </>}
 
-        <footer className="flex flex-col items-start justify-between gap-3 px-2 pb-1 text-xs text-white/65 sm:flex-row sm:items-center sm:text-sm"><div className="flex items-center gap-2"><Info className="h-5 w-5 text-white" /><span>Painel de informações da UNIG Clínicas</span><span className="text-white/35">•</span><span className="flex items-center gap-1.5"><RefreshCw className="h-3.5 w-3.5" />Atualização automática a cada 5 segundos</span></div><span className="hidden tracking-[0.28em] text-white/80 lg:block">Saúde, Ensino e Vida Real</span><span className="text-[10px] text-white/40 sm:hidden">Atualizado às {updatedLabel}</span></footer>
+        <footer className="flex flex-col items-start justify-between gap-3 px-2 pb-1 text-xs text-white/65 sm:flex-row sm:items-center sm:text-sm"><div className="flex items-center gap-2"><Info className="h-5 w-5 text-white" /><span>Painel de informações da UNIG Clínicas</span><span className="text-white/35">•</span><span className="flex items-center gap-1.5"><RefreshCw className="h-3.5 w-3.5" />Tempo real · fallback de 5 segundos</span></div><span className="hidden tracking-[0.28em] text-white/80 lg:block">Saúde, Ensino e Vida Real</span><span className="text-[10px] text-white/40 sm:hidden">Atualizado às {updatedLabel}</span></footer>
       </div>
     </main>
   );

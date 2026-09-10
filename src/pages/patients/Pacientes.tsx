@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, UserRound } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -29,7 +30,8 @@ const EMPTY_FORM = {
 };
 
 export default function Pacientes() {
-  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get('search') ?? '');
   const [form, setForm] = useState(EMPTY_FORM);
   const queryClient = useQueryClient();
   const catalog = useQuery({

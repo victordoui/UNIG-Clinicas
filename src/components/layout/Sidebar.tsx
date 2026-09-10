@@ -67,7 +67,7 @@ interface NavGroup {
 }
 
 const STAFF = ['super_admin', 'administrador', 'secretaria', 'coordenacao'] as UnigRole[];
-const CLINICAL_NAVIGATION_GROUPS = new Set(['clinical-care', 'administration']);
+const CLINICAL_NAVIGATION_GROUPS = new Set(['clinical-care', 'patient-portal', 'tutor-portal', 'administration']);
 const sidebarScrollMemory = new globalThis.Map<string, number>();
 
 const NAV_GROUPS: NavGroup[] = [
@@ -84,6 +84,20 @@ const NAV_GROUPS: NavGroup[] = [
       { title: 'Veterinária', url: '/veterinaria', icon: PawPrint },
       { title: 'Procedimentos e exames', url: '/procedimentos-exames', icon: FlaskConical },
       { title: 'Indicadores', url: '/indicadores-clinicos', icon: BarChart3 },
+    ],
+  },
+  {
+    id: 'patient-portal', section: 'PORTAL', label: 'Área do Paciente', icon: Users, roles: ['paciente'],
+    items: [
+      { title: 'Início', url: '/portal/paciente', icon: Home },
+      { title: 'Fila e agenda', url: '/agenda-fila', icon: CalendarDays },
+    ],
+  },
+  {
+    id: 'tutor-portal', section: 'PORTAL', label: 'Área do Tutor', icon: PawPrint, roles: ['tutor'],
+    items: [
+      { title: 'Meus animais', url: '/portal/tutor', icon: PawPrint },
+      { title: 'Fila e agenda', url: '/agenda-fila', icon: CalendarDays },
     ],
   },
   {

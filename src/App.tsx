@@ -82,6 +82,9 @@ import Supervisoes from './pages/care/Supervisoes';
 import Veterinaria from './pages/care/Veterinaria';
 import ProcedimentosExames from './pages/care/ProcedimentosExames';
 import PainelTV from './pages/care/PainelTV';
+import FilaQR from './pages/care/FilaQR';
+import PortalPaciente from './pages/portal/PortalPaciente';
+import PortalTutor from './pages/portal/PortalTutor';
 
 const ADMIN_ROLES = ['super_admin', 'administrador'] as const;
 
@@ -102,11 +105,14 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/fila/qr/:token" element={<FilaQR />} />
 
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/pacientes" element={<ProtectedRoute><Pacientes /></ProtectedRoute>} />
             <Route path="/agenda-fila" element={<ProtectedRoute><AgendaFila /></ProtectedRoute>} />
             <Route path="/painel-tv" element={<ProtectedRoute><PainelTV /></ProtectedRoute>} />
+            <Route path="/portal/paciente" element={<ProtectedRoute allowRoles={['paciente']}><PortalPaciente /></ProtectedRoute>} />
+            <Route path="/portal/tutor" element={<ProtectedRoute allowRoles={['tutor']}><PortalTutor /></ProtectedRoute>} />
             <Route path="/atendimentos" element={<ProtectedRoute><Atendimentos /></ProtectedRoute>} />
             <Route path="/indicadores-clinicos" element={<ProtectedRoute><Indicadores /></ProtectedRoute>} />
             <Route path="/documentos-consentimentos" element={<ProtectedRoute><DocumentosConsentimentos /></ProtectedRoute>} />

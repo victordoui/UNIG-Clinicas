@@ -1,5 +1,5 @@
 import {
-  ShieldCheck, Shield, ClipboardList, GraduationCap, BookOpen, User,
+  ShieldCheck, Shield, ClipboardList, GraduationCap, BookOpen, User, PawPrint,
   DollarSign, Headset, Building2, MapPinned, Eye, type LucideIcon,
 } from 'lucide-react';
 
@@ -15,6 +15,8 @@ export type UnigRole =
   | 'atendimento'
   | 'gestor_unidade'
   | 'operador_espacos'
+  | 'paciente'
+  | 'tutor'
   | 'visitante'; // fallback quando o usuário ainda não tem papel
 
 export const UNIG_ROLE_LABEL: Record<UnigRole, string> = {
@@ -28,6 +30,8 @@ export const UNIG_ROLE_LABEL: Record<UnigRole, string> = {
   atendimento: 'Atendimento',
   gestor_unidade: 'Gestor de Unidade',
   operador_espacos: 'Operador de Espaços',
+  paciente: 'Paciente',
+  tutor: 'Tutor',
   visitante: 'Visitante',
 };
 
@@ -42,6 +46,8 @@ export const UNIG_ROLE_ICON: Record<UnigRole, LucideIcon> = {
   atendimento: Headset,
   gestor_unidade: Building2,
   operador_espacos: MapPinned,
+  paciente: User,
+  tutor: PawPrint,
   visitante: Eye,
 };
 
@@ -56,6 +62,8 @@ export const UNIG_ROLE_BADGE: Record<UnigRole, string> = {
   atendimento: 'bg-rose-500/15 text-rose-700 border-rose-500/30',
   gestor_unidade: 'bg-fuchsia-500/15 text-fuchsia-700 border-fuchsia-500/30',
   operador_espacos: 'bg-teal-500/15 text-teal-700 border-teal-500/30',
+  paciente: 'bg-primary/15 text-primary border-primary/30',
+  tutor: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30',
   visitante: 'bg-muted text-muted-foreground border-border',
 };
 
@@ -70,6 +78,8 @@ export const UNIG_ROLE_TEXT_COLOR: Record<UnigRole, string> = {
   atendimento: 'text-rose-600',
   gestor_unidade: 'text-fuchsia-600',
   operador_espacos: 'text-teal-600',
+  paciente: 'text-primary',
+  tutor: 'text-emerald-600',
   visitante: 'text-muted-foreground',
 };
 
@@ -84,6 +94,8 @@ export const ALL_UNIG_ROLES: UnigRole[] = [
   'atendimento',
   'gestor_unidade',
   'operador_espacos',
+  'paciente',
+  'tutor',
 ];
 
 // Papéis considerados "equipe" (staff) — usados para permissões amplas de backoffice.
@@ -114,6 +126,8 @@ export function mapDbRoleToUnig(dbRole: string | null | undefined, isSuperAdmin 
     student: 'aluno',
     receptionist: 'atendimento',
     auditor: 'financeiro',
+    patient: 'paciente',
+    tutor: 'tutor',
   };
   if (clinicalRoleMap[dbRole]) return clinicalRoleMap[dbRole];
   if ((ALL_UNIG_ROLES as string[]).includes(dbRole)) return dbRole as UnigRole;
