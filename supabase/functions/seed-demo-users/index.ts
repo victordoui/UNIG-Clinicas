@@ -257,6 +257,67 @@ Deno.serve(async (req) => {
         if (evaluationInsertError) throw evaluationInsertError;
       }
     }
+
+    // Add one versioned clinical evolution for the first demo patient.
+    const demoClinicianId = userIdByRole.get('clinician');
+    const demoPatientId = patientByCode.get('demo-001');
+    if (demoClinicianId && demoPatientId) {
+      const { data: demoClinic, error: demoClinicError } = await admin.from('clinics')
+        .select('id').eq('organization_id', organizationId).eq('code', 'ODONTO').single();
+      if (demoClinicError) throw demoClinicError;
+      const { data: demoAppointment, error: appointmentError } = await admin.from('appointments')
+        .select('id').eq('organization_id', organizationId).eq('clinic_id', demoClinic.id)
+        .eq('patient_id', demoPatientId).eq('reason', 'Consulta de demonstração').single();
+      if (appointmentError) throw appointmentError;
+      const { data: demoTicket } = await admin.from('queue_tickets').select('id').eq('appointment_id', demoAppointment.id).maybeSingle();
+      const { data: existingEncounter, error: encounterLookupError } = await admin.from('encounters')
+        .select('id').eq('appointment_id', demoAppointment.id).maybeSingle();
+      if (encounterLookupError) throw encounterLookupError;
+      let encounterId = existingEncounter?.id;
+      if (!encounterId) {
+        const { data: createdEncounter, error: encounterInsertError } = await admin.from('encounters').insert({
+          organization_id: organizationId,
+          clinic_id: demoClinic.id,
+          patient_id: demoPatientId,
+          appointment_id: demoAppointment.id,
+          queue_ticket_id: demoTicket?.id ?? null,
+          status: 'in_progress',
+          created_by: demoClinicianId,
+          updated_by: demoClinicianId,
+        }).select('id').single();
+        if (encounterInsertError) throw encounterInsertError;
+        encounterId = createdEncounter.id;
+      }
+      const { data: existingRecord, error: recordLookupError } = await admin.from('clinical_records')
+        .select('id').eq('organization_id', organizationId).eq('patient_id', demoPatientId).limit(1).maybeSingle();
+      if (recordLookupError) throw recordLookupError;
+      let clinicalRecordId = existingRecord?.id;
+      if (!clinicalRecordId) {
+        const { data: createdRecord, error: recordInsertError } = await admin.from('clinical_records').insert({
+          organization_id: organizationId, patient_id: demoPatientId, created_by: demoClinicianId,
+        }).select('id').single();
+        if (recordInsertError) throw recordInsertError;
+        clinicalRecordId = createdRecord.id;
+      }
+      const { data: existingNote, error: noteLookupError } = await admin.from('clinical_notes')
+        .select('id').eq('encounter_id', encounterId).eq('note_type', 'evolution').maybeSingle();
+      if (noteLookupError) throw noteLookupError;
+      if (!existingNote) {
+        const noteContent = 'Paciente acolhida para avaliação inicial. Sem intercorrências no momento; plano terapêutico em definição pela equipe acadêmica.';
+        const { data: createdNote, error: noteInsertError } = await admin.from('clinical_notes').insert({
+          clinical_record_id: clinicalRecordId,
+          encounter_id: encounterId,
+          note_type: 'evolution',
+          content: noteContent,
+          author_id: demoClinicianId,
+        }).select('id').single();
+        if (noteInsertError) throw noteInsertError;
+        const { error: versionInsertError } = await admin.from('clinical_note_versions').insert({
+          clinical_note_id: createdNote.id, version_number: 1, content: noteContent, reason: 'Registro inicial', author_id: demoClinicianId,
+        });
+        if (versionInsertError) throw versionInsertError;
+      }
+    }
     return json({ ok: true, created, existed, total: ROLES.length });
   } catch (error) {
     return json({ ok: false, error: error instanceof Error ? error.message : String(error) }, 500);
