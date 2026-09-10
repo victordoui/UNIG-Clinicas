@@ -170,6 +170,18 @@ Deno.serve(async (req) => {
         const { error } = await admin.from('queue_tickets').insert({ queue_session_id: sessionId, patient_id: patientId, appointment_id: appointmentId, ticket_number: (lastTicket?.ticket_number ?? 0) + 1, status: 'waiting', priority: index === 0 ? 'priority' : 'normal' });
         if (error) throw error;
       }
+      const { data: existingProcedure, error: procedureLookupError } = await admin.from('clinical_procedures').select('id').eq('clinic_id', clinic.id).eq('patient_id', patientId).eq('code', 'AVALIACAO_INICIAL').maybeSingle();
+      if (procedureLookupError) throw procedureLookupError;
+      if (!existingProcedure) {
+        const { error } = await admin.from('clinical_procedures').insert({ organization_id: organizationId, clinic_id: clinic.id, patient_id: patientId, code: 'AVALIACAO_INICIAL', name: 'Avaliação inicial', status: 'planned' });
+        if (error) throw error;
+      }
+      const { data: existingExam, error: examLookupError } = await admin.from('exam_orders').select('id').eq('clinic_id', clinic.id).eq('patient_id', patientId).eq('exam_name', 'Exame demonstrativo').maybeSingle();
+      if (examLookupError) throw examLookupError;
+      if (!existingExam) {
+        const { error } = await admin.from('exam_orders').insert({ organization_id: organizationId, clinic_id: clinic.id, patient_id: patientId, exam_name: 'Exame demonstrativo', status: 'requested' });
+        if (error) throw error;
+      }
     }
 
     const { data: roleRows, error: rolesError } = await admin.from('roles').select('id, code').in('code', ROLES.map(([code]) => code));

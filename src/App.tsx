@@ -80,6 +80,7 @@ import Indicadores from './pages/reporting/Indicadores';
 import DocumentosConsentimentos from './pages/care/DocumentosConsentimentos';
 import Supervisoes from './pages/care/Supervisoes';
 import Veterinaria from './pages/care/Veterinaria';
+import ProcedimentosExames from './pages/care/ProcedimentosExames';
 
 const ADMIN_ROLES = ['super_admin', 'administrador'] as const;
 
@@ -109,6 +110,7 @@ const App = () => (
             <Route path="/documentos-consentimentos" element={<ProtectedRoute><DocumentosConsentimentos /></ProtectedRoute>} />
             <Route path="/supervisoes" element={<ProtectedRoute><Supervisoes /></ProtectedRoute>} />
             <Route path="/veterinaria" element={<ProtectedRoute><Veterinaria /></ProtectedRoute>} />
+            <Route path="/procedimentos-exames" element={<ProtectedRoute><ProcedimentosExames /></ProtectedRoute>} />
 
             {/* Portal do Aluno */}
             <Route path="/aluno/disciplinas" element={<ProtectedRoute><AlunoDisciplinas /></ProtectedRoute>} />
