@@ -144,7 +144,9 @@ export function useSystemSettings() {
   return useQuery({
     queryKey: ['admin-settings'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('system_settings').select('*').order('key').limit(500);
+      const { data: organization, error: organizationError } = await supabase.from('organizations').select('id').limit(1).single();
+      if (organizationError) throw organizationError;
+      const { data, error } = await (supabase as any).from('organization_settings').select('*').eq('organization_id', organization.id).order('key').limit(500);
       if (error) throw error;
       return data ?? [];
     },
@@ -155,9 +157,10 @@ export function useUpsertSetting() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ key, value, description }: { key: string; value: any; description?: string | null }) => {
-      const { error } = await supabase.rpc('admin_upsert_setting', {
-        _key: key, _value: value, _description: description ?? null,
-      });
+      const { data: organization, error: organizationError } = await supabase.from('organizations').select('id').limit(1).single();
+      if (organizationError) throw organizationError;
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await (supabase as any).from('organization_settings').upsert({ organization_id: organization.id, key, value, description: description ?? null, updated_by: auth.user?.id }, { onConflict: 'organization_id,key' });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-settings'] }),
