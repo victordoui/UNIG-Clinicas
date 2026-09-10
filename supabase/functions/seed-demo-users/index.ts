@@ -10,11 +10,20 @@ const corsHeaders = {
 
 const DEMO_PASSWORD = 'unig1234';
 const DEMO_ORGANIZATION = 'UNIG Clínicas — Ambiente de Teste';
-const ROLES = [
-  ['super_admin', 'Super Admin'], ['organization_admin', 'Administração da organização'],
-  ['clinic_manager', 'Gestão da clínica'], ['clinician', 'Profissional clínico'],
-  ['academic_supervisor', 'Supervisor acadêmico'], ['student', 'Estudante'],
-  ['receptionist', 'Recepção'], ['auditor', 'Auditoria'],
+const DEMO_ACCOUNTS = [
+  { key: 'super_admin', role: 'super_admin', email: 'super-admin@unig.demo', label: 'Super Admin', clinicCode: null },
+  { key: 'organization_admin', role: 'organization_admin', email: 'organization-admin@unig.demo', label: 'Administrador da organização', clinicCode: null },
+  ...[
+    ['ODONTO', 'Clínica de Odontologia'], ['FISIO', 'Clínica de Fisioterapia'],
+    ['VET', 'Clínica Veterinária'], ['ESTETICA', 'Clínica de Estética'],
+  ].flatMap(([clinicCode]) => [
+    { key: `clinic_manager_${clinicCode.toLowerCase()}`, role: 'clinic_manager', email: `clinic-manager-${clinicCode.toLowerCase()}@unig.demo`, label: 'Gestor da clínica', clinicCode },
+    { key: `clinician_${clinicCode.toLowerCase()}`, role: 'clinician', email: `clinician-${clinicCode.toLowerCase()}@unig.demo`, label: 'Profissional clínico', clinicCode },
+    { key: `receptionist_${clinicCode.toLowerCase()}`, role: 'receptionist', email: `receptionist-${clinicCode.toLowerCase()}@unig.demo`, label: 'Recepção e fila', clinicCode },
+  ]),
+  { key: 'academic_supervisor_odonto', role: 'academic_supervisor', email: 'academic-supervisor-odonto@unig.demo', label: 'Supervisor acadêmico', clinicCode: 'ODONTO' },
+  { key: 'student_odonto', role: 'student', email: 'student-odonto@unig.demo', label: 'Estudante', clinicCode: 'ODONTO' },
+  { key: 'auditor', role: 'auditor', email: 'auditor@unig.demo', label: 'Auditoria transversal', clinicCode: null },
 ] as const;
 
 Deno.serve(async (req) => {
@@ -184,44 +193,61 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { data: roleRows, error: rolesError } = await admin.from('roles').select('id, code').in('code', ROLES.map(([code]) => code));
+    const roleCodes = Array.from(new Set(DEMO_ACCOUNTS.map((account) => account.role)));
+    const { data: roleRows, error: rolesError } = await admin.from('roles').select('id, code').in('code', roleCodes);
     if (rolesError) throw rolesError;
     const roleByCode = new Map(roleRows.map((role) => [role.code, role.id]));
-    if (roleByCode.size !== ROLES.length) throw new Error('Papéis clínicos de sistema não foram encontrados.');
+    if (roleByCode.size !== roleCodes.length) throw new Error('Papéis clínicos de sistema não foram encontrados.');
+    const { data: scopedClinics, error: scopedClinicsError } = await admin.from('clinics').select('id, code').eq('organization_id', organizationId).in('code', demoClinics.map(([code]) => code));
+    if (scopedClinicsError) throw scopedClinicsError;
+    const clinicByCode = new Map((scopedClinics ?? []).map((clinic) => [clinic.code, clinic.id]));
+    const { data: existingUsers, error: existingUsersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+    if (existingUsersError) throw existingUsersError;
+    const userByEmail = new Map((existingUsers.users ?? []).filter((user) => user.email).map((user) => [user.email!.toLowerCase(), user]));
 
     let created = 0;
     let existed = 0;
-    const userIdByRole = new Map<string, string>();
-    for (const [code, label] of ROLES) {
-      const email = `${code.replace(/_/g, '-')}@unig.demo`;
-      const { data: createdUser, error: createError } = await admin.auth.admin.createUser({ email, password: DEMO_PASSWORD, email_confirm: true });
-      let userId = createdUser.user?.id;
-      if (createError) {
-        const { data: users, error: usersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        if (usersError) throw usersError;
-        userId = users.users.find((user) => user.email === email)?.id;
-        if (!userId) throw createError;
-        existed++;
-      } else created++;
+    const userIdByAccount = new Map<string, string>();
+    for (const account of DEMO_ACCOUNTS) {
+      let user = userByEmail.get(account.email);
+      if (!user) {
+        const { data: createdUser, error: createError } = await admin.auth.admin.createUser({ email: account.email, password: DEMO_PASSWORD, email_confirm: true });
+        if (createError || !createdUser.user) throw createError ?? new Error(`Não foi possível criar ${account.email}`);
+        user = createdUser.user;
+        userByEmail.set(account.email, user);
+        created++;
+      } else existed++;
 
       const { error: profileError } = await admin.from('profiles')
-        .upsert({ id: userId, email, full_name: `${label} — Teste` }, { onConflict: 'id' });
+        .upsert({ id: user.id, email: account.email, full_name: `${account.label} — Teste` }, { onConflict: 'id' });
       if (profileError) throw profileError;
-      const roleId = roleByCode.get(code)!;
-      const { data: assignment, error: assignmentError } = await admin.from('user_roles').select('id')
-        .eq('user_id', userId).eq('organization_id', organizationId).eq('role_id', roleId).maybeSingle();
+      const roleId = roleByCode.get(account.role)!;
+      const { data: existingAssignment, error: assignmentError } = await admin.from('user_roles').select('id')
+        .eq('user_id', user.id).eq('organization_id', organizationId).eq('role_id', roleId).maybeSingle();
       if (assignmentError) throw assignmentError;
-      if (!assignment) {
-        const { error } = await admin.from('user_roles').insert({ user_id: userId, organization_id: organizationId, role_id: roleId, is_active: true });
+      let assignmentId = existingAssignment?.id;
+      if (!assignmentId) {
+        const { data: assignment, error } = await admin.from('user_roles').insert({ user_id: user.id, organization_id: organizationId, role_id: roleId, is_active: true }).select('id').single();
         if (error) throw error;
+        assignmentId = assignment.id;
       }
-      userIdByRole.set(code, userId);
+      if (account.clinicCode) {
+        const clinicId = clinicByCode.get(account.clinicCode);
+        if (!clinicId) throw new Error(`Clínica ${account.clinicCode} não encontrada.`);
+        const { error: revokeOtherScopesError } = await admin.from('user_clinic_scopes')
+          .update({ revoked_at: new Date().toISOString() }).eq('user_role_id', assignmentId).neq('clinic_id', clinicId).is('revoked_at', null);
+        if (revokeOtherScopesError) throw revokeOtherScopesError;
+        const { error: scopeError } = await admin.from('user_clinic_scopes')
+          .upsert({ user_role_id: assignmentId, clinic_id: clinicId, revoked_at: null }, { onConflict: 'user_role_id,clinic_id' });
+        if (scopeError) throw scopeError;
+      }
+      userIdByAccount.set(account.key, user.id);
     }
 
     // Keep one academic supervision available in the quick-access environment
     // so supervisors and students can validate the workflow immediately.
-    const demoStudentId = userIdByRole.get('student');
-    const demoSupervisorId = userIdByRole.get('academic_supervisor');
+    const demoStudentId = userIdByAccount.get('student_odonto');
+    const demoSupervisorId = userIdByAccount.get('academic_supervisor_odonto');
     if (demoStudentId && demoSupervisorId) {
       const { data: demoClinic, error: demoClinicError } = await admin.from('clinics')
         .select('id').eq('organization_id', organizationId).eq('code', 'ODONTO').single();
@@ -259,7 +285,7 @@ Deno.serve(async (req) => {
     }
 
     // Add one versioned clinical evolution for the first demo patient.
-    const demoClinicianId = userIdByRole.get('clinician');
+    const demoClinicianId = userIdByAccount.get('clinician_odonto');
     const demoPatientId = patientByCode.get('demo-001');
     if (demoClinicianId && demoPatientId) {
       const { data: demoClinic, error: demoClinicError } = await admin.from('clinics')
@@ -318,7 +344,7 @@ Deno.serve(async (req) => {
         if (versionInsertError) throw versionInsertError;
       }
     }
-    return json({ ok: true, created, existed, total: ROLES.length });
+    return json({ ok: true, created, existed, total: DEMO_ACCOUNTS.length });
   } catch (error) {
     return json({ ok: false, error: error instanceof Error ? error.message : String(error) }, 500);
   }

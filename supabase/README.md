@@ -13,3 +13,20 @@ história local deve ser separada/normalizada para não levar o esquema legado a
 banco do UNIG Clínicas.
 
 Nunca inclua chaves do Supabase em migrations, commits ou documentação.
+
+## Acessos rápidos de desenvolvimento
+
+As contas de demonstração são criadas pela Edge Function `seed-demo-users` e
+usam a senha comum `unig1234` apenas no ambiente de teste. A tela de entrada
+as apresenta separadas por clínica:
+
+- Administração geral: `super-admin@unig.demo` e `organization-admin@unig.demo`.
+- Cada clínica: `clinic-manager-{clinica}@unig.demo`,
+  `clinician-{clinica}@unig.demo` e `receptionist-{clinica}@unig.demo`, usando
+  os identificadores `odonto`, `fisio`, `vet` e `estetica`.
+- Odontologia também possui `academic-supervisor-odonto@unig.demo` e
+  `student-odonto@unig.demo`.
+- Auditoria transversal: `auditor@unig.demo`.
+
+As contas clínicas têm escopo RLS restrito à clínica indicada. Não reutilize
+essas contas ou a senha em produção.

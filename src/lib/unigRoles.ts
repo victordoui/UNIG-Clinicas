@@ -125,23 +125,88 @@ export interface DemoUser {
   role: UnigRole;
   email: string;
   password: string;
-  label?: string;
+  label: string;
+  accessGroup: string;
+  clinicCode?: string;
+  clinicName?: string;
 }
 
 export const DEMO_PASSWORD = 'unig1234';
 
+const CLINICS = [
+  ['ODONTO', 'Clínica de Odontologia'],
+  ['FISIO', 'Clínica de Fisioterapia'],
+  ['VET', 'Clínica Veterinária'],
+  ['ESTETICA', 'Clínica de Estética'],
+] as const;
+
 export const DEMO_USERS: DemoUser[] = [
-  ['super_admin', 'Super Admin'],
-  ['organization_admin', 'Administração da organização'],
-  ['clinic_manager', 'Gestão da clínica'],
-  ['clinician', 'Profissional clínico'],
-  ['academic_supervisor', 'Supervisor acadêmico'],
-  ['student', 'Estudante'],
-  ['receptionist', 'Recepção'],
-  ['auditor', 'Auditoria'],
-].map(([databaseRole, label]) => ({
-  role: mapDbRoleToUnig(databaseRole),
-  email: `${databaseRole.replace(/_/g, '-')}@unig.demo`,
-  password: DEMO_PASSWORD,
-  label,
-}));
+  {
+    role: 'super_admin',
+    email: 'super-admin@unig.demo',
+    password: DEMO_PASSWORD,
+    label: 'Super Admin',
+    accessGroup: 'Administração geral',
+  },
+  {
+    role: 'administrador',
+    email: 'organization-admin@unig.demo',
+    password: DEMO_PASSWORD,
+    label: 'Administrador da organização',
+    accessGroup: 'Administração geral',
+  },
+  ...CLINICS.flatMap(([clinicCode, clinicName]) => ([
+    {
+      role: 'gestor_unidade' as const,
+      email: `clinic-manager-${clinicCode.toLowerCase()}@unig.demo`,
+      password: DEMO_PASSWORD,
+      label: 'Gestor da clínica',
+      accessGroup: clinicName,
+      clinicCode,
+      clinicName,
+    },
+    {
+      role: 'professor' as const,
+      email: `clinician-${clinicCode.toLowerCase()}@unig.demo`,
+      password: DEMO_PASSWORD,
+      label: 'Profissional clínico',
+      accessGroup: clinicName,
+      clinicCode,
+      clinicName,
+    },
+    {
+      role: 'atendimento' as const,
+      email: `receptionist-${clinicCode.toLowerCase()}@unig.demo`,
+      password: DEMO_PASSWORD,
+      label: 'Recepção e fila',
+      accessGroup: clinicName,
+      clinicCode,
+      clinicName,
+    },
+  ])),
+  {
+    role: 'coordenacao',
+    email: 'academic-supervisor-odonto@unig.demo',
+    password: DEMO_PASSWORD,
+    label: 'Supervisor acadêmico',
+    accessGroup: 'Clínica de Odontologia',
+    clinicCode: 'ODONTO',
+    clinicName: 'Clínica de Odontologia',
+  },
+  {
+    role: 'aluno',
+    email: 'student-odonto@unig.demo',
+    password: DEMO_PASSWORD,
+    label: 'Estudante',
+    accessGroup: 'Clínica de Odontologia',
+    clinicCode: 'ODONTO',
+    clinicName: 'Clínica de Odontologia',
+  },
+  {
+    role: 'financeiro',
+    email: 'auditor@unig.demo',
+    password: DEMO_PASSWORD,
+    label: 'Auditoria transversal',
+    accessGroup: 'Auditoria transversal',
+  },
+];

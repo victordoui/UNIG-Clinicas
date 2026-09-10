@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,15 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
+  const demoGroups = useMemo(() => {
+    const groups = new Map<string, typeof DEMO_USERS>();
+    DEMO_USERS.forEach((demoUser) => {
+      const group = groups.get(demoUser.accessGroup) ?? [];
+      group.push(demoUser);
+      groups.set(demoUser.accessGroup, group);
+    });
+    return Array.from(groups.entries());
+  }, []);
 
   useEffect(() => {
     if (!loading && user) navigate('/', { replace: true });
@@ -69,11 +78,11 @@ export default function Auth() {
         style={{ background: 'linear-gradient(135deg, #01413D 0%, #0A736B 58%, #08A899 100%)' }}
       >
         <div className="absolute inset-0 opacity-25 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.25) 0%, transparent 45%)' }} />
-        <div className="relative flex flex-col items-start gap-4">
+        <div className="relative flex flex-col items-start gap-4 pt-16">
           <img
             src={unigLogo}
             alt="UNIG Clínicas"
-            className="h-auto w-full max-w-[470px] object-contain [filter:drop-shadow(0_0_2px_#fff)_drop-shadow(0_0_6px_#fff)_drop-shadow(0_4px_10px_rgba(0,0,0,0.35))]"
+            className="h-auto w-full max-w-[560px] object-contain [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.85))_drop-shadow(0_2px_7px_rgba(0,0,0,0.18))]"
           />
         </div>
 
@@ -96,7 +105,7 @@ export default function Auth() {
             <img
               src={unigLogo}
               alt="UNIG Clínicas"
-              className="h-auto w-full max-w-[340px] object-contain [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.2))]"
+              className="h-auto w-full max-w-[360px] object-contain [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.7))_drop-shadow(0_2px_5px_rgba(0,0,0,0.16))]"
             />
           </div>
 
@@ -145,31 +154,39 @@ export default function Auth() {
                 <Badge variant="secondary" className="shrink-0"><Sparkles className="h-3 w-3 mr-1" /> Demo</Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                {DEMO_USERS.map((d) => {
-                  const Icon = UNIG_ROLE_ICON[d.role];
-                  const isLoading = demoLoading === d.email;
-                  return (
-                    <button
-                      key={d.role}
-                      onClick={() => signInDemo(d.email, d.password, d.label ?? UNIG_ROLE_LABEL[d.role])}
-                      disabled={!!demoLoading}
-                      className={cn(
-                        'group rounded-lg border bg-card p-2.5 hover:shadow-md hover:border-primary/40 transition-all flex items-center gap-2 text-left min-w-0 disabled:opacity-60 disabled:pointer-events-none',
-                      )}
-                    >
-                      <div className={cn('h-8 w-8 rounded-md flex items-center justify-center shrink-0 border', UNIG_ROLE_BADGE[d.role])}>
-                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className={cn('h-4 w-4', UNIG_ROLE_TEXT_COLOR[d.role])} />}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[12px] font-semibold text-foreground truncate">{d.label ?? UNIG_ROLE_LABEL[d.role]}</div>
-                        <div className="text-[10px] text-muted-foreground truncate">{d.email}</div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+            <CardContent className="space-y-4">
+              {demoGroups.map(([groupName, users]) => (
+                <section key={groupName} className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span>{groupName}</span>
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {users.map((d) => {
+                      const Icon = UNIG_ROLE_ICON[d.role];
+                      const isLoading = demoLoading === d.email;
+                      return (
+                        <button
+                          key={d.email}
+                          onClick={() => signInDemo(d.email, d.password, d.label ?? UNIG_ROLE_LABEL[d.role])}
+                          disabled={!!demoLoading}
+                          className={cn(
+                            'group rounded-lg border bg-card p-2.5 hover:shadow-md hover:border-primary/40 transition-all flex items-center gap-2 text-left min-w-0 disabled:opacity-60 disabled:pointer-events-none',
+                          )}
+                        >
+                          <div className={cn('h-8 w-8 rounded-md flex items-center justify-center shrink-0 border', UNIG_ROLE_BADGE[d.role])}>
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className={cn('h-4 w-4', UNIG_ROLE_TEXT_COLOR[d.role])} />}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-[12px] font-semibold text-foreground truncate">{d.label}</div>
+                            <div className="text-[10px] text-muted-foreground truncate">{d.email}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
             </CardContent>
           </Card>
         </div>

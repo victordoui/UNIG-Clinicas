@@ -17,7 +17,7 @@ as $function$
       and user_role.is_active
       and permission.code = required_permission
       and (
-        not exists (select 1 from public.user_clinic_scopes scope where scope.user_role_id = user_role.id and scope.revoked_at is null)
+        not exists (select 1 from public.user_clinic_scopes scope where scope.user_role_id = user_role.id)
         or exists (select 1 from public.user_clinic_scopes scope where scope.user_role_id = user_role.id and scope.clinic_id = target_clinic_id and scope.revoked_at is null)
       )
   );

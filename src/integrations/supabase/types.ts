@@ -63,6 +63,7 @@ export type Database = {
         Row: {
           archived_at: string | null
           birth_date: string | null
+          clinic_id: string | null
           breed: string | null
           created_at: string
           created_by: string | null
@@ -79,6 +80,7 @@ export type Database = {
           archived_at?: string | null
           birth_date?: string | null
           breed?: string | null
+          clinic_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -94,6 +96,7 @@ export type Database = {
           archived_at?: string | null
           birth_date?: string | null
           breed?: string | null
+          clinic_id?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -106,6 +109,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "animals_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "animals_organization_id_fkey"
             columns: ["organization_id"]
@@ -1003,6 +1013,45 @@ export type Database = {
           },
         ]
       }
+      patient_clinic_links: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          patient_id: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_id: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_clinic_links_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_clinic_links_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       permissions: {
         Row: {
           code: string
@@ -1413,18 +1462,21 @@ export type Database = {
           clinic_id: string
           created_at: string
           id: string
+          revoked_at: string | null
           user_role_id: string
         }
         Insert: {
           clinic_id: string
           created_at?: string
           id?: string
+          revoked_at?: string | null
           user_role_id: string
         }
         Update: {
           clinic_id?: string
           created_at?: string
           id?: string
+          revoked_at?: string | null
           user_role_id?: string
         }
         Relationships: [
@@ -1523,6 +1575,7 @@ export type Database = {
           patient_preferred_name?: string
           patient_record_number: string
           target_organization_id: string
+          target_clinic_id?: string
         }
         Returns: string
       }
@@ -1658,4 +1711,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
