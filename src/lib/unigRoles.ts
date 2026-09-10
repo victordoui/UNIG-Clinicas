@@ -3,7 +3,7 @@ import {
   DollarSign, Headset, Building2, MapPinned, Eye, type LucideIcon,
 } from 'lucide-react';
 
-// Papéis oficiais do sistema UNIG-A
+// Papéis oficiais do sistema UNIG Clínicas
 export type UnigRole =
   | 'super_admin'
   | 'administrador'

@@ -1,51 +1,61 @@
-# 📦 VStock - Sistema Inteligente de Estoque
+# UNIG Clínicas
 
-**VStock** é um sistema inteligente de almoxarifado desenvolvido para facilitar o controle e gerenciamento de produtos. A solução oferece recursos modernos para cadastro, movimentação (entrada, saída e transferência), alertas, leitura via QR Code e relatórios. Ideal para instituições que precisam otimizar o controle de materiais, como universidades, prefeituras e empresas privadas.
+Plataforma institucional para atendimento, agenda, fila, prontuário,
+supervisão acadêmica e gestão das clínicas universitárias da UNIG.
 
----
+## Stack
 
-## 🚀 Funcionalidades
+- React 18 + TypeScript + Vite
+- React Router, TanStack Query e shadcn/ui/Radix
+- Supabase Auth, Postgres, RLS, Storage e Edge Functions
+- PWA com Workbox
 
-- **📊 Dashboard**  
-  Visão geral das atividades do sistema e status do estoque.
+## Executar localmente
 
-- **📦 Produtos**  
-  Cadastro e gerenciamento completo dos produtos armazenados.
+1. Copie `.env.example` para `.env.local` e informe a URL do projeto e a chave **publishable** do Supabase.
+2. Instale as dependências com `npm ci`.
+3. Inicie com `npm run dev`.
 
-- **🔄 Movimentações**  
-  Registro de entradas, saídas e transferências de itens no estoque.
+O servidor local usa a porta configurada pelo processo de desenvolvimento (neste ambiente: `5173`).
 
-- **🔔 Alertas**  
-  Notificações automáticas sobre ações ou níveis críticos de estoque.
+## Validação
 
-- **📷 Scanner QR**  
-  Leitura rápida de produtos via QR Code.
+```bash
+npm run typecheck
+npm run lint -- --quiet
+npm run build
+```
 
-- **👥 Usuários**  
-  Controle de usuários com permissões diferentes (Administrador, Gerente, Usuário).
+O workflow em `.github/workflows/ci.yml` executa os três comandos em todo push e pull request para `main`.
 
-- **📈 Relatórios**  
-  Geração de relatórios de movimentações e análises do uso dos produtos.
+## Acessos de demonstração
 
-- **⚙️ Configurações**  
-  Ajustes e personalizações do sistema conforme a organização.
+A tela `/auth` organiza os acessos rápidos por clínica. Todas as contas abaixo
+usam `unig1234` somente no ambiente de teste:
 
----
+- Administração: `super-admin@unig.demo` e `organization-admin@unig.demo`.
+- Clínica: `clinic-manager-{odonto|fisio|vet|estetica}@unig.demo`,
+  `clinician-{odonto|fisio|vet|estetica}@unig.demo` e
+  `receptionist-{odonto|fisio|vet|estetica}@unig.demo`.
+- Acadêmico Odonto: `academic-supervisor-odonto@unig.demo` e `student-odonto@unig.demo`.
+- Auditoria transversal: `auditor@unig.demo`.
 
-## 🛠️ Tecnologias Utilizadas
+As contas clínicas são limitadas por RLS à clínica indicada. Não reutilize as
+contas ou a senha em produção.
 
-| Tecnologia    | Descrição                                 |
-|---------------|-------------------------------------------|
-| [Vite](https://vitejs.dev/)              | Build tool rápido e moderno para aplicações web. |
-| [TypeScript](https://www.typescriptlang.org/) | Superset do JavaScript com tipagem estática.     |
-| [React](https://reactjs.org/)           | Biblioteca para construção de interfaces de usuário. |
-| [shadcn/ui](https://ui.shadcn.com/)     | Componentes de interface acessíveis e modernos.   |
-| [Tailwind CSS](https://tailwindcss.com/) | Framework utilitário de estilos CSS.              |
+## Operação por clínica
 
----
+- `/agenda-fila`: agenda e fila operacional com clínica selecionável.
+- `/painel-tv?clinic=<clinic_id>`: painel de chamada dedicado para uma clínica,
+  com atualização automática e sem nomes ou conteúdo de prontuário.
+- `/indicadores-clinicos`: indicadores agregados ou filtrados por clínica.
 
-## 📸 Captura de Tela
+## Supabase
 
-A imagem abaixo mostra o menu lateral do sistema, com as principais seções de navegação:
-![VStock](![Imagem do WhatsApp de 2025-07-23 à(s) 16 58 18_aa9ff9a9](https://github.com/user-attachments/assets/c505f8a6-2280-4845-b227-e83c5a5366b0)
+O projeto vinculado é `hhwsqzaookfohqygihyc`. As migrations clínicas novas são
+reversíveis e mantêm o legado preservado. Nunca commit chaves secret/service
+role; a aplicação web deve usar somente a chave publishable.
 
+Consulte [supabase/README.md](supabase/README.md),
+[docs/PRODUCAO_CHECKLIST.md](docs/PRODUCAO_CHECKLIST.md) e os
+[ADRs](docs/adr/) antes de promover o ambiente.

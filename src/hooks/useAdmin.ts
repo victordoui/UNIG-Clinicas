@@ -19,7 +19,7 @@ export function useAdminUsers(search?: string) {
     queryKey: ['admin-users', search ?? ''],
     queryFn: async (): Promise<AdminUserRow[]> => {
       const [profiles, assignments, scopes] = await Promise.all([
-        supabase.from('profiles').select('id, email, full_name, created_at').order('full_name').limit(500),
+        (supabase.from('profiles') as any).select('id, email, full_name, created_at, status, is_super_admin, password_change_required').order('full_name').limit(500),
         supabase.from('user_roles').select('id, user_id, organization_id, is_active, role:roles(code)').limit(2000),
         (supabase.from('user_clinic_scopes') as any).select('id,user_role_id,clinic_id,revoked_at,clinic:clinics(name)').limit(4000),
       ]);
@@ -42,9 +42,9 @@ export function useAdminUsers(search?: string) {
         id: p.id,
         email: p.email,
         full_name: p.full_name,
-        status: 'ativo',
-        is_super_admin: false,
-        password_change_required: false,
+        status: p.status ?? 'ativo',
+        is_super_admin: Boolean(p.is_super_admin),
+        password_change_required: Boolean(p.password_change_required),
         created_at: p.created_at,
         roles: rolesByUser.get(p.id) ?? [],
       }));
@@ -72,6 +72,14 @@ export function useAssignRole() {
       if (clinicId) {
         const { error: scopeInsertError } = await (supabase.from('user_clinic_scopes') as any).upsert({ user_role_id: data.id, clinic_id: clinicId, revoked_at: null }, { onConflict: 'user_role_id,clinic_id' });
         if (scopeInsertError) throw scopeInsertError;
+      } else {
+        // A global assignment must not retain stale clinic scopes. Revoke them
+        // instead of deleting the history, so the role really becomes global.
+        const { error: scopeRevokeError } = await (supabase.from('user_clinic_scopes') as any)
+          .update({ revoked_at: new Date().toISOString() })
+          .eq('user_role_id', data.id)
+          .is('revoked_at', null);
+        if (scopeRevokeError) throw scopeRevokeError;
       }
       return data;
     },

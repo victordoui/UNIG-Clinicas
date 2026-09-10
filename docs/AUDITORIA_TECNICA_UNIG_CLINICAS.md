@@ -1,7 +1,26 @@
 # Auditoria Técnica — UNIG Clínicas
 
 **Data:** 10 de setembro de 2026  
-**Escopo:** auditoria estática da base atualmente publicada na branch `main`. Nenhuma migration, tabela, política, funcionalidade ou arquivo existente foi removido ou alterado.
+**Escopo da auditoria inicial:** análise estática da base publicada na branch
+`main` antes da transformação. A seção de atualização abaixo registra o que
+foi implementado depois da aprovação do plano.
+
+## Atualização de implementação — 10 de setembro de 2026
+
+Após a aprovação do plano, o núcleo clínico foi implementado em migrations
+novas e reversíveis no projeto Supabase `hhwsqzaookfohqygihyc`. O estado atual
+inclui escopo efetivo por clínica em RLS, pacientes vinculados por clínica,
+agenda/fila, atendimentos, procedimentos, exames, documentos privados,
+supervisões, extensão veterinária, auditoria e bloqueio de exclusões físicas.
+As contas demo estão separadas por clínica e a tela de autenticação as agrupa
+por finalidade. O painel `/painel-tv` e os indicadores filtráveis por clínica
+completam a operação básica sem expor prontuários.
+
+O CI agora executa typecheck, lint e build. Testes automatizados unitários,
+integração, E2E e matriz de RLS foram deliberadamente deixados fora desta
+etapa, conforme decisão do responsável pelo projeto. Hardening de produção,
+MFA, proteção contra senhas vazadas, seed demo e configurações de infraestrutura
+continuam listados em `docs/PRODUCAO_CHECKLIST.md`.
 
 ## 1. Resumo executivo
 
@@ -22,7 +41,9 @@ O principal risco não é a tecnologia escolhida; é a heterogeneidade históric
 | PWA | `vite-plugin-pwa`/Workbox |
 | Relatórios/exportação | Recharts, SheetJS/XLSX, jsPDF, html2canvas |
 
-O Supabase CLI não está instalado nesta máquina; esta auditoria analisou `supabase/migrations` e o cliente configurado no repositório, não o estado vivo do banco remoto. A validação `vite build` ficou bloqueada no empacotamento PWA e foi interrompida sem produzir `dist`; isso deve ser reproduzido e diagnosticado em etapa posterior.
+Na auditoria inicial o Supabase CLI não estava instalado nesta máquina; o
+estado remoto foi posteriormente validado pelo conector do Supabase. A build
+de produção e o empacotamento PWA foram corrigidos e agora passam no CI.
 
 ## 3. Arquitetura e estrutura atuais
 
@@ -72,7 +93,10 @@ O projeto aponta para um único `project_id` Supabase e concentra centenas de en
 
 Há RLS, policies e funções SQL no histórico, inclusive `SECURITY DEFINER`. Contudo, migrations antigas incluem `USING (true)`, `WITH CHECK (true)` e uma policy com `auth.role() = 'authenticated'`; outras migrations substituem policies anteriores. Como não foi feita inspeção do banco remoto, não é possível afirmar a política efetiva de cada tabela. O histórico não é uma fonte confiável, por si só, para liberar dados clínicos.
 
-**Storage:** não há configuração de bucket nem políticas de storage claramente versionadas neste repositório. Para prontuários e anexos, isso é uma lacuna crítica: arquivos clínicos devem nascer em bucket privado, nunca público, com políticas por pessoa/paciente, clínica e escopo de papel.
+**Storage na auditoria inicial:** não havia configuração de bucket nem políticas
+claramente versionadas. Essa lacuna foi coberta no núcleo clínico: o bucket
+`clinical-documents` é privado e as policies validam organização, paciente e
+clínica.
 
 ## 6. Autenticação e autorização atuais
 
@@ -118,14 +142,14 @@ O design system está centralizado em tokens CSS em `src/index.css` e mapeado no
 ## 9. Problemas técnicos e de segurança encontrados
 
 1. **Crítico — função de seed demo:** `seed-demo-users` possui senha previsível fixa, cria usuários com privilégios inclusive `super_admin`, usa `service_role` no servidor e permite CORS `*`. Ela não deve existir habilitada em ambiente de produção clínico.
-2. **Crítico — RLS histórica permissiva:** migrations contêm várias policies `FOR ALL USING (true)`/`WITH CHECK (true)` e leitura ampla. Isso é incompatível com dados pessoais e de saúde até que o estado efetivo seja reavaliado e corrigido.
+2. **Crítico — legado de RLS permissiva:** migrations antigas contêm várias policies `FOR ALL USING (true)`/`WITH CHECK (true)` e leitura ampla. O núcleo clínico novo não reutiliza essas policies e possui escopo por clínica; os domínios legados continuam fora do escopo de dados clínicos reais.
 3. **Alto — autorização incompleta no cliente:** menu e `ProtectedRoute` não substituem RLS. A maioria das rotas aceita qualquer usuário autenticado na camada de UI.
-4. **Alto — PWA cacheia chamadas Supabase com `NetworkFirst`:** respostas potencialmente sensíveis podem permanecer no dispositivo/cache. Clínico deve ter política deliberada de cache, logout e limpeza; dados clínicos não devem ser cacheados offline por padrão.
+4. **Alto — PWA na auditoria inicial cacheava chamadas Supabase:** a regra foi removida para o núcleo atual. Respostas da API Supabase agora não entram no cache offline; a política de sessão e limpeza no logout ainda precisa ser definida para produção.
 5. **Alto — schema e migrations com drift:** há redefinições de tabelas, funções e policies, histórico longo e domínios incompatíveis no mesmo `public`. Reaplicar ou “limpar” migrations existentes é arriscado.
 6. **Médio — configuração no repositório:** `.env` é versionado. A chave publishable/anon pode ser pública, mas variáveis de ambiente não devem ser tratadas como mecanismo de segredo nem versionadas como padrão. A URL/chave também estão hard-coded em `client.ts`.
 7. **Médio — falta de testes:** não foram encontrados testes unitários, de integração, E2E ou testes de RLS.
-8. **Médio — dependências/build:** o lockfile estava fora de sincronia antes de ser atualizado; versões usam faixas (`^`). A build de auditoria ficou bloqueada em PWA/Workbox e não gerou artefato.
-9. **Médio — dados de exemplo e legado:** ativos, logos, manifest e README ainda mencionam VStock/UNIG-A, elevando risco de marca, dados e fluxos residuais.
+8. **Médio — dependências/build:** versões ainda usam faixas (`^`) e o lockfile deve ser atualizado de forma controlada. O pipeline atual valida typecheck, lint e build; alertas de dados de browsers são apenas manutenção periódica.
+9. **Médio — dados de exemplo e legado:** migrations históricas e módulos acadêmicos ainda mencionam VStock/UNIG-A. A navegação e a documentação principal já usam a identidade UNIG Clínicas, mas os domínios legados devem permanecer isolados até sua descontinuação formal.
 10. **Médio — exclusões destrutivas em legados:** várias relações históricas usam `ON DELETE CASCADE`. Esse padrão não é aceitável para prontuários ou documentos consolidados.
 
 ## 10. Riscos da migração UNIG Academy → UNIG Clínicas

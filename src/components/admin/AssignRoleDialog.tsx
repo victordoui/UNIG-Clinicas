@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,13 @@ export function AssignRoleDialog({ open, onOpenChange, userId, userName }: Props
   const [clinicId, setClinicId] = useState<string>(NO_UNIT);
   const { data: clinics = [] } = useAdminClinics();
   const assign = useAssignRole();
+
+  useEffect(() => {
+    if (open) {
+      setRole('aluno');
+      setClinicId(NO_UNIT);
+    }
+  }, [open, userId]);
 
   const submit = async () => {
     try {

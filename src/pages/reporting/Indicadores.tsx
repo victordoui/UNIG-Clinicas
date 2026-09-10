@@ -1,8 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { Activity, CalendarDays, Clock3, FlaskConical, GraduationCap, Users } from 'lucide-react';
+import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+
+type Clinic = { id: string; name: string; code: string };
+type Counts = { patients: number; appointments: number; waiting: number; encounters: number; procedures: number; exams: number; supervisions: number };
 
 const metrics = [
   { key: 'patients', label: 'Pacientes ativos', icon: Users, description: 'Cadastros disponíveis para atendimento' },
@@ -14,17 +20,65 @@ const metrics = [
   { key: 'supervisions', label: 'Supervisões ativas', icon: GraduationCap, description: 'Acompanhamentos acadêmico-clínicos' },
 ] as const;
 
-export default function Indicadores(){
- const report=useQuery({queryKey:['clinical-indicators'],queryFn:async()=>{
-  const [patients,appointments,waiting,encounters,procedures,exams,supervisions]=await Promise.all([
-   supabase.from('patients').select('id',{count:'exact',head:true}).eq('status','active'),
-   supabase.from('appointments').select('id',{count:'exact',head:true}).in('status',['scheduled','confirmed','checked_in']),
-   supabase.from('queue_tickets').select('id',{count:'exact',head:true}).in('status',['waiting','called','in_service']),
-   supabase.from('encounters').select('id',{count:'exact',head:true}).eq('status','completed'),
-   (supabase as any).from('clinical_procedures').select('id',{count:'exact',head:true}).eq('status','planned'),
-   (supabase as any).from('exam_orders').select('id',{count:'exact',head:true}).in('status',['requested','collected']),
-   (supabase as any).from('student_supervisions').select('id',{count:'exact',head:true}).in('status',['planned','in_progress'])
-  ]);for(const r of [patients,appointments,waiting,encounters,procedures,exams,supervisions])if(r.error)throw r.error;return{patients:patients.count??0,appointments:appointments.count??0,waiting:waiting.count??0,encounters:encounters.count??0,procedures:procedures.count??0,exams:exams.count??0,supervisions:supervisions.count??0};
- }});
- return <MainLayout><div className="space-y-6"><div><h1 className="text-2xl font-bold">Indicadores clínicos</h1><p className="text-sm text-muted-foreground">Visão operacional agregada. Esta página não exibe conteúdo de prontuário.</p></div><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(m=>{const Icon=m.icon;return <Card key={m.key}><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm font-medium">{m.label}</CardTitle><Icon className="h-4 w-4 text-primary"/></div></CardHeader><CardContent><div className="text-3xl font-bold">{report.isLoading?'—':report.data?.[m.key]}</div><CardDescription className="mt-1 text-xs">{m.description}</CardDescription></CardContent></Card>})}</div><Card><CardHeader><CardTitle className="text-base">Leitura operacional</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Os indicadores são filtrados pelas permissões RLS da conta autenticada. Para exportações formais e indicadores institucionais, a próxima evolução deve definir período, escopo de clínica e regras de anonimização.</CardContent></Card></div></MainLayout>;
+async function countRows(query: any) {
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
+}
+
+export default function Indicadores() {
+  const [clinicId, setClinicId] = useState('all');
+  const report = useQuery({
+    queryKey: ['clinical-indicators', clinicId],
+    queryFn: async (): Promise<{ clinics: Clinic[]; counts: Counts }> => {
+      const { data: clinicRows, error: clinicError } = await supabase.from('clinics').select('id,name,code').eq('is_active', true).order('name');
+      if (clinicError) throw clinicError;
+      const clinics = (clinicRows ?? []) as Clinic[];
+      const selected = clinicId !== 'all' ? clinicId : null;
+
+      if (!selected) {
+        const [patients, appointments, waiting, encounters, procedures, exams, supervisions] = await Promise.all([
+          countRows(supabase.from('patients').select('id', { count: 'exact', head: true }).eq('status', 'active')),
+          countRows(supabase.from('appointments').select('id', { count: 'exact', head: true }).in('status', ['scheduled', 'confirmed', 'checked_in'])),
+          countRows(supabase.from('queue_tickets').select('id', { count: 'exact', head: true }).in('status', ['waiting', 'called', 'in_service'])),
+          countRows(supabase.from('encounters').select('id', { count: 'exact', head: true }).eq('status', 'completed')),
+          countRows((supabase as any).from('clinical_procedures').select('id', { count: 'exact', head: true }).eq('status', 'planned')),
+          countRows((supabase as any).from('exam_orders').select('id', { count: 'exact', head: true }).in('status', ['requested', 'collected'])),
+          countRows((supabase as any).from('student_supervisions').select('id', { count: 'exact', head: true }).in('status', ['planned', 'in_progress'])),
+        ]);
+        return { clinics, counts: { patients, appointments, waiting, encounters, procedures, exams, supervisions } };
+      }
+
+      const [links, sessions] = await Promise.all([
+        (supabase.from('patient_clinic_links') as any).select('patient_id').eq('clinic_id', selected),
+        supabase.from('queue_sessions').select('id').eq('clinic_id', selected).in('status', ['open', 'paused']),
+      ]);
+      if (links.error) throw links.error;
+      if (sessions.error) throw sessions.error;
+      const patientIds = (links.data ?? []).map((row: { patient_id: string }) => row.patient_id);
+      const sessionIds = (sessions.data ?? []).map((row: { id: string }) => row.id);
+      const [patients, appointments, waiting, encounters, procedures, exams, supervisions] = await Promise.all([
+        patientIds.length ? countRows(supabase.from('patients').select('id', { count: 'exact', head: true }).in('id', patientIds).eq('status', 'active')) : 0,
+        countRows(supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('clinic_id', selected).in('status', ['scheduled', 'confirmed', 'checked_in'])),
+        sessionIds.length ? countRows(supabase.from('queue_tickets').select('id', { count: 'exact', head: true }).in('queue_session_id', sessionIds).in('status', ['waiting', 'called', 'in_service'])) : 0,
+        countRows(supabase.from('encounters').select('id', { count: 'exact', head: true }).eq('clinic_id', selected).eq('status', 'completed')),
+        countRows((supabase as any).from('clinical_procedures').select('id', { count: 'exact', head: true }).eq('clinic_id', selected).eq('status', 'planned')),
+        countRows((supabase as any).from('exam_orders').select('id', { count: 'exact', head: true }).eq('clinic_id', selected).in('status', ['requested', 'collected'])),
+        countRows((supabase as any).from('student_supervisions').select('id', { count: 'exact', head: true }).eq('clinic_id', selected).in('status', ['planned', 'in_progress'])),
+      ]);
+      return { clinics, counts: { patients, appointments, waiting, encounters, procedures, exams, supervisions } };
+    },
+  });
+  const counts = report.data?.counts;
+
+  return <MainLayout>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div><h1 className="text-2xl font-bold">Indicadores clínicos</h1><p className="text-sm text-muted-foreground">Visão operacional agregada ou filtrada por clínica. Esta página não exibe conteúdo de prontuário.</p></div>
+        <div className="w-full space-y-1 md:w-[260px]"><Label>Escopo dos indicadores</Label><Select value={clinicId} onValueChange={setClinicId}><SelectTrigger><SelectValue placeholder="Todas as clínicas" /></SelectTrigger><SelectContent><SelectItem value="all">Todas as clínicas visíveis</SelectItem>{(report.data?.clinics ?? []).map((clinic) => <SelectItem key={clinic.id} value={clinic.id}>{clinic.name}</SelectItem>)}</SelectContent></Select></div>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map((metric) => { const Icon = metric.icon; return <Card key={metric.key}><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm font-medium">{metric.label}</CardTitle><Icon className="h-4 w-4 text-primary" /></div></CardHeader><CardContent><div className="text-3xl font-bold">{report.isLoading ? '—' : counts?.[metric.key]}</div><CardDescription className="mt-1 text-xs">{metric.description}</CardDescription></CardContent></Card>; })}</div>
+      <Card><CardHeader><CardTitle className="text-base">Leitura operacional</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Os indicadores são filtrados pelas permissões RLS da conta autenticada. Para exportações formais, defina período, escopo de clínica e regras de anonimização antes da publicação.</CardContent></Card>
+    </div>
+  </MainLayout>;
 }
