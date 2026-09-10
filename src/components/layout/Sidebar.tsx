@@ -44,6 +44,7 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  Tv,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -76,6 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { title: 'Pacientes', url: '/pacientes', icon: Users },
       { title: 'Agenda e Fila', url: '/agenda-fila', icon: CalendarDays },
+      { title: 'Painel TV', url: '/painel-tv', icon: Tv },
       { title: 'Atendimentos', url: '/atendimentos', icon: ClipboardList },
       { title: 'Documentos', url: '/documentos-consentimentos', icon: FileText },
       { title: 'Supervisões', url: '/supervisoes', icon: GraduationCap },
