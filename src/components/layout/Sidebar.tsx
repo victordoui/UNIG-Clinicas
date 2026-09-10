@@ -75,6 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
       { title: 'Pacientes', url: '/pacientes', icon: Users },
       { title: 'Agenda e Fila', url: '/agenda-fila', icon: CalendarDays },
       { title: 'Atendimentos', url: '/atendimentos', icon: ClipboardList },
+      { title: 'Documentos', url: '/documentos-consentimentos', icon: FileText },
       { title: 'Indicadores', url: '/indicadores-clinicos', icon: BarChart3 },
     ],
   },
