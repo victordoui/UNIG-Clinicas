@@ -54,9 +54,13 @@ export function usePwaUpdate() {
 
   const update = async () => {
     setUpdating(true);
+    const timeout = window.setTimeout(() => setUpdating(false), 10000);
     try {
       await updateServiceWorker(true);
     } catch {
+      // A atualização é opcional; o painel atual continua utilizável.
+    } finally {
+      window.clearTimeout(timeout);
       setUpdating(false);
     }
   };

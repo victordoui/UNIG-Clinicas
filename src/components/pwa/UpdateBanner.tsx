@@ -10,10 +10,10 @@ export function UpdateBanner() {
       <div
         role="status"
         aria-live="polite"
-        className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-background/90 backdrop-blur-sm"
+        className="fixed bottom-4 left-1/2 z-[100] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-xl"
       >
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-sm font-medium text-foreground">Carregando atualização...</p>
+        <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" />
+        <p className="text-sm font-medium">Atualizando o sistema… o painel continua disponível.</p>
       </div>
     );
   }
