@@ -2,9 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Sistema de Almoxarifado - Design System 
-Cores corporativas profissionais em HSL para máxima flexibilidade
-*/
+/* UNIG Clínicas — Design System
+   Tokens semânticos para uma identidade institucional em Verde Petróleo. */
 
 @layer base {
   :root {
@@ -17,35 +16,35 @@ Cores corporativas profissionais em HSL para máxima flexibilidade
 
   :root {
     /* Background System */
-    --background: 210 20% 98%;
-    --background-secondary: 210 17% 95%;
-    --foreground: 215 25% 15%;
+    --background: 150 29% 97%;
+    --background-secondary: 166 30% 94%;
+    --foreground: 174 33% 12%;
 
     /* Card System */
     --card: 0 0% 100%;
-    --card-secondary: 210 17% 97%;
-    --card-foreground: 215 25% 15%;
+    --card-secondary: 166 30% 98%;
+    --card-foreground: 174 33% 12%;
 
     /* Popover System */
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --popover-foreground: 174 33% 12%;
 
-    /* Primary Corporate Blue */
-    --primary: 211 89% 45%;
-    --primary-light: 211 89% 60%;
-    --primary-dark: 211 89% 35%;
+    /* UNIG Clínicas — Verde Petróleo */
+    --primary: 176 97% 13%;
+    --primary-light: 174 91% 35%;
+    --primary-dark: 175 84% 25%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary System */
-    --secondary: 210 25% 92%;
-    --secondary-foreground: 215 25% 25%;
+    --secondary: 166 56% 91%;
+    --secondary-foreground: 174 33% 18%;
 
     /* Muted System */
-    --muted: 210 20% 95%;
-    --muted-foreground: 215 15% 50%;
+    --muted: 166 30% 94%;
+    --muted-foreground: 174 13% 40%;
 
     /* Accent System */
-    --accent: 211 89% 50%;
+    --accent: 174 91% 35%;
     --accent-foreground: 0 0% 100%;
 
     /* Status Colors */
@@ -61,15 +60,15 @@ Cores corporativas profissionais em HSL para máxima flexibilidade
     --entry-foreground: 0 0% 100%;
     --exit: 0 84% 60%;
     --exit-foreground: 0 0% 100%;
-    --transfer: 211 89% 45%;
+    --transfer: 175 84% 25%;
     --transfer-foreground: 0 0% 100%;
     --new-product: 45 93% 47%;
     --new-product-foreground: 0 0% 100%;
 
     /* Interactive Elements */
-    --border: 214 31% 88%;
-    --input: 214 31% 88%;
-    --ring: 211 89% 45%;
+    --border: 166 20% 86%;
+    --input: 166 20% 86%;
+    --ring: 174 91% 35%;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-light)));
@@ -78,8 +77,8 @@ Cores corporativas profissionais em HSL para máxima flexibilidade
     --gradient-warning: linear-gradient(135deg, hsl(var(--warning)), hsl(38 92% 60%));
     
     /* Shadows */
-    --shadow-card: 0 2px 8px hsl(211 89% 45% / 0.1);
-    --shadow-elevated: 0 8px 32px hsl(211 89% 45% / 0.15);
+    --shadow-card: 0 2px 8px hsl(176 97% 13% / 0.06);
+    --shadow-elevated: 0 8px 32px hsl(176 97% 13% / 0.10);
     --shadow-glow: 0 0 20px hsl(var(--primary) / 0.3);
     
     /* Border radius */
@@ -100,14 +99,14 @@ Cores corporativas profissionais em HSL para máxima flexibilidade
     --category-others: 269 90% 77%;
     --category-others-foreground: 269 90% 15%;
 
-    /* Sidebar tokens — Azul corporativo (estilo ERP) */
-    --sidebar-background: 212 79% 28%;
+    /* Sidebar tokens */
+    --sidebar-background: 176 97% 13%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 211 89% 25%;
-    --sidebar-accent: 211 85% 36%;
+    --sidebar-primary-foreground: 176 97% 13%;
+    --sidebar-accent: 175 84% 25%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 211 80% 33%;
+    --sidebar-border: 175 70% 20%;
     --sidebar-ring: 0 0% 100%;
 
     /* ========== iOS Tokens (Conselho) ========== */

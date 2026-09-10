@@ -280,13 +280,13 @@ export function AppSidebar() {
         <div className={cn('flex flex-col items-center', collapsed && 'py-0')}>
           <img
             src={unigLogo}
-            alt="UNIG-A"
+            alt="UNIG Clínicas"
             className={cn('object-contain brightness-0 invert', collapsed ? 'h-10 w-10' : 'h-28 w-28')}
           />
           {!collapsed && (
             <div className="mt-2 text-center leading-tight">
-              <p className="text-xl font-extrabold tracking-[0.08em] text-white">UNIG-A</p>
-              <p className="text-[11px] font-medium text-white/60">Portal Acadêmico Integrado</p>
+              <p className="text-xl font-extrabold tracking-[0.04em] text-white">UNIG Clínicas</p>
+              <p className="text-[11px] font-medium text-white/60">Clínicas universitárias integradas</p>
             </div>
           )}
         </div>
@@ -303,7 +303,7 @@ export function AppSidebar() {
               asChild
               isActive={pathname === '/'}
               tooltip="Início"
-              className="h-11 rounded-2xl px-3 font-bold text-white hover:bg-white/10 data-[active=true]:bg-white data-[active=true]:text-[#0b4078] data-[active=true]:shadow-lg"
+              className="h-11 rounded-2xl px-3 font-bold text-white hover:bg-white/10 data-[active=true]:bg-white data-[active=true]:text-primary data-[active=true]:shadow-lg"
             >
               <NavLink to="/" onClick={() => { rememberScrollPosition(); closeMobile(); }}><Home className="h-[18px] w-[18px]" /><span>Início</span></NavLink>
             </SidebarMenuButton>
@@ -331,7 +331,7 @@ export function AppSidebar() {
                     title={collapsed ? group.label : undefined}
                     className={cn(
                       'flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-white outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50',
-                      open && !collapsed && 'bg-[#0b579f] shadow-sm',
+                      open && !collapsed && 'bg-white/10 shadow-sm',
                       collapsed && 'justify-center px-0',
                     )}
                   >
@@ -353,7 +353,7 @@ export function AppSidebar() {
                               asChild
                               isActive={active}
                               tooltip={item.title}
-                              className="h-10 rounded-xl px-3 text-[13px] font-semibold text-white/90 hover:bg-white/10 hover:text-white data-[active=true]:bg-white data-[active=true]:font-bold data-[active=true]:text-[#0b4078] data-[active=true]:shadow-md"
+                              className="h-10 rounded-xl px-3 text-[13px] font-semibold text-white/90 hover:bg-white/10 hover:text-white data-[active=true]:bg-white data-[active=true]:font-bold data-[active=true]:text-primary data-[active=true]:shadow-md"
                             >
                               <NavLink ref={active ? activeLinkRef : undefined} to={item.url} onClick={() => { rememberScrollPosition(); closeMobile(); }}>
                                 <ItemIcon className="h-4 w-4" />
@@ -375,8 +375,8 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="shrink-0 border-t border-white/10 p-3">
-        <div className={cn('flex items-center gap-3 rounded-2xl bg-[#0b579f] p-3 shadow-lg ring-1 ring-white/10', collapsed && 'justify-center p-2')}>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#1682f2] text-sm font-extrabold text-white">{initials}</div>
+        <div className={cn('flex items-center gap-3 rounded-2xl bg-white/10 p-3 shadow-lg ring-1 ring-white/10', collapsed && 'justify-center p-2')}>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-extrabold text-white">{initials}</div>
           {!collapsed && (
             <div className="min-w-0 flex-1 leading-tight">
               <p className="truncate text-sm font-bold text-white">{name}</p>

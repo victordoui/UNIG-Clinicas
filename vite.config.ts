@@ -31,11 +31,11 @@ export default defineConfig(({ mode }) => ({
         'robots.txt'
       ],
       manifest: {
-        name: 'UNIG-A — Portal Acadêmico Integrado',
-        short_name: 'UNIG-A',
-        description: 'Portal Acadêmico Integrado da UNIG: alunos, professores, secretaria, coordenação, financeiro e gestão em um único sistema.',
-        theme_color: '#1976D2',
-        background_color: '#ffffff',
+        name: 'UNIG Clínicas — Plataforma Integrada',
+        short_name: 'UNIG Clínicas',
+        description: 'Plataforma integrada para atendimento, agenda, supervisão acadêmica e gestão das clínicas universitárias da UNIG.',
+        theme_color: '#01413D',
+        background_color: '#F6FAF9',
         display: 'standalone',
         scope: '/',
         start_url: '/',

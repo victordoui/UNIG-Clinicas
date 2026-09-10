@@ -84,29 +84,29 @@ export default function Auth() {
       {/* Esquerda: branding */}
       <div
         className="relative hidden md:flex flex-col justify-between p-10 text-white overflow-hidden"
-        style={{ background: 'linear-gradient(135deg, hsl(211 89% 30%) 0%, hsl(211 89% 45%) 50%, hsl(211 89% 55%) 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #01413D 0%, #0A736B 58%, #08A899 100%)' }}
       >
         <div className="absolute inset-0 opacity-25 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 40%), radial-gradient(circle at 80% 60%, rgba(255,255,255,0.25) 0%, transparent 45%)' }} />
         <div className="relative flex flex-col items-start gap-4">
           <img
             src={unigLogo}
-            alt="UNIG-A"
+            alt="UNIG Clínicas"
             className="h-40 w-40 object-contain [filter:drop-shadow(0_0_2px_#fff)_drop-shadow(0_0_6px_#fff)_drop-shadow(0_4px_10px_rgba(0,0,0,0.35))]"
           />
 
           <div>
-            <div className="text-3xl font-bold">UNIG-A</div>
-            <div className="text-xs text-white/80 uppercase tracking-widest">Portal Acadêmico Integrado</div>
+            <div className="text-3xl font-bold">UNIG Clínicas</div>
+            <div className="text-xs text-white/80 uppercase tracking-widest">Plataforma de clínicas universitárias</div>
           </div>
         </div>
 
         <div className="relative space-y-4 max-w-md">
           <h1 className="text-4xl font-bold leading-tight">
-            Uma central única para toda a vida acadêmica.
+            Atendimento e ensino clínico integrados em um só lugar.
           </h1>
           <p className="text-white/90 text-sm leading-relaxed">
-            Aluno, professor, coordenação, secretaria e gestão em um único sistema —
-            requerimentos, salas, agendas, financeiro e comunicação institucional integrados.
+            Uma base institucional preparada para atendimento, agenda, supervisão acadêmica
+            e gestão das clínicas universitárias da UNIG.
           </p>
         </div>
         <div className="relative text-xs text-white/70">© {new Date().getFullYear()} UNIG · Todos os direitos reservados</div>
@@ -118,11 +118,11 @@ export default function Auth() {
           <div className="md:hidden flex flex-col items-center gap-2 justify-center mb-2">
             <img
               src={unigLogo}
-              alt="UNIG-A"
+              alt="UNIG Clínicas"
               className="h-32 w-32 object-contain [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.2))]"
             />
 
-            <span className="font-bold text-xl text-primary">UNIG-A</span>
+            <span className="font-bold text-xl text-primary">UNIG Clínicas</span>
           </div>
 
 

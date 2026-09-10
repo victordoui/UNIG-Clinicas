@@ -18,9 +18,9 @@ export function Header() {
   return (
     <div className="flex-1 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2 min-w-0">
-        <img src={unigLogo} alt="UNIG-A" className="h-7 w-7 object-contain shrink-0" />
-        <span className="font-bold text-primary hidden sm:inline">UNIG-A</span>
-        <span className="text-muted-foreground text-sm hidden md:inline">· Portal Acadêmico Integrado</span>
+        <img src={unigLogo} alt="UNIG Clínicas" className="h-7 w-7 object-contain shrink-0" />
+        <span className="font-bold text-primary hidden sm:inline">UNIG Clínicas</span>
+        <span className="text-muted-foreground text-sm hidden md:inline">· Plataforma integrada de clínicas universitárias</span>
       </div>
 
       <div className="flex items-center gap-2">

@@ -10,11 +10,11 @@ export default function Install() {
         <div className="text-center space-y-4">
           <img
             src={unigLogo}
-            alt="UNIG-A"
+            alt="UNIG Clínicas"
             className="mx-auto h-20 w-20 object-contain [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.15))]"
           />
-          <h1 className="text-3xl font-bold">Instale o UNIG-A</h1>
-          <p className="text-muted-foreground">Tenha acesso rápido ao Portal Acadêmico direto da tela inicial do seu dispositivo.</p>
+          <h1 className="text-3xl font-bold">Instale o UNIG Clínicas</h1>
+          <p className="text-muted-foreground">Tenha acesso rápido à plataforma das clínicas universitárias na tela inicial do seu dispositivo.</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
