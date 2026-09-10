@@ -23,6 +23,10 @@ export default tseslint.config(
         "warn",
         { allowConstantExport: true },
       ],
+      // The legacy Academy modules still use explicit `any` extensively. Keep
+      // reporting those sites as warnings while making CI fail on real lint
+      // errors; new clinical code should use generated Supabase types.
+      "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": "off",
     },
   }

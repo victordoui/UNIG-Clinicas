@@ -144,14 +144,14 @@ export default defineConfig(({ mode }) => ({
             sizes: '1280x720',
             type: 'image/png',
             form_factor: 'wide',
-            label: 'Dashboard UNIG Ops'
+            label: 'Dashboard UNIG Clínicas'
           },
           {
             src: 'mockups/mobile-app.png',
             sizes: '750x1334',
             type: 'image/png',
             form_factor: 'narrow',
-            label: 'UNIG Ops Mobile'
+            label: 'UNIG Clínicas Mobile'
           }
         ]
       },

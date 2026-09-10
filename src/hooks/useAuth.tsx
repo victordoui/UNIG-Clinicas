@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = async () => { if (user) await loadData(user.id); };
 
   const signOut = async () => {
-    try { await supabase.auth.signOut({ scope: 'local' }); } catch {}
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* local sign-out is best effort */ }
     setUser(null); setSession(null); setProfile(null); setDbRole(null); setIsSuperAdmin(false);
     if (typeof window !== 'undefined') window.location.href = '/auth';
   };

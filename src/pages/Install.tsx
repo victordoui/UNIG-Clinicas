@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Smartphone, Zap, WifiOff, Bell } from 'lucide-react';
-import unigLogo from '@/assets/uniga-logo.png';
+import unigSymbol from '@/assets/unig-clinicas-symbol.png';
 
 export default function Install() {
   return (
@@ -9,7 +9,7 @@ export default function Install() {
       <Card className="max-w-2xl w-full p-8 space-y-6">
         <div className="text-center space-y-4">
           <img
-            src={unigLogo}
+            src={unigSymbol}
             alt="UNIG Clínicas"
             className="mx-auto h-20 w-20 object-contain [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.15))]"
           />

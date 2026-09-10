@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import { Pencil, Plus } from 'lucide-react';
-import unigLogo from '@/assets/uniga-logo.png';
+import unigLogo from '@/assets/unig-clinicas-logo.png';
 import { cn } from '@/lib/utils';
 
 export type InstitutionalClass = {
@@ -71,7 +71,7 @@ export function InstitutionalScheduleGrid({ schedule, editable, onEntryClick, on
   return (
     <section className="schedule-print-area rounded-xl border bg-white p-3 shadow-sm print:border-0 print:p-0 print:shadow-none">
       <header className="mb-4 grid grid-cols-[80px_1fr_80px] items-center gap-2 px-1 text-slate-950 sm:grid-cols-[170px_1fr_170px] sm:gap-4 sm:px-2">
-        <img src={unigLogo} alt="UNIG" className="max-h-16 max-w-[150px] object-contain" />
+        <img src={unigLogo} alt="UNIG Clínicas" className="max-h-16 max-w-[220px] object-contain" />
         <div className="text-center">
           <h2 className="text-sm font-extrabold uppercase sm:text-lg">Curso de {schedule.course}</h2>
           <p className="text-[10px] font-bold sm:text-xs">{schedule.classCode} · {schedule.semester}</p>

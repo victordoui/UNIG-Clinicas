@@ -17,9 +17,8 @@ export default function SalasLivres() {
   const [time, setTime] = useState('07:10');
   const { data: rooms = [], isLoading: loadingRooms } = useRooms({ status: 'disponivel' });
   const { data: meetings = [], isLoading: loadingMeetings } = useAcademicMeetings();
-  if (!canRead) return <MainLayout><p className="text-sm text-muted-foreground">Sem permissão.</p></MainLayout>;
-
   const busy = useMemo(() => new Set(meetings.filter((meeting) => meeting.weekday === Number(weekday) && meeting.room?.id && toMinutes(meeting.starts_at) <= toMinutes(time) && toMinutes(meeting.ends_at) > toMinutes(time)).map((meeting) => meeting.room?.id)), [meetings, time, weekday]);
+  if (!canRead) return <MainLayout><p className="text-sm text-muted-foreground">Sem permissão.</p></MainLayout>;
   const free = rooms.filter((room: { id: string }) => !busy.has(room.id));
   const loading = loadingRooms || loadingMeetings;
   return <MainLayout><div className="space-y-6">

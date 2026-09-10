@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, X, Search } from 'lucide-react';
-import { useAdminUsers, useRevokeRole, type AdminUserRow } from '@/hooks/useAdmin';
+import { useAdminUsers, useRevokeClinicScope, useRevokeRole, type AdminUserRow } from '@/hooks/useAdmin';
 import { UNIG_ROLE_BADGE, UNIG_ROLE_LABEL, type UnigRole } from '@/lib/unigRoles';
 import { AssignRoleDialog } from './AssignRoleDialog';
 import { toast } from '@/hooks/use-toast';
@@ -14,10 +14,17 @@ export function UserRolesTable() {
   const [assignFor, setAssignFor] = useState<AdminUserRow | null>(null);
   const { data: users = [], isLoading } = useAdminUsers(search);
   const revoke = useRevokeRole();
+  const revokeScope = useRevokeClinicScope();
 
   const onRevoke = async (id: string, label: string) => {
     if (!confirm(`Revogar papel "${label}"?`)) return;
     try { await revoke.mutateAsync(id); toast({ title: 'Papel revogado' }); }
+    catch (e: any) { toast({ title: 'Erro', description: e?.message, variant: 'destructive' }); }
+  };
+
+  const onRevokeScope = async (id: string, label: string) => {
+    if (!confirm(`Revogar escopo da clínica "${label}"?`)) return;
+    try { await revokeScope.mutateAsync(id); toast({ title: 'Escopo revogado' }); }
     catch (e: any) { toast({ title: 'Erro', description: e?.message, variant: 'destructive' }); }
   };
 
@@ -51,7 +58,8 @@ export function UserRolesTable() {
                   <div className="flex flex-wrap gap-1">
                     {u.is_super_admin && <Badge className={UNIG_ROLE_BADGE.super_admin} variant="outline">Super Admin</Badge>}
                     {u.roles.map(r => (
-                      <Badge key={r.id} variant="outline" className={`${UNIG_ROLE_BADGE[r.role as UnigRole] ?? ''} gap-1 pr-1`}>
+                      <div key={r.id} className="flex flex-wrap items-center gap-1">
+                      <Badge variant="outline" className={`${UNIG_ROLE_BADGE[r.role as UnigRole] ?? ''} gap-1 pr-1`}>
                         {UNIG_ROLE_LABEL[r.role as UnigRole] ?? r.role}
                         <button
                           type="button"
@@ -60,6 +68,8 @@ export function UserRolesTable() {
                           title="Revogar"
                         ><X className="h-3 w-3" /></button>
                       </Badge>
+                      {(r.scopes ?? []).filter((scope) => !scope.revoked_at).map((scope) => <Badge key={scope.id} variant="secondary" className="gap-1 text-[10px] pr-1"><span title="Escopo de clínica">{scope.clinic_name}</span><button type="button" onClick={() => onRevokeScope(scope.id, scope.clinic_name)} className="rounded p-0.5 hover:bg-black/10" title="Revogar escopo"><X className="h-3 w-3" /></button></Badge>)}
+                      </div>
                     ))}
                     {u.roles.length === 0 && !u.is_super_admin && <span className="text-xs text-muted-foreground">Sem papéis</span>}
                   </div>

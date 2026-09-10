@@ -15,7 +15,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useAuth } from '@/hooks/useAuth';
 import { useUnreadNotificationCount } from '@/hooks/useCommunication';
 import { UNIG_ROLE_LABEL, type UnigRole } from '@/lib/unigRoles';
-import unigLogo from '@/assets/uniga-logo.png';
+import unigSymbol from '@/assets/unig-clinicas-symbol.png';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
@@ -293,7 +293,7 @@ export function AppSidebar() {
       <SidebarHeader className="shrink-0 border-b border-white/10 px-3 pb-5 pt-6">
         <div className={cn('flex flex-col items-center', collapsed && 'py-0')}>
           <img
-            src={unigLogo}
+            src={unigSymbol}
             alt="UNIG Clínicas"
             className={cn('object-contain brightness-0 invert', collapsed ? 'h-10 w-10' : 'h-28 w-28')}
           />

@@ -59,7 +59,7 @@ export function useAcademicReport(filters: Filters) {
       const { from, to } = range(filters);
 
       // Enrollments with class/course/unit
-      let eq = supabase
+      const eq = supabase
         .from('enrollments')
         .select('id, status, enrolled_at, class:classes(id, name, code, course_id, unit_id, course:courses(id, name), unit:units(id, name))')
         .gte('enrolled_at', from).lte('enrolled_at', to)
@@ -67,7 +67,7 @@ export function useAcademicReport(filters: Filters) {
       const { data: enrollments, error: e1 } = await eq;
       if (e1) throw e1;
 
-      let filtered = (enrollments ?? []).filter((e: any) => {
+      const filtered = (enrollments ?? []).filter((e: any) => {
         if (filters.courseId && e.class?.course_id !== filters.courseId) return false;
         if (filters.classId && e.class?.id !== filters.classId) return false;
         if (filters.unitId && e.class?.unit_id !== filters.unitId) return false;

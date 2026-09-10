@@ -11,23 +11,31 @@ export interface AdminUserRow {
   is_super_admin: boolean;
   password_change_required: boolean;
   created_at: string;
-  roles: { id: string; role: string; organization_id: string; is_active: boolean }[];
+  roles: { id: string; role: string; organization_id: string; is_active: boolean; scopes: { id: string; clinic_id: string; clinic_name: string; revoked_at: string | null }[] }[];
 }
 
 export function useAdminUsers(search?: string) {
   return useQuery({
     queryKey: ['admin-users', search ?? ''],
     queryFn: async (): Promise<AdminUserRow[]> => {
-      const [profiles, assignments] = await Promise.all([
+      const [profiles, assignments, scopes] = await Promise.all([
         supabase.from('profiles').select('id, email, full_name, created_at').order('full_name').limit(500),
         supabase.from('user_roles').select('id, user_id, organization_id, is_active, role:roles(code)').limit(2000),
+        (supabase.from('user_clinic_scopes') as any).select('id,user_role_id,clinic_id,revoked_at,clinic:clinics(name)').limit(4000),
       ]);
       if (profiles.error) throw profiles.error;
       if (assignments.error) throw assignments.error;
+      if (scopes.error) throw scopes.error;
+      const scopesByRole = new Map<string, any[]>();
+      for (const scope of (scopes.data ?? []) as any[]) {
+        const rows = scopesByRole.get(scope.user_role_id) ?? [];
+        rows.push({ id: scope.id, clinic_id: scope.clinic_id, clinic_name: scope.clinic?.name ?? 'Clínica', revoked_at: scope.revoked_at ?? null });
+        scopesByRole.set(scope.user_role_id, rows);
+      }
       const rolesByUser = new Map<string, any[]>();
       for (const role of (assignments.data ?? []) as any[]) {
         const rows = rolesByUser.get(role.user_id) ?? [];
-        if (role.is_active) rows.push({ ...role, role: role.role?.code ?? 'visitante' });
+        if (role.is_active) rows.push({ ...role, role: role.role?.code ?? 'visitante', scopes: scopesByRole.get(role.id) ?? [] });
         rolesByUser.set(role.user_id, rows);
       }
       const normalized = (profiles.data ?? []).map((p: any) => ({
@@ -62,7 +70,7 @@ export function useAssignRole() {
       const { data, error } = await (supabase.from('user_roles') as any).upsert({ user_id: userId, role_id: roleRow.id, organization_id: organizationId, is_active: true }, { onConflict: 'user_id,organization_id,role_id' }).select().single();
       if (error) throw error;
       if (clinicId) {
-        const { error: scopeInsertError } = await (supabase.from('user_clinic_scopes') as any).upsert({ user_role_id: data.id, clinic_id: clinicId }, { onConflict: 'user_role_id,clinic_id' });
+        const { error: scopeInsertError } = await (supabase.from('user_clinic_scopes') as any).upsert({ user_role_id: data.id, clinic_id: clinicId, revoked_at: null }, { onConflict: 'user_role_id,clinic_id' });
         if (scopeInsertError) throw scopeInsertError;
       }
       return data;
@@ -101,6 +109,17 @@ export function useAdminUnits() {
       if (error) throw error;
       return data ?? [];
     },
+  });
+}
+
+export function useRevokeClinicScope() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (scopeId: string) => {
+      const { error } = await (supabase.from('user_clinic_scopes') as any).update({ revoked_at: new Date().toISOString() }).eq('id', scopeId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
   });
 }
 

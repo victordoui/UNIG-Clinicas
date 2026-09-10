@@ -14,7 +14,7 @@ import {
   DEMO_USERS, UNIG_ROLE_LABEL, UNIG_ROLE_TEXT_COLOR, UNIG_ROLE_BADGE, UNIG_ROLE_ICON,
 } from '@/lib/unigRoles';
 import { cn } from '@/lib/utils';
-import unigLogo from '@/assets/uniga-logo.png';
+import unigLogo from '@/assets/unig-clinicas-logo.png';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -73,13 +73,8 @@ export default function Auth() {
           <img
             src={unigLogo}
             alt="UNIG Clínicas"
-            className="h-40 w-40 object-contain [filter:drop-shadow(0_0_2px_#fff)_drop-shadow(0_0_6px_#fff)_drop-shadow(0_4px_10px_rgba(0,0,0,0.35))]"
+            className="h-auto w-full max-w-[470px] object-contain [filter:drop-shadow(0_0_2px_#fff)_drop-shadow(0_0_6px_#fff)_drop-shadow(0_4px_10px_rgba(0,0,0,0.35))]"
           />
-
-          <div>
-            <div className="text-3xl font-bold">UNIG Clínicas</div>
-            <div className="text-xs text-white/80 uppercase tracking-widest">Plataforma de clínicas universitárias</div>
-          </div>
         </div>
 
         <div className="relative space-y-4 max-w-md">
@@ -101,10 +96,8 @@ export default function Auth() {
             <img
               src={unigLogo}
               alt="UNIG Clínicas"
-              className="h-32 w-32 object-contain [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.2))]"
+              className="h-auto w-full max-w-[340px] object-contain [filter:drop-shadow(0_2px_6px_rgba(0,0,0,0.2))]"
             />
-
-            <span className="font-bold text-xl text-primary">UNIG Clínicas</span>
           </div>
 
 

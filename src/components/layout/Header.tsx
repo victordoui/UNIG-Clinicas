@@ -7,7 +7,7 @@ import { LogOut } from 'lucide-react';
 import { UNIG_ROLE_LABEL, UNIG_ROLE_BADGE, UNIG_ROLE_ICON } from '@/lib/unigRoles';
 import { NotificationBell } from '@/components/comunicacao/NotificationBell';
 import { cn } from '@/lib/utils';
-import unigLogo from '@/assets/uniga-logo.png';
+import unigSymbol from '@/assets/unig-clinicas-symbol.png';
 
 export function Header() {
   const { profile, unigRole, signOut } = useAuth();
@@ -18,7 +18,7 @@ export function Header() {
   return (
     <div className="flex-1 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2 min-w-0">
-        <img src={unigLogo} alt="UNIG Clínicas" className="h-7 w-7 object-contain shrink-0" />
+        <img src={unigSymbol} alt="UNIG Clínicas" className="h-7 w-7 object-contain shrink-0" />
         <span className="font-bold text-primary hidden sm:inline">UNIG Clínicas</span>
         <span className="text-muted-foreground text-sm hidden md:inline">· Plataforma integrada de clínicas universitárias</span>
       </div>
