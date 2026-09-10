@@ -50,16 +50,21 @@ export function useAdminUsers(search?: string) {
 export function useAssignRole() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ userId, role, unitId }: { userId: string; role: UnigRole; unitId?: string | null }) => {
+    mutationFn: async ({ userId, role, clinicId }: { userId: string; role: UnigRole; clinicId?: string | null }) => {
       const dbRoleByUi: Record<string, string> = { super_admin: 'super_admin', administrador: 'organization_admin', gestor_unidade: 'clinic_manager', professor: 'clinician', coordenacao: 'academic_supervisor', aluno: 'student', atendimento: 'receptionist', financeiro: 'auditor' };
       const dbCode = dbRoleByUi[role] ?? role;
-      const [{ data: roleRow, error: roleError }, { data: unitRows, error: unitError }] = await Promise.all([
+      const [{ data: roleRow, error: roleError }, { data: scopeTarget, error: scopeError }] = await Promise.all([
         supabase.from('roles').select('id').eq('code', dbCode).single(),
-        unitId ? supabase.from('units').select('organization_id').eq('id', unitId).single() : supabase.from('units').select('organization_id').limit(1).single(),
+        clinicId ? supabase.from('clinics').select('organization_id').eq('id', clinicId).single() : supabase.from('organizations').select('id').limit(1).single(),
       ]);
-      if (roleError) throw roleError; if (unitError) throw unitError;
-      const { data, error } = await (supabase.from('user_roles') as any).upsert({ user_id: userId, role_id: roleRow.id, organization_id: unitRows.organization_id, is_active: true }, { onConflict: 'user_id,organization_id,role_id' }).select().single();
+      if (roleError) throw roleError; if (scopeError) throw scopeError;
+      const organizationId = clinicId ? scopeTarget.organization_id : scopeTarget.id;
+      const { data, error } = await (supabase.from('user_roles') as any).upsert({ user_id: userId, role_id: roleRow.id, organization_id: organizationId, is_active: true }, { onConflict: 'user_id,organization_id,role_id' }).select().single();
       if (error) throw error;
+      if (clinicId) {
+        const { error: scopeInsertError } = await (supabase.from('user_clinic_scopes') as any).upsert({ user_role_id: data.id, clinic_id: clinicId }, { onConflict: 'user_role_id,clinic_id' });
+        if (scopeInsertError) throw scopeInsertError;
+      }
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
@@ -93,6 +98,17 @@ export function useAdminUnits() {
     queryKey: ['admin-units'],
     queryFn: async () => {
       const { data, error } = await supabase.from('units').select('*').order('name').limit(500);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useAdminClinics() {
+  return useQuery({
+    queryKey: ['admin-clinics'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clinics').select('id, name, organization_id').eq('is_active', true).order('name').limit(500);
       if (error) throw error;
       return data ?? [];
     },

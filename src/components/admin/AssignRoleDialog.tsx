@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { ALL_UNIG_ROLES, UNIG_ROLE_LABEL, type UnigRole } from '@/lib/unigRoles';
-import { useAdminUnits, useAssignRole } from '@/hooks/useAdmin';
+import { useAdminClinics, useAssignRole } from '@/hooks/useAdmin';
 import { toast } from '@/hooks/use-toast';
 
 const NO_UNIT = '__none__';
@@ -18,13 +18,13 @@ interface Props {
 
 export function AssignRoleDialog({ open, onOpenChange, userId, userName }: Props) {
   const [role, setRole] = useState<UnigRole>('aluno');
-  const [unitId, setUnitId] = useState<string>(NO_UNIT);
-  const { data: units = [] } = useAdminUnits();
+  const [clinicId, setClinicId] = useState<string>(NO_UNIT);
+  const { data: clinics = [] } = useAdminClinics();
   const assign = useAssignRole();
 
   const submit = async () => {
     try {
-      await assign.mutateAsync({ userId, role, unitId: unitId === NO_UNIT ? null : unitId });
+      await assign.mutateAsync({ userId, role, clinicId: clinicId === NO_UNIT ? null : clinicId });
       toast({ title: 'Papel atribuído', description: `${UNIG_ROLE_LABEL[role]} para ${userName}.` });
       onOpenChange(false);
     } catch (e: any) {
@@ -49,12 +49,12 @@ export function AssignRoleDialog({ open, onOpenChange, userId, userName }: Props
             </Select>
           </div>
           <div>
-            <Label>Unidade (opcional)</Label>
-            <Select value={unitId} onValueChange={setUnitId}>
+            <Label>Clínica (opcional)</Label>
+            <Select value={clinicId} onValueChange={setClinicId}>
               <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={NO_UNIT}>Nenhuma / Global</SelectItem>
-                {(units as any[]).map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                {(clinics as any[]).map(clinic => <SelectItem key={clinic.id} value={clinic.id}>{clinic.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
