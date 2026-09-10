@@ -64,6 +64,7 @@ interface NavGroup {
 }
 
 const STAFF = ['super_admin', 'administrador', 'secretaria', 'coordenacao'] as UnigRole[];
+const CLINICAL_NAVIGATION_GROUPS = new Set(['clinical-care', 'administration']);
 const sidebarScrollMemory = new globalThis.Map<string, number>();
 
 const NAV_GROUPS: NavGroup[] = [
@@ -181,12 +182,7 @@ const NAV_GROUPS: NavGroup[] = [
     id: 'administration', section: 'SISTEMA', label: 'Administração', icon: Settings,
     roles: ['super_admin', 'administrador'],
     items: [
-      { title: 'Usuários', url: '/admin/usuarios', icon: Users },
-      { title: 'Permissões', url: '/admin/permissoes', icon: ShieldCheck },
-      { title: 'Unidades', url: '/admin/unidades', icon: Building2 },
       { title: 'Clínicas e Serviços', url: '/admin/clinicas', icon: ClipboardList },
-      { title: 'Configurações', url: '/admin/configuracoes', icon: Settings },
-      { title: 'Logs do Sistema', url: '/admin/logs', icon: ScrollText },
     ],
   },
 ];
@@ -207,7 +203,7 @@ export function AppSidebar() {
   const scrollStorageKey = `uniga-sidebar-scroll:${unigRole}`;
 
   const visibleGroups = useMemo(
-    () => NAV_GROUPS.filter((group) => group.roles.includes(unigRole)),
+    () => NAV_GROUPS.filter((group) => CLINICAL_NAVIGATION_GROUPS.has(group.id) && group.roles.includes(unigRole)),
     [unigRole],
   );
   const activeGroup = visibleGroups.find((group) => group.items.some((item) => matchesPath(pathname, item.url)))?.id;
