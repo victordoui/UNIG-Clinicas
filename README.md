@@ -62,3 +62,11 @@ Consulte [supabase/README.md](supabase/README.md),
 [docs/PRODUCAO_CHECKLIST.md](docs/PRODUCAO_CHECKLIST.md) e os
 [ADRs](docs/adr/) antes de promover o ambiente. O acompanhamento detalhado do
 Plano Mestre está em [docs/PLANO_MESTRE_STATUS.md](docs/PLANO_MESTRE_STATUS.md).
+## Publicação no Netlify
+
+Antes de publicar, configure no Netlify (em **Site configuration → Environment variables**) as variáveis abaixo para os contextos de produção e preview:
+
+- `VITE_SUPABASE_URL`: URL do projeto Supabase.
+- `VITE_SUPABASE_PUBLISHABLE_KEY`: chave pública/publicável do projeto Supabase.
+
+Use `.env.example` como referência. Essas variáveis são incorporadas no build; após cadastrá-las, execute um novo deploy.
