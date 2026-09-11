@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Activity, Flower2, SmilePlus, Stethoscope } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -23,6 +23,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
 type Specialty = "odonto" | "fisio" | "estetica";
@@ -61,6 +62,7 @@ const SETTINGS = {
 
 export default function Especialidades() {
   const queryClient = useQueryClient();
+  const { clinicCodes, unigRole } = useAuth();
   const [active, setActive] = useState<Specialty>("odonto");
   const [clinicId, setClinicId] = useState("");
   const [patientId, setPatientId] = useState("");
@@ -71,6 +73,20 @@ export default function Especialidades() {
   const [diagnosis, setDiagnosis] = useState("");
   const [plan, setPlan] = useState("");
   const [protocolName, setProtocolName] = useState("");
+
+  const availableSpecialties = useMemo(
+    () => (Object.keys(SETTINGS) as Specialty[]).filter((specialty) =>
+      unigRole === "super_admin" || clinicCodes.includes(SETTINGS[specialty].code),
+    ),
+    [clinicCodes, unigRole],
+  );
+
+  useEffect(() => {
+    if (availableSpecialties.length && !availableSpecialties.includes(active)) {
+      setActive(availableSpecialties[0]);
+      setClinicId("");
+    }
+  }, [active, availableSpecialties]);
 
   const workspace = useQuery({
     queryKey: ["specialty-workspace"],
@@ -263,10 +279,10 @@ export default function Especialidades() {
             reset();
           }}
         >
-          <TabsList className="grid h-auto w-full grid-cols-3">
-            <TabsTrigger value="odonto">Odontologia</TabsTrigger>
-            <TabsTrigger value="fisio">Fisioterapia</TabsTrigger>
-            <TabsTrigger value="estetica">Estética</TabsTrigger>
+          <TabsList className="grid h-auto w-full" style={{ gridTemplateColumns: `repeat(${Math.max(availableSpecialties.length, 1)}, minmax(0, 1fr))` }}>
+            {availableSpecialties.map((specialty) => (
+              <TabsTrigger key={specialty} value={specialty}>{SETTINGS[specialty].label}</TabsTrigger>
+            ))}
           </TabsList>
           <TabsContent value={active} className="mt-5">
             <div className="grid gap-5 lg:grid-cols-[400px_1fr]">

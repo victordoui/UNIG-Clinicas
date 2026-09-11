@@ -58,6 +58,7 @@ interface NavItem {
   badge?: number;
   badgeKey?: 'notifications';
   clinicCode?: string;
+  clinicCodes?: string[];
 }
 
 interface NavGroup {
@@ -70,22 +71,41 @@ interface NavGroup {
 }
 
 const STAFF = ['super_admin', 'administrador', 'secretaria', 'coordenacao'] as UnigRole[];
-const CLINICAL_NAVIGATION_GROUPS = new Set(['clinical-care', 'patient-portal', 'tutor-portal', 'administration']);
+const CLINICAL_NAVIGATION_GROUPS = new Set([
+  'clinical-operations',
+  'clinical-specialties',
+  'clinical-management',
+  'patient-portal',
+  'tutor-portal',
+  'administration',
+]);
 const sidebarScrollMemory = new globalThis.Map<string, number>();
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    id: 'clinical-care', section: 'CLÍNICAS', label: 'Atendimento Clínico', icon: ClipboardList,
+    id: 'clinical-operations', section: 'CLÍNICAS', label: 'Operação clínica', icon: ClipboardList,
     roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno', 'financeiro'],
     items: [
       { title: 'Pacientes', url: '/pacientes', icon: Users },
       { title: 'Agenda e Fila', url: '/agenda-fila', icon: CalendarDays },
       { title: 'Painel TV', url: '/painel-tv', icon: Tv },
       { title: 'Atendimentos', url: '/atendimentos', icon: ClipboardList },
+    ],
+  },
+  {
+    id: 'clinical-specialties', section: 'CLÍNICAS', label: 'Especialidades', icon: Stethoscope,
+    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno'],
+    items: [
+      { title: 'Odontologia, fisio e estética', url: '/especialidades', icon: Stethoscope, clinicCodes: ['ODONTO', 'FISIO', 'ESTETICA'] },
+      { title: 'Veterinária', url: '/veterinaria', icon: PawPrint, clinicCode: 'VET' },
+    ],
+  },
+  {
+    id: 'clinical-management', section: 'CLÍNICAS', label: 'Gestão clínica', icon: BarChart3,
+    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno', 'financeiro'],
+    items: [
       { title: 'Documentos', url: '/documentos-consentimentos', icon: FileText },
       { title: 'Supervisões', url: '/supervisoes', icon: GraduationCap },
-      { title: 'Veterinária', url: '/veterinaria', icon: PawPrint, clinicCode: 'VET' },
-      { title: 'Especialidades', url: '/especialidades', icon: Stethoscope },
       { title: 'Procedimentos e exames', url: '/procedimentos-exames', icon: FlaskConical },
       { title: 'Indicadores', url: '/indicadores-clinicos', icon: BarChart3 },
     ],
@@ -230,7 +250,12 @@ export function AppSidebar() {
   const scrollStorageKey = `uniga-sidebar-scroll:${unigRole}`;
 
   const visibleGroups = useMemo(
-    () => NAV_GROUPS.filter((group) => CLINICAL_NAVIGATION_GROUPS.has(group.id) && group.roles.includes(unigRole)).map((group) => ({ ...group, items: group.items.filter((item) => unigRole === 'super_admin' || !item.clinicCode || clinicCodes.includes(item.clinicCode)) })).filter((group) => group.items.length > 0),
+    () => NAV_GROUPS.filter((group) => CLINICAL_NAVIGATION_GROUPS.has(group.id) && group.roles.includes(unigRole)).map((group) => ({ ...group, items: group.items.filter((item) => {
+      if (unigRole === 'super_admin') return true;
+      if (item.clinicCode && !clinicCodes.includes(item.clinicCode)) return false;
+      if (item.clinicCodes && !item.clinicCodes.some((code) => clinicCodes.includes(code))) return false;
+      return true;
+    }) })).filter((group) => group.items.length > 0),
     [unigRole, clinicCodes],
   );
   const activeGroup = visibleGroups.find((group) => group.items.some((item) => matchesPath(pathname, item.url)))?.id;
