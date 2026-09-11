@@ -12,7 +12,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 const CONSENT_LABELS: Record<string, string> = { pending: 'Pendente', granted: 'Concedido', revoked: 'Revogado', expired: 'Expirado' };
-const DOCUMENT_LABELS: Record<string, string> = { attachment: 'Anexo clínico', prescription: 'Receita', certificate: 'Atestado', declaration: 'Declaração', term: 'Termo', exam: 'Exame / imagem' };
+const DOCUMENT_LABELS: Record<string, string> = {
+  attachment: 'Anexo clínico',
+  clinical_document: 'Documento clínico (receita, atestado ou declaração)',
+  consent: 'Termo / consentimento',
+  exam: 'Exame / imagem',
+};
 
 export default function DocumentosConsentimentos() {
   const qc = useQueryClient();
