@@ -111,7 +111,9 @@ export default function AgendaFila() {
   const [concurrentCapacity, setConcurrentCapacity] = useState("1");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
-  const [agendaView, setAgendaView] = useState<"day" | "week" | "month" | "list">("day");
+  const [agendaView, setAgendaView] = useState<
+    "day" | "week" | "month" | "list"
+  >("day");
   const [agendaDate, setAgendaDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
   );
@@ -132,12 +134,14 @@ export default function AgendaFila() {
             .order("name"),
           supabase
             .from("patients")
-            .select("id,record_number,person:persons(full_name,document_number)")
+            .select(
+              "id,record_number,person:persons(full_name,document_number)",
+            )
             .eq("status", "active"),
           supabase
             .from("appointments")
             .select(
-              "id,scheduled_at,status,reason,clinic:clinics(name,code),patient:patients(record_number,person:persons(full_name,document_number))",
+              "id,organization_id,clinic_id,scheduled_at,status,reason,clinic:clinics(name,code),patient:patients(record_number,person:persons(full_name,document_number))",
             )
             .order("scheduled_at")
             .limit(50),
@@ -248,6 +252,39 @@ export default function AgendaFila() {
     onError: (e: Error) =>
       toast({
         title: "Não foi possível atualizar a agenda",
+        description: e.message,
+        variant: "destructive",
+      }),
+  });
+  const prepareReminder = useMutation({
+    mutationFn: async (appointment: any) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await (supabase as any)
+        .from("appointment_communication_events")
+        .insert({
+          organization_id: appointment.organization_id,
+          clinic_id: appointment.clinic_id,
+          appointment_id: appointment.id,
+          event_type: "reminder_prepared",
+          channel: "whatsapp_prepared",
+          status: "prepared",
+          payload: {
+            scheduled_at: appointment.scheduled_at,
+            patient_record: appointment.patient?.record_number ?? null,
+          },
+          created_by: auth.user?.id,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () =>
+      toast({
+        title: "Lembrete preparado",
+        description:
+          "O registro foi auditado. Nenhuma mensagem externa é enviada enquanto a integração de WhatsApp não estiver configurada.",
+      }),
+    onError: (e: Error) =>
+      toast({
+        title: "Não foi possível preparar lembrete",
         description: e.message,
         variant: "destructive",
       }),
@@ -416,7 +453,9 @@ export default function AgendaFila() {
     const normalized = checkInQuery.trim().toLocaleLowerCase();
     if (normalized.length < 2) return [];
     return appointments
-      .filter((item) => !activeClinicCode || item.clinic?.code === activeClinicCode)
+      .filter(
+        (item) => !activeClinicCode || item.clinic?.code === activeClinicCode,
+      )
       .filter((item) => ["scheduled", "confirmed"].includes(item.status))
       .filter((item) => {
         const patientInfo = item.patient;
@@ -424,7 +463,11 @@ export default function AgendaFila() {
           patientInfo?.person?.full_name,
           patientInfo?.record_number,
           patientInfo?.person?.document_number,
-        ].some((value) => String(value ?? "").toLocaleLowerCase().includes(normalized));
+        ].some((value) =>
+          String(value ?? "")
+            .toLocaleLowerCase()
+            .includes(normalized),
+        );
       });
   }, [activeClinicCode, appointments, checkInQuery]);
 
@@ -459,7 +502,8 @@ export default function AgendaFila() {
               <CardHeader>
                 <CardTitle className="text-base">Check-in rápido</CardTitle>
                 <CardDescription>
-                  Localize o agendamento por nome, prontuário ou CPF/documento e registre a chegada.
+                  Localize o agendamento por nome, prontuário ou CPF/documento e
+                  registre a chegada.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -471,17 +515,46 @@ export default function AgendaFila() {
                 />
                 {checkInQuery.trim().length >= 2 && (
                   <div className="space-y-2">
-                    {checkInMatches.length ? checkInMatches.map((item) => (
-                      <div key={item.id} className="flex flex-col gap-2 rounded border p-3 text-sm sm:flex-row sm:items-center">
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium">{item.patient?.person?.full_name ?? item.patient?.record_number}</p>
-                          <p className="text-xs text-muted-foreground">{item.patient?.record_number} · {item.clinic?.name} · {new Date(item.scheduled_at).toLocaleString("pt-BR")}</p>
+                    {checkInMatches.length ? (
+                      checkInMatches.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex flex-col gap-2 rounded border p-3 text-sm sm:flex-row sm:items-center"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium">
+                              {item.patient?.person?.full_name ??
+                                item.patient?.record_number}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.patient?.record_number} ·{" "}
+                              {item.clinic?.name} ·{" "}
+                              {new Date(item.scheduled_at).toLocaleString(
+                                "pt-BR",
+                              )}
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            disabled={!canManage || updateAppointment.isPending}
+                            onClick={() =>
+                              updateAppointment.mutate({
+                                id: item.id,
+                                status: "checked_in",
+                              })
+                            }
+                          >
+                            <Check className="mr-1 h-3 w-3" />
+                            Registrar chegada
+                          </Button>
                         </div>
-                        <Button size="sm" disabled={!canManage || updateAppointment.isPending} onClick={() => updateAppointment.mutate({ id: item.id, status: "checked_in" })}>
-                          <Check className="mr-1 h-3 w-3" />Registrar chegada
-                        </Button>
-                      </div>
-                    )) : <p className="text-sm text-muted-foreground">Nenhum agendamento em aberto encontrado para esta clínica.</p>}
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Nenhum agendamento em aberto encontrado para esta
+                        clínica.
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -560,9 +633,12 @@ export default function AgendaFila() {
               <CardHeader>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <CardTitle className="text-base">Agenda operacional</CardTitle>
+                    <CardTitle className="text-base">
+                      Agenda operacional
+                    </CardTitle>
                     <CardDescription>
-                      Visualize os horários da clínica por período e acompanhe a chegada.
+                      Visualize os horários da clínica por período e acompanhe a
+                      chegada.
                     </CardDescription>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -574,7 +650,14 @@ export default function AgendaFila() {
                         variant={agendaView === view ? "default" : "outline"}
                         onClick={() => setAgendaView(view)}
                       >
-                        {{ day: "Dia", week: "Semana", month: "Mês", list: "Lista" }[view]}
+                        {
+                          {
+                            day: "Dia",
+                            week: "Semana",
+                            month: "Mês",
+                            list: "Lista",
+                          }[view]
+                        }
                       </Button>
                     ))}
                     {agendaView !== "list" && (
@@ -620,6 +703,17 @@ export default function AgendaFila() {
                           {APPOINTMENT_LABELS[item.status] ?? item.status}
                         </Badge>
                         <div className="flex flex-wrap gap-1">
+                          {["scheduled", "confirmed"].includes(item.status) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={!canManage || prepareReminder.isPending}
+                              onClick={() => prepareReminder.mutate(item)}
+                            >
+                              <PhoneCall className="mr-1 h-3 w-3" />
+                              Preparar lembrete
+                            </Button>
+                          )}
                           {item.status === "scheduled" && (
                             <Button
                               size="sm"
