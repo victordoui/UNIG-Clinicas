@@ -26,28 +26,30 @@ Este documento mantém o plano rastreável e evita que funcionalidades do UNIG A
 - Estruturas isoladas de especialidade para odontograma, avaliação/sessões de fisioterapia, protocolos/sessões de estética e consulta/peso/vacinação veterinária, com permissões próprias.
 - Papéis `patient`/`tutor`, vínculo opcional de conta com `profiles.person_id`, jornada QR autenticada e shells dos portais `/portal/paciente` e `/portal/tutor`.
 
-## Parcial / próximo ciclo
+## Entregue nas fases operacionais
 
-- Check-in manual e QR autenticado já em operação; ainda falta a jornada por CPF/código (localizar ou cadastrar → confirmar dados → emitir senha). A abertura da fila já permite serviço, janela e capacidade.
-- Seleção de serviço na abertura da fila e agenda completa dia/semana/mês/lista.
-- Tela operacional de atendimento com abas de resumo, prontuário, evoluções, exames, documentos, anexos e rascunho/envio para supervisão.
-- Adendos/correções com versionamento de conteúdo e revisão de evoluções já disponíveis; a tela operacional de encounter com todas as abas clínicas ainda falta.
-- Busca global respeitando RLS, central de notificações clínicas e Realtime de supervisões/status do atendimento.
-- Indicadores operacionais e acadêmicos completos (tempo de espera/atendimento, faltas, capacidade, satisfação, por serviço/horário/dia/clínica).
+- Check-in por agenda, prontuário/CPF/documento e QR autenticado; abertura de fila por serviço, janela e capacidade.
+- Agenda nas visões dia, semana, mês e lista, com confirmação, remarcação auditada e preparação de lembretes sem disparo externo automático.
+- Tela operacional de encounter com resumo, anamnese, evoluções versionadas, rascunho, envio para supervisão, conclusão, procedimentos, exames e documentos no mesmo contexto.
+- Busca global sujeita à autorização, central de notificações, indicadores por clínica e relatórios operacionais/acadêmicos com exportação CSV.
+- Fluxos completos das especialidades: odontograma e planos de tratamento; avaliação, sessões e alta em fisioterapia; protocolos e sessões de estética; e consulta, vacinação, peso, internação e alta veterinárias.
+- Portais: o paciente consulta agenda, histórico, documentos e avisos próprios; o tutor consulta animais, vacinas, consultas e avisos próprios.
 
 ## Pendente por ciclo do plano
 
 ### Ciclo 8 — especialidades
 
-As tabelas e políticas dos módulos já estão criadas. A tela **Especialidades clínicas** agora permite registrar odontograma inicial com dente/condição, avaliação fisioterapêutica e protocolos de estética, todos filtrados pela clínica e RLS. A clínica veterinária também registra consultas com queixa, diagnóstico e prescrição. Ainda faltam o histórico dental detalhado, sessões sequenciais de fisioterapia, sessões estéticas com regiões/fotos e peso, vacinação, cirurgia e internação veterinários.
+Concluído para o escopo atual. Os módulos especializados permanecem separados do núcleo comum e filtrados pela clínica autorizada. Evoluções adicionais de cada especialidade devem ser priorizadas junto aos responsáveis técnicos antes de aumentar a estrutura clínica.
 
 ### Ciclo 9 — portais
 
-Papéis, vínculo de identidade, entrada autenticada na fila por QR e telas iniciais já estão disponíveis. Faltam histórico/documentos completos, agenda detalhada, notificações e cadastro de animais pelo tutor.
+O portal do paciente está concluído no escopo atual. No portal do tutor, a interface de documentos de animais e as migrations correspondentes estão prontas, mas sua ativação depende de aplicar no projeto Supabase, nesta ordem: `20260911220000_tutor_animal_documents.sql` e `20260911220500_validate_animal_document_clinic.sql`. Até isso ocorrer, a tela informa a indisponibilidade sem expor ou misturar dados.
+
+Ainda falta, no Plano Mestre, a avaliação pós-atendimento pelo paciente/tutor. Ela requer uma migration própria, com RLS que autorize somente o titular do atendimento, e portanto ficou separada para a próxima rodada de banco.
 
 ### Ciclo 10 — gestão e hardening
 
-Dashboard executivo e por clínica, templates documentais, URLs assinadas com expiração, MFA, backups/restauração testados, proteção contra senhas vazadas, retenção LGPD/Lei 13.787 e revisão institucional pelo DPO/TI/responsáveis técnicos.
+Dashboard executivo e por clínica, versões documentais, assinatura autenticada, URLs temporárias para arquivos privados e auditoria estão entregues. Permanecem pendentes MFA, backups/restauração testados, proteção contra senhas vazadas, retenção LGPD/Lei 13.787 e revisão institucional pelo DPO/TI/responsáveis técnicos.
 
 O Security Advisor do projeto está sem achados de RLS ou `SECURITY DEFINER`; resta habilitar no painel do Supabase a proteção contra senhas comprometidas (Auth → Password Security).
 
@@ -57,7 +59,7 @@ Os testes automatizados unitários, integração, E2E e matriz de RLS permanecem
 
 ## Ordem de continuidade
 
-1. Entregar as interfaces clínicas das quatro especialidades.
-2. Completar histórico/documentos e notificações dos portais.
-3. Fechar indicadores, busca global e avaliação pós-atendimento.
+1. Aplicar as duas migrations de documentos veterinários no Supabase e validar o isolamento com uma conta de tutor.
+2. Criar a migration e a interface de avaliação pós-atendimento, com escopo exclusivo do paciente/tutor e indicadores agregados para gestão.
+3. Quando o escopo adiado for retomado, executar testes unitários, integração, E2E e matriz de RLS.
 4. Concluir MFA, backups, retenção e revisão institucional de produção.
