@@ -19,6 +19,7 @@ import unigSymbol from '@/assets/unig-clinicas-symbol.png';
 import unigLogo from '@/assets/unig-clinicas-logo.png';
 import { cn } from '@/lib/utils';
 import {
+  Activity,
   BarChart3,
   Bell,
   BookOpen,
