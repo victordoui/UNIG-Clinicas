@@ -67,8 +67,11 @@ export default function Especialidades() {
   const [clinicId, setClinicId] = useState("");
   const [patientId, setPatientId] = useState("");
   const [tooth, setTooth] = useState("");
+  const [surface, setSurface] = useState("");
   const [condition, setCondition] = useState("");
   const [notes, setNotes] = useState("");
+  const [treatmentPlanTitle, setTreatmentPlanTitle] = useState("");
+  const [recommendedProcedure, setRecommendedProcedure] = useState("");
   const [complaint, setComplaint] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [plan, setPlan] = useState("");
@@ -97,6 +100,7 @@ export default function Especialidades() {
         odontogramResult,
         physioResult,
         protocolResult,
+        dentalPlansResult,
       ] = await Promise.all([
         supabase
           .from("clinics")
@@ -128,6 +132,11 @@ export default function Especialidades() {
           .eq("active", true)
           .order("updated_at", { ascending: false })
           .limit(8),
+        (supabase as any)
+          .from("dental_treatment_plans")
+          .select("id,title,status,patient_id,notes,updated_at,items:dental_treatment_plan_items(id,tooth_code,surface,finding,recommended_procedure,status)")
+          .order("updated_at", { ascending: false })
+          .limit(8),
       ]);
       for (const result of [
         clinicResult,
@@ -135,6 +144,7 @@ export default function Especialidades() {
         odontogramResult,
         physioResult,
         protocolResult,
+        dentalPlansResult,
       ])
         if (result.error) throw result.error;
       return {
@@ -143,6 +153,7 @@ export default function Especialidades() {
         odontograms: odontogramResult.data ?? [],
         physio: physioResult.data ?? [],
         protocols: protocolResult.data ?? [],
+        dentalPlans: dentalPlansResult.data ?? [],
       };
     },
   });
@@ -157,8 +168,11 @@ export default function Especialidades() {
   const reset = () => {
     setPatientId("");
     setTooth("");
+    setSurface("");
     setCondition("");
     setNotes("");
+    setTreatmentPlanTitle("");
+    setRecommendedProcedure("");
     setComplaint("");
     setDiagnosis("");
     setPlan("");
@@ -190,17 +204,51 @@ export default function Especialidades() {
           .select("id")
           .single();
         if (error) throw error;
+        let odontogramEntryId: string | null = null;
         if (tooth && condition) {
-          const { error: entryError } = await (supabase as any)
+          const { data: entry, error: entryError } = await (supabase as any)
             .from("dental_odontogram_entries")
             .insert({
               odontogram_id: data.id,
               tooth_code: tooth,
+              surface: surface || null,
               condition,
               notes: notes || null,
               recorded_by: auth.user?.id,
-            });
+            })
+            .select("id")
+            .single();
           if (entryError) throw entryError;
+          odontogramEntryId = entry.id;
+        }
+        if (treatmentPlanTitle.trim() && recommendedProcedure.trim()) {
+          const { data: treatmentPlan, error: planError } = await (supabase as any)
+            .from("dental_treatment_plans")
+            .insert({
+              organization_id: selectedClinic.organization_id,
+              clinic_id: selectedClinic.id,
+              patient_id: patientId,
+              odontogram_id: data.id,
+              title: treatmentPlanTitle.trim(),
+              notes: notes || null,
+              ...actor,
+            })
+            .select("id")
+            .single();
+          if (planError) throw planError;
+          const { error: itemError } = await (supabase as any)
+            .from("dental_treatment_plan_items")
+            .insert({
+              treatment_plan_id: treatmentPlan.id,
+              odontogram_entry_id: odontogramEntryId,
+              tooth_code: tooth || "Não informado",
+              surface: surface || null,
+              finding: condition || null,
+              recommended_procedure: recommendedProcedure.trim(),
+              notes: notes || null,
+              ...actor,
+            });
+          if (itemError) throw itemError;
         }
       } else if (active === "fisio") {
         if (!patientId) throw new Error("Selecione o paciente.");
@@ -341,6 +389,14 @@ export default function Especialidades() {
                             />
                           </div>
                           <div className="space-y-1">
+                            <Label>Face</Label>
+                            <Input
+                              value={surface}
+                              onChange={(event) => setSurface(event.target.value)}
+                              placeholder="Ex.: oclusal"
+                            />
+                          </div>
+                          <div className="space-y-1">
                             <Label>Condição</Label>
                             <Input
                               value={condition}
@@ -357,6 +413,18 @@ export default function Especialidades() {
                             value={notes}
                             onChange={(event) => setNotes(event.target.value)}
                           />
+                        </div>
+                        <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                          <p className="text-sm font-semibold text-primary">Vincular a um plano de tratamento</p>
+                          <div className="space-y-1">
+                            <Label>Plano</Label>
+                            <Input value={treatmentPlanTitle} onChange={(event) => setTreatmentPlanTitle(event.target.value)} placeholder="Ex.: Reabilitação do quadrante superior" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Procedimento recomendado</Label>
+                            <Input value={recommendedProcedure} onChange={(event) => setRecommendedProcedure(event.target.value)} placeholder="Ex.: Restauração em resina" />
+                          </div>
+                          <p className="text-xs text-muted-foreground">Ao preencher os dois campos, o achado ficará associado ao plano e ao procedimento recomendado.</p>
                         </div>
                       </>
                     )}
@@ -462,6 +530,29 @@ export default function Especialidades() {
                   )}
                 </CardContent>
               </Card>
+              {active === "odonto" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Planos de tratamento</CardTitle>
+                    <CardDescription>Achado → procedimento recomendado → execução clínica.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {(workspace.data?.dentalPlans as any[])?.map((treatmentPlan) => (
+                      <div key={treatmentPlan.id} className="rounded-lg border p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-medium">{treatmentPlan.title}</p>
+                          <Badge variant="outline">{treatmentPlan.status}</Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">{patientLabel(treatmentPlan.patient_id)}</p>
+                        {(treatmentPlan.items ?? []).map((item: any) => (
+                          <p key={item.id} className="mt-2 rounded bg-muted px-2 py-1 text-sm">Dente {item.tooth_code}{item.surface ? ` · ${item.surface}` : ""} → {item.recommended_procedure}</p>
+                        ))}
+                      </div>
+                    ))}
+                    {!workspace.data?.dentalPlans?.length && <p className="py-4 text-center text-sm text-muted-foreground">Nenhum plano odontológico registrado.</p>}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </TabsContent>
         </Tabs>
