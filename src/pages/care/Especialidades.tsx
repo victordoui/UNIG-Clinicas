@@ -158,7 +158,7 @@ export default function Especialidades() {
         (supabase as any)
           .from("physiotherapy_assessments")
           .select(
-            "id,patient_id,chief_complaint,physiotherapy_diagnosis,status,updated_at",
+            "id,patient_id,chief_complaint,physiotherapy_diagnosis,functional_assessment,status,updated_at",
           )
           .order("updated_at", { ascending: false })
           .limit(8),
@@ -371,6 +371,14 @@ export default function Especialidades() {
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); toast({ title: "Item do plano atualizado" }); },
+    onError: (error: Error) => toast({ title: "Não foi possível atualizar", description: error.message, variant: "destructive" }),
+  });
+  const updatePhysioAssessment = useMutation({
+    mutationFn: async ({ id, status, reassessment, functionalAssessment }: { id: string; status: "active" | "discharged"; reassessment: string; functionalAssessment?: Record<string, unknown> }) => {
+      const { error } = await (supabase as any).from("physiotherapy_assessments").update({ status, functional_assessment: { ...functionalAssessment, reassessment }, updated_by: (await supabase.auth.getUser()).data.user?.id }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); toast({ title: "Jornada terapêutica atualizada" }); },
     onError: (error: Error) => toast({ title: "Não foi possível atualizar", description: error.message, variant: "destructive" }),
   });
   const registerAestheticSession = useMutation({
@@ -634,6 +642,12 @@ export default function Especialidades() {
                     {(workspace.data?.physioSessions as any[])?.map((session) => <div key={session.id} className="rounded-lg border-l-4 border-primary bg-muted/40 p-3"><p className="font-medium">Sessão {session.session_number} · {session.status}</p><p className="mt-1 text-sm text-muted-foreground">{session.goals || session.exercise_plan || "Sem observações."}</p></div>)}
                     {!workspace.data?.physioSessions?.length && <p className="text-sm text-muted-foreground">Registre a primeira sessão após criar uma avaliação.</p>}
                   </CardContent>
+                </Card>
+              )}
+              {active === "fisio" && moduleContext && ["physio-discharge", "physio-functional"].includes(searchParams.get("module") ?? "") && (
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Reavaliação e alta</CardTitle><CardDescription>Registre o desfecho da jornada terapêutica com rastreabilidade.</CardDescription></CardHeader>
+                  <CardContent className="space-y-3">{(workspace.data?.physio as any[])?.map((assessment) => <div key={assessment.id} className="rounded-lg border p-3"><p className="font-medium">{patientLabel(assessment.patient_id)}</p><p className="mt-1 text-sm text-muted-foreground">{assessment.physiotherapy_diagnosis || "Sem diagnóstico registrado."}</p><div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" disabled={assessment.status === "discharged" || updatePhysioAssessment.isPending} onClick={() => updatePhysioAssessment.mutate({ id: assessment.id, status: "active", reassessment: "Reavaliação registrada em " + new Date().toLocaleDateString("pt-BR"), functionalAssessment: assessment.functional_assessment })}>Registrar reavaliação</Button><Button size="sm" disabled={assessment.status === "discharged" || updatePhysioAssessment.isPending} onClick={() => updatePhysioAssessment.mutate({ id: assessment.id, status: "discharged", reassessment: "Alta fisioterapêutica registrada em " + new Date().toLocaleDateString("pt-BR"), functionalAssessment: assessment.functional_assessment })}>Dar alta</Button><Badge variant="outline">{assessment.status}</Badge></div></div>)}</CardContent>
                 </Card>
               )}
               {active === "estetica" && (
