@@ -41,8 +41,8 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 **Status: em andamento.**
 
-- Agenda dia/semana/mês/lista: entregue. Serviços e check-in por CPF/código: pendente.
-- Tela de encounter com início, evolução, rascunho, envio para supervisão e conclusão: entregue. Resumo longitudinal, exames, documentos vinculados e supervisão no mesmo contexto: pendente.
+- Agenda dia/semana/mês/lista, serviços e check-in por prontuário/CPF/documento: entregues.
+- Tela de encounter com início, evolução, rascunho, envio para supervisão, conclusão, exames, documentos e supervisões no mesmo contexto: entregue. Resumo longitudinal por paciente: pendente.
 - Indicadores por clínica e exportação CSV operacional: entregue. Relatórios acadêmicos e por serviço: pendentes.
 - Busca global e central de notificações clínicas: entregues.
 
