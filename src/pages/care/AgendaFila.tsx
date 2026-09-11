@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
@@ -88,7 +89,10 @@ type Session = {
 
 export default function AgendaFila() {
   const qc = useQueryClient();
-  const { unigRole } = useAuth();
+  const { unigRole, activeClinicCode } = useAuth();
+  const [searchParams] = useSearchParams();
+  const requestedSection = searchParams.get("section");
+  const defaultTab = requestedSection === "fila" ? "fila" : "agenda";
   const canManage = [
     "super_admin",
     "administrador",
@@ -107,6 +111,10 @@ export default function AgendaFila() {
   const [concurrentCapacity, setConcurrentCapacity] = useState("1");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
+  const [agendaView, setAgendaView] = useState<"day" | "week" | "month" | "list">("day");
+  const [agendaDate, setAgendaDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
 
   const data = useQuery({
     queryKey: ["care-operation"],
@@ -128,7 +136,7 @@ export default function AgendaFila() {
           supabase
             .from("appointments")
             .select(
-              "id,scheduled_at,status,reason,clinic:clinics(name),patient:patients(record_number,person:persons(full_name))",
+              "id,scheduled_at,status,reason,clinic:clinics(name,code),patient:patients(record_number,person:persons(full_name))",
             )
             .order("scheduled_at")
             .limit(50),
@@ -379,6 +387,30 @@ export default function AgendaFila() {
   const sessions = (data.data?.sessions as Session[]) ?? [];
   const tickets = (data.data?.tickets as any[]) ?? [];
   const selectedSession = sessions.find((item) => item.id === session);
+  const scopedAppointments = useMemo(() => {
+    const base = activeClinicCode
+      ? appointments.filter((item) => item.clinic?.code === activeClinicCode)
+      : appointments;
+    if (agendaView === "list") return base;
+
+    const selected = new Date(`${agendaDate}T00:00:00`);
+    const start = new Date(selected);
+    const end = new Date(selected);
+    if (agendaView === "day") end.setDate(end.getDate() + 1);
+    if (agendaView === "week") {
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+      end.setTime(start.getTime());
+      end.setDate(end.getDate() + 7);
+    }
+    if (agendaView === "month") {
+      start.setDate(1);
+      end.setMonth(end.getMonth() + 1, 1);
+    }
+    return base.filter((item) => {
+      const scheduled = new Date(item.scheduled_at);
+      return scheduled >= start && scheduled < end;
+    });
+  }, [activeClinicCode, agendaDate, agendaView, appointments]);
 
   return (
     <MainLayout>
@@ -401,7 +433,7 @@ export default function AgendaFila() {
             disponíveis para a equipe de recepção e gestão.
           </p>
         )}
-        <Tabs defaultValue="agenda">
+        <Tabs key={defaultTab} defaultValue={defaultTab}>
           <TabsList>
             <TabsTrigger value="agenda">Agenda</TabsTrigger>
             <TabsTrigger value="fila">Fila</TabsTrigger>
@@ -479,14 +511,41 @@ export default function AgendaFila() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">
-                  Próximos agendamentos
-                </CardTitle>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-base">Agenda operacional</CardTitle>
+                    <CardDescription>
+                      Visualize os horários da clínica por período e acompanhe a chegada.
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(["day", "week", "month", "list"] as const).map((view) => (
+                      <Button
+                        key={view}
+                        type="button"
+                        size="sm"
+                        variant={agendaView === view ? "default" : "outline"}
+                        onClick={() => setAgendaView(view)}
+                      >
+                        {{ day: "Dia", week: "Semana", month: "Mês", list: "Lista" }[view]}
+                      </Button>
+                    ))}
+                    {agendaView !== "list" && (
+                      <Input
+                        aria-label="Data de referência da agenda"
+                        type="date"
+                        value={agendaDate}
+                        onChange={(event) => setAgendaDate(event.target.value)}
+                        className="w-[155px]"
+                      />
+                    )}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {appointments.length ? (
-                    appointments.map((item) => (
+                  {scopedAppointments.length ? (
+                    scopedAppointments.map((item) => (
                       <div
                         key={item.id}
                         className="flex flex-col gap-3 rounded border p-3 text-sm md:flex-row md:items-center"
@@ -568,7 +627,7 @@ export default function AgendaFila() {
                     ))
                   ) : (
                     <p className="py-4 text-center text-sm text-muted-foreground">
-                      Nenhum agendamento.
+                      Nenhum agendamento neste período.
                     </p>
                   )}
                 </div>
