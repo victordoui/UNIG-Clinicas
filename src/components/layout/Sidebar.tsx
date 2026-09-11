@@ -306,21 +306,22 @@ function matchesPath(pathname: string, url: string) {
 
 export function AppSidebar() {
   const { state, setOpen, openMobile, setOpenMobile, isMobile } = useSidebar();
-  const { unigRole, profile, signOut, clinicCodes } = useAuth();
+  const { unigRole, profile, signOut, clinicCodes, activeClinicCode, setActiveClinicCode } = useAuth();
   const { data: unreadNotifications = 0 } = useUnreadNotificationCount();
   const { pathname } = useLocation();
   const collapsed = state === 'collapsed';
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollStorageKey = `uniga-sidebar-scroll:${unigRole}`;
 
+  const availableClinicCodes = unigRole === 'super_admin' ? Object.keys(CLINIC_LABELS) : clinicCodes;
+  const menuClinicCodes = activeClinicCode ? [activeClinicCode] : availableClinicCodes;
   const visibleGroups = useMemo(
     () => NAV_GROUPS.filter((group) => CLINICAL_NAVIGATION_GROUPS.has(group.id) && group.roles.includes(unigRole)).map((group) => ({ ...group, items: group.items.filter((item) => {
-      if (unigRole === 'super_admin') return true;
-      if (item.clinicCode && !clinicCodes.includes(item.clinicCode)) return false;
-      if (item.clinicCodes && !item.clinicCodes.some((code) => clinicCodes.includes(code))) return false;
+      if (item.clinicCode && !menuClinicCodes.includes(item.clinicCode)) return false;
+      if (item.clinicCodes && !item.clinicCodes.some((code) => menuClinicCodes.includes(code))) return false;
       return true;
     }) })).filter((group) => group.items.length > 0),
-    [unigRole, clinicCodes],
+    [unigRole, menuClinicCodes],
   );
   const activeGroup = visibleGroups.find((group) => group.items.some((item) => matchesPath(pathname, item.url)))?.id;
   const [openGroup, setOpenGroup] = useState<string | null>(() => activeGroup ?? null);
@@ -385,12 +386,12 @@ export function AppSidebar() {
 
   const name = profile?.full_name || profile?.email || 'Usuário';
   const initials = name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
-  const clinicLabel = unigRole === 'super_admin'
-    ? 'Todas as clínicas'
-    : clinicCodes.length === 1
-      ? (CLINIC_LABELS[clinicCodes[0]] ?? 'Clínica vinculada')
-      : clinicCodes.length > 1
-        ? `${clinicCodes.length} clínicas vinculadas`
+  const clinicLabel = activeClinicCode
+    ? (CLINIC_LABELS[activeClinicCode] ?? 'Clínica vinculada')
+    : availableClinicCodes.length === 1
+      ? (CLINIC_LABELS[availableClinicCodes[0]] ?? 'Clínica vinculada')
+      : availableClinicCodes.length > 1
+        ? 'Todas as clínicas'
         : 'Acesso institucional';
   const closeMobile = () => { if (isMobile) setOpenMobile(false); };
   const toggleGroup = (id: string) => {
@@ -413,7 +414,7 @@ export function AppSidebar() {
             alt="UNIG Clínicas"
             className={cn('object-contain brightness-0 invert', collapsed ? 'h-10 w-10' : 'h-auto w-full max-w-[205px]')}
           />
-          {!collapsed && <div className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.07] px-3 py-2 text-center text-xs font-semibold text-white/90"><Building2 className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{clinicLabel}</span></div>}
+          {!collapsed && <div className="mt-4 flex w-full items-center gap-2 rounded-xl border border-white/15 bg-white/[0.07] px-3 py-2 text-xs font-semibold text-white/90"><Building2 className="h-3.5 w-3.5 shrink-0" /><select aria-label="Clínica atual" value={activeClinicCode ?? ''} onChange={(event) => setActiveClinicCode(event.target.value || null)} className="min-w-0 flex-1 cursor-pointer appearance-none bg-transparent text-center outline-none"><option value="" className="text-foreground">{availableClinicCodes.length > 1 ? 'Todas as clínicas' : clinicLabel}</option>{availableClinicCodes.map((code) => <option key={code} value={code} className="text-foreground">{CLINIC_LABELS[code] ?? code}</option>)}</select><ChevronDown className="h-3.5 w-3.5 shrink-0" /></div>}
         </div>
       </SidebarHeader>
 

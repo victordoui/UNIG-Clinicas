@@ -24,6 +24,8 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   unigRole: UnigRole;
   clinicCodes: string[];
+  activeClinicCode: string | null;
+  setActiveClinicCode: (clinicCode: string | null) => void;
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -36,6 +38,8 @@ const AuthContext = createContext<AuthContextType>({
   isSuperAdmin: false,
   unigRole: 'visitante',
   clinicCodes: [],
+  activeClinicCode: null,
+  setActiveClinicCode: () => {},
   loading: true,
   signOut: async () => {},
   refreshProfile: async () => {},
@@ -49,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [clinicCodes, setClinicCodes] = useState<string[]>([]);
+  const [activeClinicCode, setActiveClinicCode] = useState<string | null>(null);
 
   const loadData = async (userId: string) => {
     const [profileRes, roleRes] = await Promise.all([
@@ -69,8 +74,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const assignmentId = (roleRes.data as any)?.id;
     if (assignmentId) {
       const { data: scopes } = await supabase.from('user_clinic_scopes').select('clinic:clinics(code)').eq('user_role_id', assignmentId).is('revoked_at', null);
-      setClinicCodes((scopes ?? []).map((scope: any) => scope.clinic?.code).filter(Boolean));
-    } else setClinicCodes([]);
+      const codes = (scopes ?? []).map((scope: any) => scope.clinic?.code).filter(Boolean) as string[];
+      setClinicCodes(codes);
+      setActiveClinicCode((current) => current && codes.includes(current) ? current : (codes.length === 1 ? codes[0] : null));
+    } else { setClinicCodes([]); setActiveClinicCode(null); }
   };
 
   useEffect(() => {
@@ -86,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           finally { if (!cancelled) setLoading(false); }
         }, 0);
       } else {
-        setProfile(null); setDbRole(null); setClinicCodes([]); setIsSuperAdmin(false); setLoading(false);
+        setProfile(null); setDbRole(null); setClinicCodes([]); setActiveClinicCode(null); setIsSuperAdmin(false); setLoading(false);
       }
     });
 
@@ -108,14 +115,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try { await supabase.auth.signOut({ scope: 'local' }); } catch { /* local sign-out is best effort */ }
-    setUser(null); setSession(null); setProfile(null); setDbRole(null); setClinicCodes([]); setIsSuperAdmin(false);
+    setUser(null); setSession(null); setProfile(null); setDbRole(null); setClinicCodes([]); setActiveClinicCode(null); setIsSuperAdmin(false);
     if (typeof window !== 'undefined') window.location.href = '/auth';
   };
 
   const unigRole = mapDbRoleToUnig(dbRole, isSuperAdmin);
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, isSuperAdmin, unigRole, clinicCodes, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, isSuperAdmin, unigRole, clinicCodes, activeClinicCode, setActiveClinicCode, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
