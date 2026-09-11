@@ -1,11 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { Activity, CalendarDays, Clock3, FlaskConical, GraduationCap, Users } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Download } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 type Clinic = { id: string; name: string; code: string };
 type Counts = { patients: number; appointments: number; waiting: number; encounters: number; procedures: number; exams: number; supervisions: number };
@@ -28,6 +31,7 @@ async function countRows(query: any) {
 
 export default function Indicadores() {
   const [clinicId, setClinicId] = useState('all');
+  const { activeClinicCode } = useAuth();
   const report = useQuery({
     queryKey: ['clinical-indicators', clinicId],
     queryFn: async (): Promise<{ clinics: Clinic[]; counts: Counts }> => {
@@ -70,12 +74,37 @@ export default function Indicadores() {
     },
   });
   const counts = report.data?.counts;
+  useEffect(() => {
+    if (!activeClinicCode || !report.data?.clinics?.length) return;
+    const activeClinic = report.data.clinics.find((clinic) => clinic.code === activeClinicCode);
+    if (activeClinic) setClinicId(activeClinic.id);
+  }, [activeClinicCode, report.data?.clinics]);
+
+  const exportCsv = () => {
+    if (!counts) return;
+    const scope = clinicId === 'all'
+      ? 'Todas as clínicas visíveis'
+      : report.data?.clinics.find((clinic) => clinic.id === clinicId)?.name ?? 'Clínica';
+    const lines = [
+      ['Indicador', 'Quantidade'],
+      ...metrics.map((metric) => [metric.label, String(counts[metric.key])]),
+      [],
+      ['Escopo', scope],
+      ['Gerado em', new Date().toLocaleString('pt-BR')],
+    ].map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(';'));
+    const url = URL.createObjectURL(new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `indicadores-unig-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   return <MainLayout>
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div><h1 className="text-2xl font-bold">Indicadores clínicos</h1><p className="text-sm text-muted-foreground">Visão operacional agregada ou filtrada por clínica. Esta página não exibe conteúdo de prontuário.</p></div>
-        <div className="w-full space-y-1 md:w-[260px]"><Label>Escopo dos indicadores</Label><Select value={clinicId} onValueChange={setClinicId}><SelectTrigger><SelectValue placeholder="Todas as clínicas" /></SelectTrigger><SelectContent><SelectItem value="all">Todas as clínicas visíveis</SelectItem>{(report.data?.clinics ?? []).map((clinic) => <SelectItem key={clinic.id} value={clinic.id}>{clinic.name}</SelectItem>)}</SelectContent></Select></div>
+        <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto"><div className="w-full space-y-1 md:w-[260px]"><Label>Escopo dos indicadores</Label><Select value={clinicId} onValueChange={setClinicId}><SelectTrigger><SelectValue placeholder="Todas as clínicas" /></SelectTrigger><SelectContent><SelectItem value="all">Todas as clínicas visíveis</SelectItem>{(report.data?.clinics ?? []).map((clinic) => <SelectItem key={clinic.id} value={clinic.id}>{clinic.name}</SelectItem>)}</SelectContent></Select></div><Button type="button" variant="outline" className="mt-auto" disabled={!counts} onClick={exportCsv}><Download className="mr-2 h-4 w-4" />Exportar CSV</Button></div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map((metric) => { const Icon = metric.icon; return <Card key={metric.key}><CardHeader className="pb-2"><div className="flex items-center justify-between"><CardTitle className="text-sm font-medium">{metric.label}</CardTitle><Icon className="h-4 w-4 text-primary" /></div></CardHeader><CardContent><div className="text-3xl font-bold">{report.isLoading ? '—' : counts?.[metric.key]}</div><CardDescription className="mt-1 text-xs">{metric.description}</CardDescription></CardContent></Card>; })}</div>
       <Card><CardHeader><CardTitle className="text-base">Leitura operacional</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Os indicadores são filtrados pelas permissões RLS da conta autenticada. Para exportações formais, defina período, escopo de clínica e regras de anonimização antes da publicação.</CardContent></Card>
