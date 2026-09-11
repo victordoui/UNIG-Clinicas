@@ -346,6 +346,27 @@ export default function Indicadores() {
       };
     },
   });
+  const feedbackSummary = useQuery({
+    queryKey: ["clinic-feedback-summary", clinicId],
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)(
+        "get_clinic_feedback_summary",
+        { target_clinic_id: clinicId === "all" ? null : clinicId },
+      );
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        clinic_id: string;
+        clinic_name: string;
+        response_count: number;
+        average_service: number;
+        average_organization: number;
+        average_wait: number;
+        average_structure: number;
+        average_overall: number;
+      }>;
+    },
+  });
   const counts = report.data?.counts;
   useEffect(() => {
     if (!activeClinicCode || !report.data?.clinics?.length) return;
@@ -530,6 +551,41 @@ export default function Indicadores() {
             </CardContent>
           </Card>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Satisfação pós-atendimento</CardTitle>
+            <CardDescription>
+              Médias agregadas por clínica. Comentários e identificação do
+              paciente não são exibidos neste painel.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {feedbackSummary.isError ? (
+              <p className="text-sm text-muted-foreground">
+                O indicador será habilitado após a atualização segura do banco
+                de dados.
+              </p>
+            ) : feedbackSummary.data?.length ? (
+              feedbackSummary.data.map((item) => (
+                <div
+                  key={item.clinic_id}
+                  className="grid gap-2 rounded border p-3 text-sm sm:grid-cols-[1fr_auto_auto_auto_auto_auto] sm:items-center"
+                >
+                  <span className="font-medium">{item.clinic_name}</span>
+                  <span>{item.response_count} resposta(s)</span>
+                  <span title="Média geral">Geral {item.average_overall}★</span>
+                  <span title="Atendimento">Atend. {item.average_service}★</span>
+                  <span title="Organização">Org. {item.average_organization}★</span>
+                  <span title="Tempo de espera e estrutura">Espera {item.average_wait}★ · Estrutura {item.average_structure}★</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Ainda não há avaliações no escopo selecionado.
+              </p>
+            )}
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Leitura operacional</CardTitle>
