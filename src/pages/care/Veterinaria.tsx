@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Cat, PawPrint } from 'lucide-react';
+import { Cat, PawPrint, BedDouble } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,13 +35,15 @@ export default function Veterinaria() {
   const data = useQuery({
     queryKey: ['veterinary'],
     queryFn: async () => {
-      const [clinics, animals, persons, consultations, weights, vaccinations] = await Promise.all([
+      const [clinics, animals, persons, consultations, weights, vaccinations, hospitalizations, hospitalizationTasks] = await Promise.all([
         supabase.from('clinics').select('id,name,organization_id').eq('code', 'VET').eq('is_active', true),
         (supabase as any).from('animals').select('id,clinic_id,name,species,breed,sex,microchip_number,animal_guardians(person:persons(full_name))').is('archived_at', null).order('name'),
         (supabase as any).from('persons').select('id,full_name').is('archived_at', null).order('full_name').limit(500),
         (supabase as any).from('veterinary_consultations').select('id,animal_id,chief_complaint,diagnosis,created_at').order('created_at', { ascending: false }).limit(12),
         (supabase as any).from('veterinary_weights').select('id,animal_id,weight_kg,measured_at').order('measured_at', { ascending: false }).limit(12),
         (supabase as any).from('veterinary_vaccinations').select('id,animal_id,vaccine_name,administered_at,next_due_at').order('administered_at', { ascending: false }).limit(12),
+        (supabase as any).from('veterinary_hospitalizations').select('id,animal_id,box_code,status,admission_reason,admitted_at').in('status', ['admitted']).order('admitted_at', { ascending: false }),
+        (supabase as any).from('veterinary_hospitalization_tasks').select('id,hospitalization_id,title,task_type,scheduled_at,status').in('status', ['planned']).order('scheduled_at').limit(30),
       ]);
       if (clinics.error) throw clinics.error;
       if (animals.error) throw animals.error;
@@ -49,7 +51,9 @@ export default function Veterinaria() {
       if (consultations.error) throw consultations.error;
       if (weights.error) throw weights.error;
       if (vaccinations.error) throw vaccinations.error;
-      return { clinics: (clinics.data ?? []) as Clinic[], animals: animals.data ?? [], persons: persons.data ?? [], consultations: consultations.data ?? [], weights: weights.data ?? [], vaccinations: vaccinations.data ?? [] };
+      if (hospitalizations.error) throw hospitalizations.error;
+      if (hospitalizationTasks.error) throw hospitalizationTasks.error;
+      return { clinics: (clinics.data ?? []) as Clinic[], animals: animals.data ?? [], persons: persons.data ?? [], consultations: consultations.data ?? [], weights: weights.data ?? [], vaccinations: vaccinations.data ?? [], hospitalizations: hospitalizations.data ?? [], hospitalizationTasks: hospitalizationTasks.data ?? [] };
     },
   });
   const animalClinic = (animalId: string) => {
@@ -107,6 +111,8 @@ export default function Veterinaria() {
   const consultations = (data.data?.consultations as any[]) ?? [];
   const weights = (data.data?.weights as any[]) ?? [];
   const vaccinations = (data.data?.vaccinations as any[]) ?? [];
+  const hospitalizations = (data.data?.hospitalizations as any[]) ?? [];
+  const hospitalizationTasks = (data.data?.hospitalizationTasks as any[]) ?? [];
 
   return (
     <MainLayout>
@@ -133,6 +139,7 @@ export default function Veterinaria() {
           <Card><CardHeader><CardTitle className="text-base">Consultas recentes</CardTitle></CardHeader><CardContent className="space-y-2">{consultations.length ? consultations.map((consultation: any) => { const animal = animals.find((item: any) => item.id === consultation.animal_id); return <div key={consultation.id} className="rounded border p-3"><div className="flex items-center justify-between gap-3"><p className="font-medium">{animal?.name ?? 'Animal'}</p><span className="text-xs text-muted-foreground">{new Date(consultation.created_at).toLocaleDateString('pt-BR')}</span></div><p className="mt-1 text-sm text-muted-foreground">{consultation.chief_complaint}</p>{consultation.diagnosis && <p className="mt-1 text-sm">Diagnóstico: {consultation.diagnosis}</p>}</div>; }) : <p className="text-sm text-muted-foreground">Nenhuma consulta registrada.</p>}</CardContent></Card>
         </div>
         <div className="grid gap-5 lg:grid-cols-2">
+          <Card><CardHeader><CardTitle className="flex items-center gap-2 text-base"><BedDouble className="h-4 w-4" />Internações ativas</CardTitle><CardDescription>Mapa dos boxes em uso na clínica veterinária.</CardDescription></CardHeader><CardContent className="space-y-2">{hospitalizations.length ? hospitalizations.map((stay: any) => <div key={stay.id} className="rounded border p-3 text-sm"><strong>Box {stay.box_code}</strong> · {animals.find((animal: any) => animal.id === stay.animal_id)?.name ?? 'Animal'}<span className="mt-1 block text-xs text-muted-foreground">{stay.admission_reason || 'Sem motivo informado'} · desde {new Date(stay.admitted_at).toLocaleString('pt-BR')}</span>{hospitalizationTasks.filter((task: any) => task.hospitalization_id === stay.id).map((task: any) => <p key={task.id} className="mt-2 rounded bg-muted px-2 py-1 text-xs">{new Date(task.scheduled_at).toLocaleString('pt-BR')} · {task.title}</p>)}</div>) : <p className="text-sm text-muted-foreground">Nenhuma internação ativa.</p>}</CardContent></Card>
           <Card><CardHeader><CardTitle className="text-base">Peso e acompanhamento</CardTitle></CardHeader><CardContent className="space-y-3"><form onSubmit={(event) => { event.preventDefault(); createWeight.mutate(); }} className="flex flex-wrap gap-2"><Select value={weightAnimalId} onValueChange={setWeightAnimalId}><SelectTrigger className="min-w-[180px] flex-1"><SelectValue placeholder="Animal" /></SelectTrigger><SelectContent>{animals.map((animal: any) => <SelectItem key={animal.id} value={animal.id}>{animal.name}</SelectItem>)}</SelectContent></Select><Input className="w-28" type="number" min="0.01" step="0.001" placeholder="kg" value={weightKg} onChange={(event) => setWeightKg(event.target.value)} /><Button disabled={!weightAnimalId || !weightKg || createWeight.isPending}>Registrar peso</Button></form>{weights.map((item: any) => <p key={item.id} className="border-t pt-2 text-sm">{animals.find((animal: any) => animal.id === item.animal_id)?.name ?? 'Animal'} · <strong>{item.weight_kg} kg</strong> · {new Date(item.measured_at).toLocaleDateString('pt-BR')}</p>)}</CardContent></Card>
           <Card><CardHeader><CardTitle className="text-base">Vacinação</CardTitle></CardHeader><CardContent className="space-y-3"><form onSubmit={(event) => { event.preventDefault(); createVaccination.mutate(); }} className="grid gap-2 sm:grid-cols-2"><Select value={vaccineAnimalId} onValueChange={setVaccineAnimalId}><SelectTrigger><SelectValue placeholder="Animal" /></SelectTrigger><SelectContent>{animals.map((animal: any) => <SelectItem key={animal.id} value={animal.id}>{animal.name}</SelectItem>)}</SelectContent></Select><Input placeholder="Vacina" value={vaccineName} onChange={(event) => setVaccineName(event.target.value)} /><Input type="date" value={vaccineDate} onChange={(event) => setVaccineDate(event.target.value)} /><Button disabled={!vaccineAnimalId || !vaccineName.trim() || createVaccination.isPending}>Registrar vacina</Button></form>{vaccinations.map((item: any) => <p key={item.id} className="border-t pt-2 text-sm">{animals.find((animal: any) => animal.id === item.animal_id)?.name ?? 'Animal'} · <strong>{item.vaccine_name}</strong> · {new Date(`${item.administered_at}T12:00:00`).toLocaleDateString('pt-BR')}</p>)}</CardContent></Card>
         </div>
