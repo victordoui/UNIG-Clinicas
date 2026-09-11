@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from "react-router-dom";
 
 type Specialty = "odonto" | "fisio" | "estetica";
 type Clinic = {
@@ -60,9 +61,25 @@ const SETTINGS = {
   },
 };
 
+const MODULE_CONTEXT: Record<string, { specialty: Specialty; title: string; description: string }> = {
+  odontogram: { specialty: "odonto", title: "Odontograma", description: "Registre dentes, faces, achados e condutas recomendadas." },
+  anamnesis: { specialty: "odonto", title: "Anamnese odontológica", description: "Concentre os dados clínicos e observações iniciais do paciente." },
+  "treatment-plans": { specialty: "odonto", title: "Planos de tratamento", description: "Acompanhe achados, procedimentos recomendados e execução." },
+  "physio-assessment": { specialty: "fisio", title: "Avaliação fisioterapêutica", description: "Registre queixa, diagnóstico e plano terapêutico." },
+  "physio-functional": { specialty: "fisio", title: "Avaliação funcional", description: "Organize os dados funcionais do paciente." },
+  "physio-plans": { specialty: "fisio", title: "Planos terapêuticos", description: "Planeje a jornada terapêutica e seus objetivos." },
+  "physio-sessions": { specialty: "fisio", title: "Sessões e evoluções", description: "Acompanhe as sessões e o progresso funcional." },
+  "physio-discharge": { specialty: "fisio", title: "Reavaliações e alta", description: "Registre reavaliações e desfechos terapêuticos." },
+  "aesthetic-assessment": { specialty: "estetica", title: "Prontuários e anamnese", description: "Registre o contexto clínico da avaliação estética." },
+  "aesthetic-evaluation": { specialty: "estetica", title: "Avaliação estética", description: "Organize a avaliação facial, corporal ou capilar." },
+  "aesthetic-protocols": { specialty: "estetica", title: "Protocolos e sessões", description: "Cadastre protocolos e acompanhe suas sessões." },
+  "aesthetic-photos": { specialty: "estetica", title: "Registro fotográfico", description: "Área preparada para evolução visual com consentimento." },
+};
+
 export default function Especialidades() {
   const queryClient = useQueryClient();
-  const { clinicCodes, unigRole } = useAuth();
+  const { clinicCodes, activeClinicCode, unigRole } = useAuth();
+  const [searchParams] = useSearchParams();
   const [active, setActive] = useState<Specialty>("odonto");
   const [clinicId, setClinicId] = useState("");
   const [patientId, setPatientId] = useState("");
@@ -76,13 +93,22 @@ export default function Especialidades() {
   const [diagnosis, setDiagnosis] = useState("");
   const [plan, setPlan] = useState("");
   const [protocolName, setProtocolName] = useState("");
+  const moduleContext = MODULE_CONTEXT[searchParams.get("module") ?? ""];
 
   const availableSpecialties = useMemo(
     () => (Object.keys(SETTINGS) as Specialty[]).filter((specialty) =>
-      unigRole === "super_admin" || clinicCodes.includes(SETTINGS[specialty].code),
+      (unigRole === "super_admin" || clinicCodes.includes(SETTINGS[specialty].code)) &&
+      (!activeClinicCode || SETTINGS[specialty].code === activeClinicCode),
     ),
-    [clinicCodes, unigRole],
+    [activeClinicCode, clinicCodes, unigRole],
   );
+
+  useEffect(() => {
+    if (moduleContext && availableSpecialties.includes(moduleContext.specialty)) {
+      setActive(moduleContext.specialty);
+      setClinicId("");
+    }
+  }, [moduleContext, availableSpecialties]);
 
   useEffect(() => {
     if (availableSpecialties.length && !availableSpecialties.includes(active)) {
@@ -313,9 +339,9 @@ export default function Especialidades() {
             <Stethoscope className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Especialidades clínicas</h1>
+            <h1 className="text-2xl font-bold">{moduleContext?.title ?? "Especialidades clínicas"}</h1>
             <p className="text-sm text-muted-foreground">
-              Registros especializados separados pela clínica selecionada.
+              {moduleContext?.description ?? "Registros especializados separados pela clínica selecionada."}
             </p>
           </div>
         </div>
