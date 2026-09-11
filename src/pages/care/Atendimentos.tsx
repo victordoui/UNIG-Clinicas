@@ -47,7 +47,16 @@ export default function Atendimentos() {
   const data = useQuery({
     queryKey: ["clinical-workspace"],
     queryFn: async () => {
-      const [clinics, patients, encounters, notes] = await Promise.all([
+      const [
+        clinics,
+        patients,
+        encounters,
+        notes,
+        procedures,
+        exams,
+        documents,
+        supervisions,
+      ] = await Promise.all([
         supabase
           .from("clinics")
           .select("id,organization_id,name,code")
@@ -65,7 +74,7 @@ export default function Atendimentos() {
           .limit(30),
         (supabase.from("clinical_notes") as any)
           .select(
-            "id,encounter_id,note_type,content,authored_at,signed_at,workflow_status,review_feedback",
+            "id,encounter_id,note_type,content,authored_at,signed_at,workflow_status,review_feedback,clinical_record:clinical_records(patient_id)",
           )
           .order("authored_at", { ascending: false })
           .limit(50),
@@ -257,6 +266,9 @@ export default function Atendimentos() {
   const notes =
     (data.data?.notes as any[])?.filter((x) => x.encounter_id === encounter) ??
     [];
+  const longitudinalNotes = ((data.data?.notes as any[]) ?? [])
+    .filter((item) => item.clinical_record?.patient_id === selected?.patient_id)
+    .slice(0, 12);
   const patientProcedures = ((data.data?.procedures as any[]) ?? []).filter(
     (x) => x.patient_id === selected?.patient_id,
   );
@@ -493,6 +505,26 @@ export default function Atendimentos() {
                     Sem evoluções registradas.
                   </p>
                 )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Resumo longitudinal do paciente</CardTitle>
+                <CardDescription>
+                  Registros anteriores disponíveis neste prontuário, do mais recente para o mais antigo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {longitudinalNotes.length ? longitudinalNotes.map((item) => (
+                  <div key={item.id} className="rounded border p-3 text-sm">
+                    <div className="mb-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                      <span>{new Date(item.authored_at).toLocaleString("pt-BR")}</span>
+                      <Badge variant="outline">{item.note_type}</Badge>
+                      <Badge variant={item.workflow_status === "approved" ? "secondary" : "outline"}>{workflowLabels[item.workflow_status] ?? "Rascunho"}</Badge>
+                    </div>
+                    <p className="line-clamp-3 whitespace-pre-wrap">{item.content}</p>
+                  </div>
+                )) : <p className="text-sm text-muted-foreground">Ainda não há registros anteriores para este paciente.</p>}
               </CardContent>
             </Card>
             <div className="grid gap-4 lg:grid-cols-2">
