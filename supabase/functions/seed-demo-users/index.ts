@@ -20,6 +20,7 @@ const DEMO_ACCOUNTS = [
     { key: `clinic_manager_${clinicCode.toLowerCase()}`, role: 'clinic_manager', email: `clinic-manager-${clinicCode.toLowerCase()}@unig.demo`, label: 'Gestor da clínica', clinicCode },
     { key: `clinician_${clinicCode.toLowerCase()}`, role: 'clinician', email: `clinician-${clinicCode.toLowerCase()}@unig.demo`, label: 'Profissional clínico', clinicCode },
     { key: `receptionist_${clinicCode.toLowerCase()}`, role: 'receptionist', email: `receptionist-${clinicCode.toLowerCase()}@unig.demo`, label: 'Recepção e fila', clinicCode },
+    { key: `patient_${clinicCode.toLowerCase()}`, role: 'patient', email: `patient-${clinicCode.toLowerCase()}@unig.demo`, label: 'Cliente / Paciente', clinicCode, patientDocument: `demo-00${['ODONTO', 'FISIO', 'VET', 'ESTETICA'].indexOf(clinicCode) + 1}` },
   ]),
   { key: 'academic_supervisor_odonto', role: 'academic_supervisor', email: 'academic-supervisor-odonto@unig.demo', label: 'Supervisor acadêmico', clinicCode: 'ODONTO' },
   { key: 'student_odonto', role: 'student', email: 'student-odonto@unig.demo', label: 'Estudante', clinicCode: 'ODONTO' },
@@ -218,8 +219,14 @@ Deno.serve(async (req) => {
         created++;
       } else existed++;
 
+      let personId: string | null = null;
+      if ('patientDocument' in account && account.patientDocument) {
+        const { data: patient, error: patientError } = await admin.from('patients').select('person_id').eq('id', patientByCode.get(account.patientDocument)!).single();
+        if (patientError) throw patientError;
+        personId = patient.person_id;
+      }
       const { error: profileError } = await admin.from('profiles')
-        .upsert({ id: user.id, email: account.email, full_name: `${account.label} — Teste` }, { onConflict: 'id' });
+        .upsert({ id: user.id, email: account.email, full_name: `${account.label} — Teste`, person_id: personId }, { onConflict: 'id' });
       if (profileError) throw profileError;
       const roleId = roleByCode.get(account.role)!;
       const { data: existingAssignment, error: assignmentError } = await admin.from('user_roles').select('id')

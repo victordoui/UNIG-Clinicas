@@ -27,6 +27,7 @@ as apresenta separadas por clínica:
 - Odontologia também possui `academic-supervisor-odonto@unig.demo` e
   `student-odonto@unig.demo`.
 - Auditoria transversal: `auditor@unig.demo`.
+- Portal do cliente: `patient-{odonto|fisio|vet|estetica}@unig.demo`, cada um limitado ao próprio cadastro e clínica.
 
 As contas clínicas têm escopo RLS restrito à clínica indicada. Não reutilize
 essas contas ou a senha em produção.

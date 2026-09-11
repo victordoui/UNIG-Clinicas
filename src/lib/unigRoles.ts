@@ -143,6 +143,7 @@ export interface DemoUser {
   accessGroup: string;
   clinicCode?: string;
   clinicName?: string;
+  patientDocument?: string;
 }
 
 export const DEMO_PASSWORD = 'unig1234';
@@ -178,6 +179,16 @@ export const DEMO_USERS: DemoUser[] = [
       accessGroup: clinicName,
       clinicCode,
       clinicName,
+    },
+    {
+      role: 'paciente' as const,
+      email: `patient-${clinicCode.toLowerCase()}@unig.demo`,
+      password: DEMO_PASSWORD,
+      label: 'Cliente / Paciente',
+      accessGroup: `${clinicName} — Portal do cliente`,
+      clinicCode,
+      clinicName,
+      patientDocument: `demo-00${(['ODONTO', 'FISIO', 'VET', 'ESTETICA'] as const).indexOf(clinicCode) + 1}`,
     },
     {
       role: 'professor' as const,

@@ -50,7 +50,7 @@ export default function Auth() {
     }
   };
 
-  const signInDemo = async (demoEmail: string, demoPassword: string, label: string) => {
+  const signInDemo = async (demoEmail: string, demoPassword: string, label: string, role?: string) => {
     setDemoLoading(demoEmail);
     const { error } = await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPassword });
     if (error) {
@@ -65,7 +65,7 @@ export default function Auth() {
         toast({ title: `Erro no acesso rápido (${label})`, description: error.message, variant: 'destructive' });
       }
     } else {
-      navigate('/', { replace: true });
+      navigate(role === 'paciente' ? '/portal/paciente' : role === 'tutor' ? '/portal/tutor' : '/', { replace: true });
     }
     setDemoLoading(null);
   };
@@ -168,7 +168,7 @@ export default function Auth() {
                       return (
                         <button
                           key={d.email}
-                          onClick={() => signInDemo(d.email, d.password, d.label ?? UNIG_ROLE_LABEL[d.role])}
+                          onClick={() => signInDemo(d.email, d.password, d.label ?? UNIG_ROLE_LABEL[d.role], d.role)}
                           disabled={!!demoLoading}
                           className={cn(
                             'group rounded-lg border bg-card p-2.5 hover:shadow-md hover:border-primary/40 transition-all flex items-center gap-2 text-left min-w-0 disabled:opacity-60 disabled:pointer-events-none',
