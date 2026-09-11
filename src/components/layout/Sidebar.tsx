@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUnreadNotificationCount } from '@/hooks/useCommunication';
 import { UNIG_ROLE_LABEL, type UnigRole } from '@/lib/unigRoles';
 import unigSymbol from '@/assets/unig-clinicas-symbol.png';
+import unigLogo from '@/assets/unig-clinicas-logo.png';
 import { cn } from '@/lib/utils';
 import {
   BarChart3,
@@ -312,16 +313,10 @@ export function AppSidebar() {
       <SidebarHeader className="shrink-0 border-b border-white/10 px-3 pb-5 pt-6">
         <div className={cn('flex flex-col items-center', collapsed && 'py-0')}>
           <img
-            src={unigSymbol}
+            src={collapsed ? unigSymbol : unigLogo}
             alt="UNIG Clínicas"
-            className={cn('object-contain brightness-0 invert', collapsed ? 'h-10 w-10' : 'h-28 w-28')}
+            className={cn('object-contain brightness-0 invert', collapsed ? 'h-10 w-10' : 'h-auto w-full max-w-[205px]')}
           />
-          {!collapsed && (
-            <div className="mt-2 text-center leading-tight">
-              <p className="text-xl font-extrabold tracking-[0.04em] text-white">UNIG Clínicas</p>
-              <p className="text-[11px] font-medium text-white/60">Clínicas universitárias integradas</p>
-            </div>
-          )}
         </div>
       </SidebarHeader>
 
