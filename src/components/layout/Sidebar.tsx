@@ -51,6 +51,7 @@ import {
   MapPinned,
   Megaphone,
   MessageSquare,
+  Monitor,
   Package,
   PawPrint,
   School,
@@ -127,6 +128,7 @@ const NAV_GROUPS: NavGroup[] = [
     ],
     items: [
       { title: "Painel", url: "/", icon: LayoutGrid },
+      { title: "Recepção", url: "/recepcao-operacional", icon: Monitor },
       { title: "Fila", url: "/agenda-fila?section=fila", icon: ClipboardList },
       {
         title: "Agenda",

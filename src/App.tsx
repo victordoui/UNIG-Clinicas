@@ -128,6 +128,9 @@ const AdminLogs = lazy(() => import("./pages/admin/Logs"));
 const AdminClinicas = lazy(() => import("./pages/admin/Clinicas"));
 const Pacientes = lazy(() => import("./pages/patients/Pacientes"));
 const AgendaFila = lazy(() => import("./pages/care/AgendaFila"));
+const RecepcaoOperacional = lazy(
+  () => import("./pages/care/RecepcaoOperacional"),
+);
 const Atendimentos = lazy(() => import("./pages/care/Atendimentos"));
 const Indicadores = lazy(() => import("./pages/reporting/Indicadores"));
 const DocumentosConsentimentos = lazy(
@@ -197,6 +200,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <AgendaFila />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/recepcao-operacional"
+                element={
+                  <ProtectedRoute>
+                    <RecepcaoOperacional />
                   </ProtectedRoute>
                 }
               />
