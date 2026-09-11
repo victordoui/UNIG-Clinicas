@@ -48,10 +48,10 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 ## Fase 6 — Insumos e comunicação
 
-**Status: em andamento.**
+**Status: concluída.**
 
 - Estoque por clínica, lotes, validade, mínimo/máximo, inventário, movimentação e alertas: entregue.
-- Lembretes, confirmação/remarcação e preparação para WhatsApp: pendentes.
+- Lembretes preparados, confirmação e remarcação auditadas, com preparação para WhatsApp sem disparo externo automático: entregues.
 
 ## Fase 7 — Portais
 
@@ -69,6 +69,6 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 ## Próxima fase
 
-**Fase 6 — Comunicação operacional.**
+**Fase 7 — Documentos do portal do tutor.**
 
-Entrega prevista: lembretes, confirmação/remarcação e preparação segura para integração de WhatsApp.
+Entrega prevista: arquivos de animais com acesso exclusivo do tutor vinculado, sem misturar documentos de pacientes humanos.

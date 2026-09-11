@@ -289,6 +289,58 @@ export default function AgendaFila() {
         variant: "destructive",
       }),
   });
+  const rescheduleAppointment = useMutation({
+    mutationFn: async ({
+      appointment,
+      scheduledAt,
+    }: {
+      appointment: any;
+      scheduledAt: string;
+    }) => {
+      const target = new Date(scheduledAt);
+      if (Number.isNaN(target.getTime()))
+        throw new Error("Informe uma data e horário válidos.");
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await (supabase.from("appointments") as any)
+        .update({
+          scheduled_at: target.toISOString(),
+          status: "scheduled",
+          updated_by: auth.user?.id,
+        })
+        .eq("id", appointment.id);
+      if (error) throw error;
+      const { error: eventError } = await (supabase as any)
+        .from("appointment_communication_events")
+        .insert({
+          organization_id: appointment.organization_id,
+          clinic_id: appointment.clinic_id,
+          appointment_id: appointment.id,
+          event_type: "reschedule_requested",
+          channel: "whatsapp_prepared",
+          status: "registered",
+          payload: {
+            previous_scheduled_at: appointment.scheduled_at,
+            scheduled_at: target.toISOString(),
+          },
+          created_by: auth.user?.id,
+        });
+      if (eventError) throw eventError;
+    },
+    onSuccess: () => {
+      refresh();
+      toast({
+        title: "Agendamento remarcado",
+        description:
+          "A remarcação foi registrada e está pronta para a comunicação externa quando ela for configurada.",
+      });
+    },
+    onError: (e: Error) =>
+      toast({
+        title: "Não foi possível remarcar",
+        description: e.message,
+        variant: "destructive",
+      }),
+  });
 
   const openSession = useMutation({
     mutationFn: async () => {
@@ -712,6 +764,30 @@ export default function AgendaFila() {
                             >
                               <PhoneCall className="mr-1 h-3 w-3" />
                               Preparar lembrete
+                            </Button>
+                          )}
+                          {["scheduled", "confirmed"].includes(item.status) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={
+                                !canManage || rescheduleAppointment.isPending
+                              }
+                              onClick={() => {
+                                const current = new Date(item.scheduled_at);
+                                const initial = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}T${String(current.getHours()).padStart(2, "0")}:${String(current.getMinutes()).padStart(2, "0")}`;
+                                const next = window.prompt(
+                                  "Novo horário (AAAA-MM-DDTHH:mm)",
+                                  initial,
+                                );
+                                if (next)
+                                  rescheduleAppointment.mutate({
+                                    appointment: item,
+                                    scheduledAt: next,
+                                  });
+                              }}
+                            >
+                              Remarcar
                             </Button>
                           )}
                           {item.status === "scheduled" && (
