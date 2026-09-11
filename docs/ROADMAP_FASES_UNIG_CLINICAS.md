@@ -30,12 +30,12 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 ## Fase 4 — Prontuário e documentos clínicos completos
 
-**Status: em andamento.**
+**Status: concluída.**
 
 - Anamnese estruturada, contexto de encounter e resumo longitudinal por paciente: entregues.
 - Exames, imagens e anexos vinculados ao prontuário: entregues.
 - Central de documentos e consentimentos, com arquivo protegido: entregue.
-- Assinatura eletrônica e histórico de versões dos documentos: pendentes.
+- Assinatura eletrônica com atestação do usuário autenticado, trilha de auditoria e histórico imutável de versões: entregues. A assinatura certificada por provedor externo/ICP-Brasil permanece uma evolução contratual futura.
 
 ## Fase 5 — Operação e gestão clínica
 
@@ -69,6 +69,6 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 ## Próxima fase
 
-**Fase 4 — Assinatura eletrônica e histórico de documentos.**
+**Fase 5 — Relatórios acadêmicos e por serviço.**
 
-Entrega prevista: assinatura eletrônica auditável, versão de documento e consulta controlada pelo prontuário.
+Entrega prevista: visão consolidada por serviço, clínica e supervisão acadêmica com exportação operacional.
