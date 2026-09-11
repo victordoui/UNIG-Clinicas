@@ -96,6 +96,11 @@ export default function Especialidades() {
   const [assessmentId, setAssessmentId] = useState("");
   const [sessionGoals, setSessionGoals] = useState("");
   const [exercisePlan, setExercisePlan] = useState("");
+  const [aestheticProtocolId, setAestheticProtocolId] = useState("");
+  const [aestheticRegions, setAestheticRegions] = useState("");
+  const [aestheticProducts, setAestheticProducts] = useState("");
+  const [aestheticResult, setAestheticResult] = useState("");
+  const [photoConsent, setPhotoConsent] = useState(false);
   const moduleContext = MODULE_CONTEXT[searchParams.get("module") ?? ""];
 
   const availableSpecialties = useMemo(
@@ -131,6 +136,7 @@ export default function Especialidades() {
         protocolResult,
         dentalPlansResult,
         physioSessionsResult,
+        aestheticSessionsResult,
       ] = await Promise.all([
         supabase
           .from("clinics")
@@ -172,6 +178,11 @@ export default function Especialidades() {
           .select("id,assessment_id,session_number,status,goals,exercise_plan,session_date")
           .order("session_date", { ascending: false })
           .limit(20),
+        (supabase as any)
+          .from("aesthetic_sessions")
+          .select("id,protocol_id,patient_id,session_number,regions,products,photo_consent,result_notes,session_date,protocol:aesthetic_protocols(name)")
+          .order("session_date", { ascending: false })
+          .limit(20),
       ]);
       for (const result of [
         clinicResult,
@@ -181,6 +192,7 @@ export default function Especialidades() {
         protocolResult,
         dentalPlansResult,
         physioSessionsResult,
+        aestheticSessionsResult,
       ])
         if (result.error) throw result.error;
       return {
@@ -191,6 +203,7 @@ export default function Especialidades() {
         protocols: protocolResult.data ?? [],
         dentalPlans: dentalPlansResult.data ?? [],
         physioSessions: physioSessionsResult.data ?? [],
+        aestheticSessions: aestheticSessionsResult.data ?? [],
       };
     },
   });
@@ -217,6 +230,11 @@ export default function Especialidades() {
     setAssessmentId("");
     setSessionGoals("");
     setExercisePlan("");
+    setAestheticProtocolId("");
+    setAestheticRegions("");
+    setAestheticProducts("");
+    setAestheticResult("");
+    setPhotoConsent(false);
   };
   const patientLabel = (id: string) => {
     const patient = workspace.data?.patients.find((item) => item.id === id);
@@ -354,6 +372,17 @@ export default function Especialidades() {
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); toast({ title: "Item do plano atualizado" }); },
     onError: (error: Error) => toast({ title: "Não foi possível atualizar", description: error.message, variant: "destructive" }),
+  });
+  const registerAestheticSession = useMutation({
+    mutationFn: async () => {
+      if (!selectedClinic || !patientId || !aestheticProtocolId) throw new Error("Selecione clínica, paciente e protocolo.");
+      const sessions = (workspace.data?.aestheticSessions ?? []).filter((session: any) => session.protocol_id === aestheticProtocolId && session.patient_id === patientId);
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await (supabase as any).from("aesthetic_sessions").insert({ organization_id: selectedClinic.organization_id, clinic_id: selectedClinic.id, patient_id: patientId, protocol_id: aestheticProtocolId, session_number: sessions.length + 1, regions: aestheticRegions.split(",").map((value) => value.trim()).filter(Boolean), products: aestheticProducts.split(",").map((value) => value.trim()).filter(Boolean), photo_consent: photoConsent, result_notes: aestheticResult || null, created_by: auth.user?.id });
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); setAestheticProtocolId(""); setAestheticRegions(""); setAestheticProducts(""); setAestheticResult(""); setPhotoConsent(false); toast({ title: "Sessão estética registrada" }); },
+    onError: (error: Error) => toast({ title: "Não foi possível registrar a sessão", description: error.message, variant: "destructive" }),
   });
   const current = SETTINGS[active];
   const Icon = current.Icon;
@@ -604,6 +633,23 @@ export default function Especialidades() {
                     </div>
                     {(workspace.data?.physioSessions as any[])?.map((session) => <div key={session.id} className="rounded-lg border-l-4 border-primary bg-muted/40 p-3"><p className="font-medium">Sessão {session.session_number} · {session.status}</p><p className="mt-1 text-sm text-muted-foreground">{session.goals || session.exercise_plan || "Sem observações."}</p></div>)}
                     {!workspace.data?.physioSessions?.length && <p className="text-sm text-muted-foreground">Registre a primeira sessão após criar uma avaliação.</p>}
+                  </CardContent>
+                </Card>
+              )}
+              {active === "estetica" && (
+                <Card>
+                  <CardHeader><CardTitle className="text-base">Sessões e evolução estética</CardTitle><CardDescription>Registre áreas, produtos, resultado e autorização de imagem.</CardDescription></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-3 rounded-lg border p-3">
+                      <div className="space-y-1"><Label>Paciente</Label><Select value={patientId} onValueChange={setPatientId}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{workspace.data?.patients.map((patient) => <SelectItem key={patient.id} value={patient.id}>{patient.record_number} · {patient.person?.full_name ?? "Paciente"}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-1"><Label>Protocolo</Label><Select value={aestheticProtocolId} onValueChange={setAestheticProtocolId}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{(workspace.data?.protocols as any[])?.map((protocol) => <SelectItem key={protocol.id} value={protocol.id}>{protocol.name}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-1"><Label>Áreas tratadas</Label><Input value={aestheticRegions} onChange={(event) => setAestheticRegions(event.target.value)} placeholder="Ex.: Face, pescoço" /></div>
+                      <div className="space-y-1"><Label>Produtos utilizados</Label><Input value={aestheticProducts} onChange={(event) => setAestheticProducts(event.target.value)} placeholder="Ex.: Gel, sérum" /></div>
+                      <div className="space-y-1"><Label>Evolução / resultado</Label><Textarea value={aestheticResult} onChange={(event) => setAestheticResult(event.target.value)} /></div>
+                      <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={photoConsent} onChange={(event) => setPhotoConsent(event.target.checked)} /> Consentimento para registro fotográfico</label>
+                      <Button onClick={() => registerAestheticSession.mutate()} disabled={!clinicId || !patientId || !aestheticProtocolId || registerAestheticSession.isPending}>Registrar sessão</Button>
+                    </div>
+                    {(workspace.data?.aestheticSessions as any[])?.map((session) => <div key={session.id} className="rounded-lg border p-3"><p className="font-medium">{session.protocol?.name ?? "Protocolo"} · Sessão {session.session_number}</p><p className="mt-1 text-sm text-muted-foreground">{patientLabel(session.patient_id)} · {(session.regions ?? []).join(", ") || "Área não informada"}</p><p className="mt-1 text-sm">{session.result_notes || "Sem observações."}</p></div>)}
                   </CardContent>
                 </Card>
               )}
