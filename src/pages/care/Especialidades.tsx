@@ -145,7 +145,7 @@ export default function Especialidades() {
           .limit(500),
         (supabase as any)
           .from("dental_odontograms")
-          .select("id,patient_id,notes,updated_at")
+          .select("id,patient_id,notes,updated_at,entries:dental_odontogram_entries(id,tooth_code,surface,condition,notes)")
           .eq("status", "active")
           .order("updated_at", { ascending: false })
           .limit(8),
@@ -346,6 +346,14 @@ export default function Especialidades() {
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); setAssessmentId(""); setSessionGoals(""); setExercisePlan(""); toast({ title: "Sessão registrada" }); },
     onError: (error: Error) => toast({ title: "Não foi possível registrar a sessão", description: error.message, variant: "destructive" }),
+  });
+  const updateTreatmentItem = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "approved" | "performed" | "cancelled" }) => {
+      const { error } = await (supabase as any).from("dental_treatment_plan_items").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); toast({ title: "Item do plano atualizado" }); },
+    onError: (error: Error) => toast({ title: "Não foi possível atualizar", description: error.message, variant: "destructive" }),
   });
   const current = SETTINGS[active];
   const Icon = current.Icon;
@@ -602,10 +610,15 @@ export default function Especialidades() {
               {active === "odonto" && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Planos de tratamento</CardTitle>
+                    <CardTitle className="text-base">Odontograma visual e planos</CardTitle>
                     <CardDescription>Achado → procedimento recomendado → execução clínica.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
+                    {(workspace.data?.odontograms as any[])?.slice(0, 1).map((odontogram) => {
+                      const entries = odontogram.entries ?? [];
+                      const teeth = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28,48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+                      return <div key={odontogram.id} className="rounded-lg border bg-muted/30 p-3"><p className="mb-3 text-sm font-medium">Mapa do paciente: {patientLabel(odontogram.patient_id)}</p><div className="grid grid-cols-8 gap-1 sm:grid-cols-16">{teeth.map((toothCode) => { const entry = entries.find((entry: any) => entry.tooth_code === String(toothCode)); return <div key={toothCode} title={entry ? `${entry.condition}${entry.surface ? ` · ${entry.surface}` : ""}` : `Dente ${toothCode}`} className={`rounded border px-1 py-2 text-center text-xs font-bold ${entry ? "border-primary bg-primary text-primary-foreground" : "bg-background text-muted-foreground"}`}>{toothCode}</div>; })}</div><p className="mt-3 text-xs text-muted-foreground">Dentes destacados possuem achados registrados. Passe o cursor para ver condição e face.</p></div>;
+                    })}
                     {(workspace.data?.dentalPlans as any[])?.map((treatmentPlan) => (
                       <div key={treatmentPlan.id} className="rounded-lg border p-3">
                         <div className="flex items-center justify-between gap-2">
@@ -614,7 +627,7 @@ export default function Especialidades() {
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">{patientLabel(treatmentPlan.patient_id)}</p>
                         {(treatmentPlan.items ?? []).map((item: any) => (
-                          <p key={item.id} className="mt-2 rounded bg-muted px-2 py-1 text-sm">Dente {item.tooth_code}{item.surface ? ` · ${item.surface}` : ""} → {item.recommended_procedure}</p>
+                          <div key={item.id} className="mt-2 flex flex-wrap items-center gap-2 rounded bg-muted px-2 py-2 text-sm"><span className="flex-1">Dente {item.tooth_code}{item.surface ? ` · ${item.surface}` : ""} → {item.recommended_procedure}</span><Badge variant="outline">{item.status}</Badge>{item.status === "planned" && <Button size="sm" variant="outline" onClick={() => updateTreatmentItem.mutate({ id: item.id, status: "approved" })}>Aprovar</Button>}{item.status === "approved" && <Button size="sm" onClick={() => updateTreatmentItem.mutate({ id: item.id, status: "performed" })}>Registrar execução</Button>}</div>
                         ))}
                       </div>
                     ))}
