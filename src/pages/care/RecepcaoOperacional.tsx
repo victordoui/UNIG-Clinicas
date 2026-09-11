@@ -24,6 +24,7 @@ const initialQueue: Ticket[] = [
   { code: "O-015", patient: "Rafael Souza", wait: 7 },
   { code: "O-016", patient: "Beatriz Alves", wait: 4 },
 ];
+const SIMULATION_KEY = "unig-recepcao-simulacao";
 
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
@@ -49,6 +50,18 @@ export default function RecepcaoOperacional() {
     "08:08  Paciente compareceu à recepção",
     "08:09  Atendimento iniciado por Gisele",
   ]);
+
+  useEffect(() => {
+    const payload = {
+      active: true,
+      queueOpen,
+      current: current ? Number(current.code.replace(/\D/g, "")) : null,
+      queue: queue.map((item) => Number(item.code.replace(/\D/g, ""))),
+      announced: Number(lastCall.replace(/\D/g, "")),
+      updatedAt: new Date().toISOString(),
+    };
+    window.localStorage.setItem(SIMULATION_KEY, JSON.stringify(payload));
+  }, [current, lastCall, queue, queueOpen]);
 
   useEffect(() => {
     if (!serviceStarted || !current) return;

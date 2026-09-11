@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -8,6 +8,8 @@ import {
   Megaphone,
   RefreshCw,
   UsersRound,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -50,6 +52,44 @@ const PREFIX_BY_CLINIC: Record<string, string> = {
   VET: "V",
   ESTETICA: "E",
 };
+const SIMULATION_KEY = "unig-recepcao-simulacao";
+const DEMO_CLINIC: Clinic = {
+  id: "simulacao-odonto",
+  name: "Clínica de Odontologia · Simulação",
+  code: "ODONTO",
+};
+
+type ReceptionSimulation = {
+  active: boolean;
+  queueOpen: boolean;
+  current: number | null;
+  queue: number[];
+  announced: number | null;
+  updatedAt: string;
+};
+
+function readSimulation(): ReceptionSimulation | null {
+  try {
+    const value = window.localStorage.getItem(SIMULATION_KEY);
+    if (!value) return null;
+    const parsed = JSON.parse(value) as ReceptionSimulation;
+    return parsed.active ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function simulatedTicket(number: number, status: QueueTicket["status"]): QueueTicket {
+  return {
+    id: `simulated-${number}`,
+    queue_session_id: "simulated-session",
+    ticket_number: number,
+    priority: "normal",
+    status,
+    called_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+  };
+}
 
 function formatTicket(
   ticket: QueueTicket | undefined,
@@ -79,6 +119,12 @@ export default function PainelTV() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [clinicId, setClinicId] = useState(searchParams.get("clinic") ?? "");
   const [now, setNow] = useState(() => new Date());
+  const [simulation, setSimulation] = useState<ReceptionSimulation | null>(
+    () => readSimulation(),
+  );
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const lastAnnouncementRef = useRef<string | null>(null);
   const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ["queue-tv", TODAY],
     refetchInterval: 5000,
@@ -114,13 +160,15 @@ export default function PainelTV() {
   });
 
   const clinics = data?.clinics ?? [];
+  const availableClinics = simulation ? [DEMO_CLINIC, ...clinics] : clinics;
   const selectedClinicId =
-    clinicId && clinics.some((clinic) => clinic.id === clinicId)
+    clinicId && availableClinics.some((clinic) => clinic.id === clinicId)
       ? clinicId
-      : (clinics[0]?.id ?? "");
-  const selectedClinic = clinics.find(
+      : (simulation ? DEMO_CLINIC.id : (clinics[0]?.id ?? ""));
+  const selectedClinic = availableClinics.find(
     (clinic) => clinic.id === selectedClinicId,
   );
+  const isSimulation = Boolean(simulation && selectedClinicId === DEMO_CLINIC.id);
   const sessions = useMemo(
     () =>
       data?.sessions.filter(
@@ -139,12 +187,12 @@ export default function PainelTV() {
       ),
     [data?.tickets, sessionIds],
   );
-  const current = tickets
+  const realCurrent = tickets
     .filter(
       (ticket) => ticket.status === "called" || ticket.status === "in_service",
     )
     .sort((a, b) => (b.called_at ?? "").localeCompare(a.called_at ?? ""))[0];
-  const waiting = useMemo(
+  const realWaiting = useMemo(
     () =>
       tickets
         .filter((ticket) => ticket.status === "waiting")
@@ -156,6 +204,12 @@ export default function PainelTV() {
         ),
     [tickets],
   );
+  const current = isSimulation && simulation?.current
+    ? simulatedTicket(simulation.current, "called")
+    : realCurrent;
+  const waiting = isSimulation
+    ? (simulation?.queue ?? []).map((number) => simulatedTicket(number, "waiting"))
+    : realWaiting;
   const next = waiting[0];
   const remaining = waiting.slice(1, 4);
   const averageWait = waiting.length
@@ -171,7 +225,7 @@ export default function PainelTV() {
         ),
       )
     : 0;
-  const queueOpen = sessions.some((session) => session.status === "open");
+  const queueOpen = isSimulation ? Boolean(simulation?.queueOpen) : sessions.some((session) => session.status === "open");
   const updatedLabel = dataUpdatedAt
     ? new Date(dataUpdatedAt).toLocaleTimeString("pt-BR", {
         hour: "2-digit",
@@ -188,6 +242,46 @@ export default function PainelTV() {
       document.title = "UNIG Clínicas";
     };
   }, []);
+  const activateSound = async () => {
+    const AudioContextConstructor = window.AudioContext;
+    const context = audioContextRef.current ?? new AudioContextConstructor();
+    audioContextRef.current = context;
+    await context.resume();
+    setSoundEnabled(context.state === "running");
+  };
+  const playAnnouncement = () => {
+    const context = audioContextRef.current;
+    if (!context || context.state !== "running") return;
+    const start = context.currentTime;
+    [0, 0.23].forEach((offset, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(index ? 880 : 659, start + offset);
+      gain.gain.setValueAtTime(0.0001, start + offset);
+      gain.gain.exponentialRampToValueAtTime(0.16, start + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + offset + 0.18);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(start + offset);
+      oscillator.stop(start + offset + 0.2);
+    });
+  };
+  useEffect(() => {
+    const refreshSimulation = () => setSimulation(readSimulation());
+    window.addEventListener("storage", refreshSimulation);
+    const interval = window.setInterval(refreshSimulation, 800);
+    return () => {
+      window.removeEventListener("storage", refreshSimulation);
+      window.clearInterval(interval);
+    };
+  }, []);
+  useEffect(() => {
+    const announcedAt = simulation?.updatedAt;
+    if (!announcedAt) return;
+    const previous = lastAnnouncementRef.current;
+    lastAnnouncementRef.current = announcedAt;
+    if (previous && soundEnabled) playAnnouncement();
+  }, [simulation?.updatedAt, soundEnabled]);
   useEffect(() => {
     if (selectedClinicId && selectedClinicId !== searchParams.get("clinic"))
       setSearchParams({ clinic: selectedClinicId }, { replace: true });
@@ -242,13 +336,22 @@ export default function PainelTV() {
                 <SelectValue placeholder="Selecione a clínica" />
               </SelectTrigger>
               <SelectContent>
-                {clinics.map((clinic) => (
+                {availableClinics.map((clinic) => (
                   <SelectItem key={clinic.id} value={clinic.id}>
                     {clinic.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <button
+              type="button"
+              onClick={() => void activateSound()}
+              className={`flex h-12 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-bold shadow-lg shadow-black/10 transition lg:h-14 ${soundEnabled ? "bg-[#0AAE9B] text-white" : "bg-white/15 text-white hover:bg-white/25"}`}
+              aria-label={soundEnabled ? "Som do painel ativado" : "Ativar som do painel"}
+            >
+              {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+              <span className="hidden xl:inline">{soundEnabled ? "Som ativo" : "Ativar som"}</span>
+            </button>
             <div className="hidden text-right sm:block">
               <p className="text-4xl font-extrabold leading-none tracking-tight lg:text-5xl">
                 {now.toLocaleTimeString("pt-BR", {
@@ -263,12 +366,12 @@ export default function PainelTV() {
           </div>
         </header>
 
-        {isLoading ? (
+        {isLoading && !simulation ? (
           <div className="grid flex-1 gap-5 lg:grid-cols-[1.7fr_1fr]">
             <div className="animate-pulse rounded-2xl bg-white/10" />
             <div className="animate-pulse rounded-2xl bg-white/10" />
           </div>
-        ) : error ? (
+        ) : error && !simulation ? (
           <div className="flex flex-1 items-center justify-center rounded-2xl border border-red-200/20 bg-red-500/15 p-8 text-center">
             <div>
               <p className="font-semibold">Não foi possível carregar a fila.</p>
@@ -283,6 +386,11 @@ export default function PainelTV() {
           </div>
         ) : (
           <>
+            {isSimulation && (
+              <div className="rounded-xl border border-[#52e4ca]/40 bg-[#087A70]/40 px-4 py-3 text-sm font-semibold text-[#D7FFF7]">
+                Modo de simulação ativo · a chamada é recebida da tela Recepção neste navegador.
+              </div>
+            )}
             <section className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
               <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#005D55] to-[#004943] p-6 shadow-xl shadow-black/15 sm:p-8 lg:min-h-[390px] lg:p-10">
                 <div className="flex items-center gap-3 text-sm font-bold uppercase tracking-[0.32em] text-[#8DEBDD] sm:text-lg">
