@@ -71,10 +71,16 @@ interface NavGroup {
 }
 
 const STAFF = ['super_admin', 'administrador', 'secretaria', 'coordenacao'] as UnigRole[];
+const CLINIC_LABELS: Record<string, string> = {
+  ODONTO: 'Clínica de Odontologia',
+  FISIO: 'Clínica de Fisioterapia',
+  VET: 'Clínica Veterinária',
+  ESTETICA: 'Clínica de Estética',
+};
 const CLINICAL_NAVIGATION_GROUPS = new Set([
   'clinical-operations',
-  'clinical-specialties',
-  'clinical-management',
+  'dental-clinical', 'physio-clinical', 'veterinary-clinical', 'aesthetic-clinical',
+  'clinical-learning', 'clinical-management', 'clinical-support',
   'patient-portal',
   'tutor-portal',
   'administration',
@@ -83,31 +89,88 @@ const sidebarScrollMemory = new globalThis.Map<string, number>();
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    id: 'clinical-operations', section: 'CLÍNICAS', label: 'Operação clínica', icon: ClipboardList,
+    id: 'clinical-operations', section: 'ATENDIMENTO', label: 'Atendimento', icon: ClipboardList,
     roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno', 'financeiro'],
     items: [
+      { title: 'Painel', url: '/', icon: LayoutGrid },
+      { title: 'Fila', url: '/agenda-fila?section=fila', icon: ClipboardList },
+      { title: 'Agenda', url: '/agenda-fila?section=agenda', icon: CalendarDays },
       { title: 'Pacientes', url: '/pacientes', icon: Users },
-      { title: 'Agenda e Fila', url: '/agenda-fila', icon: CalendarDays },
-      { title: 'Painel TV', url: '/painel-tv', icon: Tv },
       { title: 'Atendimentos', url: '/atendimentos', icon: ClipboardList },
+      { title: 'Painel da TV', url: '/painel-tv', icon: Tv },
     ],
   },
   {
-    id: 'clinical-specialties', section: 'CLÍNICAS', label: 'Especialidades', icon: Stethoscope,
+    id: 'dental-clinical', section: 'ODONTOLOGIA', label: 'Odontologia', icon: Stethoscope,
     roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno'],
     items: [
-      { title: 'Odontologia, fisio e estética', url: '/especialidades', icon: Stethoscope, clinicCodes: ['ODONTO', 'FISIO', 'ESTETICA'] },
-      { title: 'Veterinária', url: '/veterinaria', icon: PawPrint, clinicCode: 'VET' },
+      { title: 'Prontuários', url: '/atendimentos', icon: FileText, clinicCode: 'ODONTO' },
+      { title: 'Odontograma', url: '/especialidades?module=odontogram', icon: Stethoscope, clinicCode: 'ODONTO' },
+      { title: 'Anamneses', url: '/especialidades?module=anamnesis', icon: ClipboardList, clinicCode: 'ODONTO' },
+      { title: 'Planos de tratamento', url: '/especialidades?module=treatment-plans', icon: FileBadge, clinicCode: 'ODONTO' },
+      { title: 'Procedimentos', url: '/procedimentos-exames?module=procedures', icon: ClipboardList, clinicCode: 'ODONTO' },
+      { title: 'Evoluções', url: '/atendimentos?module=evolutions', icon: ScrollText, clinicCode: 'ODONTO' },
+      { title: 'Exames e imagens', url: '/procedimentos-exames?module=exams', icon: FlaskConical, clinicCode: 'ODONTO' },
+      { title: 'Documentos', url: '/documentos-consentimentos', icon: FileText, clinicCode: 'ODONTO' },
     ],
   },
   {
-    id: 'clinical-management', section: 'CLÍNICAS', label: 'Gestão clínica', icon: BarChart3,
+    id: 'physio-clinical', section: 'FISIOTERAPIA', label: 'Fisioterapia', icon: Activity,
+    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno'],
+    items: [
+      { title: 'Prontuários e avaliações', url: '/especialidades?module=physio-assessment', icon: FileText, clinicCode: 'FISIO' },
+      { title: 'Avaliação funcional', url: '/especialidades?module=physio-functional', icon: Activity, clinicCode: 'FISIO' },
+      { title: 'Planos terapêuticos', url: '/especialidades?module=physio-plans', icon: ClipboardList, clinicCode: 'FISIO' },
+      { title: 'Sessões e evoluções', url: '/especialidades?module=physio-sessions', icon: ScrollText, clinicCode: 'FISIO' },
+      { title: 'Reavaliações e alta', url: '/especialidades?module=physio-discharge', icon: FileBadge, clinicCode: 'FISIO' },
+    ],
+  },
+  {
+    id: 'veterinary-clinical', section: 'VETERINÁRIA', label: 'Veterinária', icon: PawPrint,
+    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno'],
+    items: [
+      { title: 'Tutores e animais', url: '/veterinaria', icon: PawPrint, clinicCode: 'VET' },
+      { title: 'Consultas e prontuários', url: '/veterinaria?module=consultations', icon: Stethoscope, clinicCode: 'VET' },
+      { title: 'Vacinas', url: '/veterinaria?module=vaccines', icon: ClipboardList, clinicCode: 'VET' },
+      { title: 'Exames e prescrições', url: '/veterinaria?module=exams', icon: FlaskConical, clinicCode: 'VET' },
+      { title: 'Internação', url: '/veterinaria?module=hospitalization', icon: Building2, clinicCode: 'VET' },
+    ],
+  },
+  {
+    id: 'aesthetic-clinical', section: 'ESTÉTICA', label: 'Estética', icon: Stethoscope,
+    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno'],
+    items: [
+      { title: 'Prontuários e anamnese', url: '/especialidades?module=aesthetic-assessment', icon: FileText, clinicCode: 'ESTETICA' },
+      { title: 'Avaliação estética', url: '/especialidades?module=aesthetic-evaluation', icon: Stethoscope, clinicCode: 'ESTETICA' },
+      { title: 'Protocolos e sessões', url: '/especialidades?module=aesthetic-protocols', icon: ClipboardList, clinicCode: 'ESTETICA' },
+      { title: 'Registro fotográfico', url: '/especialidades?module=aesthetic-photos', icon: FileBadge, clinicCode: 'ESTETICA' },
+    ],
+  },
+  {
+    id: 'clinical-learning', section: 'ENSINO / SUPERVISÃO', label: 'Ensino e supervisão', icon: GraduationCap,
+    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno'],
+    items: [
+      { title: 'Supervisões', url: '/supervisoes', icon: GraduationCap },
+      { title: 'Alunos', url: '/academico/alunos', icon: Users },
+      { title: 'Professores', url: '/academico/professores', icon: BookOpen },
+      { title: 'Pendências clínicas', url: '/supervisoes?status=pending', icon: ClipboardList },
+    ],
+  },
+  {
+    id: 'clinical-management', section: 'GESTÃO', label: 'Gestão clínica', icon: BarChart3,
     roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno', 'financeiro'],
     items: [
-      { title: 'Documentos', url: '/documentos-consentimentos', icon: FileText },
-      { title: 'Supervisões', url: '/supervisoes', icon: GraduationCap },
-      { title: 'Procedimentos e exames', url: '/procedimentos-exames', icon: FlaskConical },
       { title: 'Indicadores', url: '/indicadores-clinicos', icon: BarChart3 },
+      { title: 'Avaliações', url: '/supervisoes', icon: FileBadge },
+      { title: 'Relatórios', url: '/relatorios/operacionais', icon: BarChart3 },
+    ],
+  },
+  {
+    id: 'clinical-support', section: 'APOIO', label: 'Apoio clínico', icon: Package,
+    roles: ['super_admin', 'administrador', 'gestor_unidade', 'professor', 'coordenacao', 'atendimento', 'aluno', 'financeiro'],
+    items: [
+      { title: 'Materiais e insumos', url: '/admin/clinicas', icon: Package },
+      { title: 'Configurações da clínica', url: '/admin/clinicas', icon: Settings },
     ],
   },
   {
@@ -321,6 +384,13 @@ export function AppSidebar() {
 
   const name = profile?.full_name || profile?.email || 'Usuário';
   const initials = name.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
+  const clinicLabel = unigRole === 'super_admin'
+    ? 'Todas as clínicas'
+    : clinicCodes.length === 1
+      ? (CLINIC_LABELS[clinicCodes[0]] ?? 'Clínica vinculada')
+      : clinicCodes.length > 1
+        ? `${clinicCodes.length} clínicas vinculadas`
+        : 'Acesso institucional';
   const closeMobile = () => { if (isMobile) setOpenMobile(false); };
   const toggleGroup = (id: string) => {
     if (collapsed) {
@@ -342,6 +412,7 @@ export function AppSidebar() {
             alt="UNIG Clínicas"
             className={cn('object-contain brightness-0 invert', collapsed ? 'h-10 w-10' : 'h-auto w-full max-w-[205px]')}
           />
+          {!collapsed && <div className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.07] px-3 py-2 text-center text-xs font-semibold text-white/90"><Building2 className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{clinicLabel}</span></div>}
         </div>
       </SidebarHeader>
 
