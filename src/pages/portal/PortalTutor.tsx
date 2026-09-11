@@ -40,6 +40,17 @@ export default function PortalTutor() {
       return (data ?? []) as any[];
     },
   });
+  const notifications = useQuery({
+    queryKey: ["tutor-portal-notifications"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("notifications") as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
   return (
     <MainLayout>
       <div className="space-y-6">
@@ -127,6 +138,41 @@ export default function PortalTutor() {
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     Nenhuma consulta ou vacina disponível.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Meus avisos</CardTitle>
+                <CardDescription>
+                  Notificações direcionadas à sua conta de tutor.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {notifications.data?.length ? (
+                  notifications.data.map((item) => (
+                    <div key={item.id} className="rounded border p-3 text-sm">
+                      <div className="flex justify-between gap-3">
+                        <strong>{item.title ?? "Aviso"}</strong>
+                        {!item.read_at && (
+                          <span className="text-xs text-primary">Novo</span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-muted-foreground">
+                        {item.message ??
+                          item.body ??
+                          item.content ??
+                          "Sem detalhes adicionais."}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {new Date(item.created_at).toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum aviso disponível.
                   </p>
                 )}
               </CardContent>

@@ -57,8 +57,8 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 **Status: em andamento.**
 
-- Portal do paciente: agenda detalhada, histórico e documentos: entregues; notificações próprias: pendentes.
-- Portal do tutor: animais, vacinas e consultas: entregues; documentos do animal: pendentes.
+- Portal do paciente: agenda detalhada, histórico, documentos e notificações próprias: entregues.
+- Portal do tutor: animais, vacinas, consultas e notificações próprias: entregues; documentos do animal: pendentes.
 
 ## Fase 8 — Qualidade e produção
 

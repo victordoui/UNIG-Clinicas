@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 type PortalData = {
   patient_id: string;
@@ -54,6 +55,17 @@ export default function PortalPaciente() {
       const { data, error } = await supabase.rpc(
         "get_my_patient_documents" as never,
       );
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+  const notifications = useQuery({
+    queryKey: ["patient-portal-notifications"],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("notifications") as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(8);
       if (error) throw error;
       return (data ?? []) as any[];
     },
@@ -167,6 +179,13 @@ export default function PortalPaciente() {
                               "_blank",
                               "noopener,noreferrer",
                             );
+                          else
+                            toast({
+                              title: "Não foi possível abrir o documento",
+                              description:
+                                "Verifique se o arquivo continua disponível para o seu cadastro.",
+                              variant: "destructive",
+                            });
                         }}
                       >
                         <Download className="mr-1 h-3 w-3" />
@@ -177,6 +196,41 @@ export default function PortalPaciente() {
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     Nenhum documento disponível.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Meus avisos</CardTitle>
+                <CardDescription>
+                  Notificações direcionadas à sua conta.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {notifications.data?.length ? (
+                  notifications.data.map((item) => (
+                    <div key={item.id} className="rounded border p-3 text-sm">
+                      <div className="flex justify-between gap-3">
+                        <strong>{item.title ?? "Aviso"}</strong>
+                        {!item.read_at && (
+                          <span className="text-xs text-primary">Novo</span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-muted-foreground">
+                        {item.message ??
+                          item.body ??
+                          item.content ??
+                          "Sem detalhes adicionais."}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {new Date(item.created_at).toLocaleString("pt-BR")}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum aviso disponível.
                   </p>
                 )}
               </CardContent>
