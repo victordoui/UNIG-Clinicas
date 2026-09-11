@@ -39,11 +39,11 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 ## Fase 5 — Operação e gestão clínica
 
-**Status: em andamento.**
+**Status: concluída.**
 
 - Agenda dia/semana/mês/lista, serviços e check-in por prontuário/CPF/documento: entregues.
 - Tela de encounter com início, evolução, rascunho, envio para supervisão, conclusão, exames, documentos e supervisões no mesmo contexto; resumo longitudinal por paciente: entregues.
-- Indicadores por clínica e exportação CSV operacional: entregue. Relatórios acadêmicos e por serviço: pendentes.
+- Indicadores por clínica, relatórios por serviço e supervisão acadêmica, com exportação CSV operacional: entregues.
 - Busca global e central de notificações clínicas: entregues.
 
 ## Fase 6 — Insumos e comunicação
@@ -69,6 +69,6 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 ## Próxima fase
 
-**Fase 5 — Relatórios acadêmicos e por serviço.**
+**Fase 6 — Comunicação operacional.**
 
-Entrega prevista: visão consolidada por serviço, clínica e supervisão acadêmica com exportação operacional.
+Entrega prevista: lembretes, confirmação/remarcação e preparação segura para integração de WhatsApp.
