@@ -210,6 +210,15 @@ export const DEMO_USERS: DemoUser[] = [
     },
   ])),
   {
+    role: 'tutor',
+    email: 'tutor-vet@unig.demo',
+    password: DEMO_PASSWORD,
+    label: 'Cliente / Tutor veterinário',
+    accessGroup: 'Clínica Veterinária — Portal do cliente',
+    clinicCode: 'VET',
+    clinicName: 'Clínica Veterinária',
+  },
+  {
     role: 'coordenacao',
     email: 'academic-supervisor-odonto@unig.demo',
     password: DEMO_PASSWORD,

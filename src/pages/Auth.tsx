@@ -58,7 +58,7 @@ export default function Auth() {
       if (error.message.toLowerCase().includes('invalid') || error.message.toLowerCase().includes('credential')) {
         toast({
           title: 'Acesso de teste indisponível',
-          description: 'As contas de teste ainda estão sendo preparadas.',
+          description: 'As contas de teste não foram criadas neste Supabase. Aplique a migration 20260911232000_seed_clinical_demo_accesses.sql e tente novamente.',
           variant: 'destructive',
         });
       } else {

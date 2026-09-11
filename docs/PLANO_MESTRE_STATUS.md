@@ -59,7 +59,8 @@ Os testes automatizados unitários, integração, E2E e matriz de RLS permanecem
 
 ## Ordem de continuidade
 
-1. Aplicar as duas migrations de documentos veterinários no Supabase e validar o isolamento com uma conta de tutor.
-2. Aplicar `20260911230000_post_visit_feedback.sql` e `20260911231000_tutor_veterinary_feedback.sql`; validar avaliações de paciente e tutor, além das médias agregadas por clínica.
-3. Quando o escopo adiado for retomado, executar testes unitários, integração, E2E e matriz de RLS.
-4. Concluir MFA, backups, retenção e revisão institucional de produção.
+1. Aplicar `20260911232000_seed_clinical_demo_accesses.sql` para habilitar os acessos rápidos de teste e validar o isolamento entre clínicas.
+2. Aplicar as duas migrations de documentos veterinários no Supabase e validar o isolamento com uma conta de tutor.
+3. Aplicar `20260911230000_post_visit_feedback.sql` e `20260911231000_tutor_veterinary_feedback.sql`; validar avaliações de paciente e tutor, além das médias agregadas por clínica.
+4. Quando o escopo adiado for retomado, executar testes unitários, integração, E2E e matriz de RLS.
+5. Concluir MFA, backups, retenção e revisão institucional de produção.
