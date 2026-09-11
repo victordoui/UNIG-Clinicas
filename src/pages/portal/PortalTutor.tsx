@@ -1,5 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Cat, Plus, ShieldCheck } from "lucide-react";
+import {
+  CalendarDays,
+  Cat,
+  Download,
+  FileHeart,
+  Plus,
+  ShieldCheck,
+} from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import {
   Card,
@@ -47,6 +54,17 @@ export default function PortalTutor() {
         .select("*")
         .order("created_at", { ascending: false })
         .limit(8);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+  const documents = useQuery({
+    queryKey: ["tutor-portal-documents"],
+    retry: false,
+    queryFn: async () => {
+      const { data, error } = await (supabase.rpc as any)(
+        "get_my_tutor_documents",
+      );
       if (error) throw error;
       return (data ?? []) as any[];
     },
@@ -138,6 +156,65 @@ export default function PortalTutor() {
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     Nenhuma consulta ou vacina disponível.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileHeart className="h-4 w-4" />
+                  Documentos dos animais
+                </CardTitle>
+                <CardDescription>
+                  Laudos, receitas e arquivos liberados para seus animais
+                  vinculados.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {documents.isError ? (
+                  <p className="rounded bg-muted p-3 text-sm text-muted-foreground">
+                    Os documentos veterinários serão disponibilizados após a
+                    atualização segura do banco de dados.
+                  </p>
+                ) : documents.data?.length ? (
+                  documents.data.map((item) => (
+                    <div
+                      key={item.document_id}
+                      className="flex flex-col gap-2 rounded border p-3 text-sm sm:flex-row sm:items-center"
+                    >
+                      <span className="flex-1">
+                        <strong>{item.file_name}</strong>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {item.animal_name} ·{" "}
+                          {new Date(item.created_at).toLocaleDateString(
+                            "pt-BR",
+                          )}
+                        </span>
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          const { data: signed, error } = await supabase.storage
+                            .from("animal-documents")
+                            .createSignedUrl(item.storage_path, 60);
+                          if (error || !signed?.signedUrl) return;
+                          window.open(
+                            signed.signedUrl,
+                            "_blank",
+                            "noopener,noreferrer",
+                          );
+                        }}
+                      >
+                        <Download className="mr-1 h-3 w-3" />
+                        Abrir
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum documento disponível para seus animais.
                   </p>
                 )}
               </CardContent>

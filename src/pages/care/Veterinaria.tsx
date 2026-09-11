@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Cat, PawPrint, BedDouble } from "lucide-react";
+import { Cat, PawPrint, BedDouble, FileUp } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import {
   Card,
@@ -54,6 +54,12 @@ export default function Veterinaria() {
   const [taskType, setTaskType] = useState("medication");
   const [taskScheduledAt, setTaskScheduledAt] = useState(() =>
     new Date().toISOString().slice(0, 16),
+  );
+  const [animalDocumentAnimalId, setAnimalDocumentAnimalId] = useState("");
+  const [animalDocumentType, setAnimalDocumentType] =
+    useState("clinical_document");
+  const [animalDocumentFile, setAnimalDocumentFile] = useState<File | null>(
+    null,
   );
   const data = useQuery({
     queryKey: ["veterinary"],
@@ -143,6 +149,61 @@ export default function Veterinaria() {
     if (!animal || !clinic) throw new Error("Selecione um animal válido.");
     return { animal, clinic };
   };
+  const animalDocuments = useQuery({
+    queryKey: ["veterinary-animal-documents"],
+    retry: false,
+    queryFn: async () => {
+      const { data: rows, error } = await (supabase as any)
+        .from("animal_documents")
+        .select("id,animal_id,document_type,file_name,created_at,archived_at")
+        .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .limit(30);
+      if (error) throw error;
+      return (rows ?? []) as any[];
+    },
+  });
+  const uploadAnimalDocument = useMutation({
+    mutationFn: async () => {
+      const { animal, clinic } = animalClinic(animalDocumentAnimalId);
+      if (!animalDocumentFile) throw new Error("Selecione um arquivo.");
+      const safeName = animalDocumentFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${clinic.organization_id}/${animal.id}/${crypto.randomUUID()}-${safeName}`;
+      const { error: storageError } = await supabase.storage
+        .from("animal-documents")
+        .upload(path, animalDocumentFile, {
+          contentType: animalDocumentFile.type || "application/octet-stream",
+          upsert: false,
+        });
+      if (storageError) throw storageError;
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await (supabase as any)
+        .from("animal_documents")
+        .insert({
+          organization_id: clinic.organization_id,
+          clinic_id: clinic.id,
+          animal_id: animal.id,
+          document_type: animalDocumentType,
+          file_name: animalDocumentFile.name,
+          mime_type: animalDocumentFile.type || "application/octet-stream",
+          storage_path: path,
+          file_size: animalDocumentFile.size,
+          created_by: auth.user?.id,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["veterinary-animal-documents"] });
+      setAnimalDocumentFile(null);
+      toast({ title: "Documento do animal anexado" });
+    },
+    onError: (error: Error) =>
+      toast({
+        title: "Não foi possível anexar documento",
+        description: error.message,
+        variant: "destructive",
+      }),
+  });
   const createWeight = useMutation({
     mutationFn: async () => {
       const { animal, clinic } = animalClinic(weightAnimalId);
@@ -430,6 +491,123 @@ export default function Veterinaria() {
               de pessoas.
             </p>
           </div>
+        </div>
+        <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Documentos do animal</CardTitle>
+              <CardDescription>
+                Laudos, receitas e anexos ficam separados do prontuário de
+                pacientes humanos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {animalDocuments.isError ? (
+                <p className="rounded bg-muted p-3 text-sm text-muted-foreground">
+                  Este recurso será habilitado após a aplicação da migração de
+                  documentos veterinários no Supabase.
+                </p>
+              ) : (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    uploadAnimalDocument.mutate();
+                  }}
+                  className="space-y-3"
+                >
+                  <div className="space-y-1">
+                    <Label>Animal</Label>
+                    <Select
+                      value={animalDocumentAnimalId}
+                      onValueChange={setAnimalDocumentAnimalId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {animals.map((animal: any) => (
+                          <SelectItem key={animal.id} value={animal.id}>
+                            {animal.name} · {animal.species}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Categoria</Label>
+                    <Select
+                      value={animalDocumentType}
+                      onValueChange={setAnimalDocumentType}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="clinical_document">
+                          Documento clínico
+                        </SelectItem>
+                        <SelectItem value="exam">Exame / imagem</SelectItem>
+                        <SelectItem value="prescription">Receita</SelectItem>
+                        <SelectItem value="attachment">Anexo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Arquivo</Label>
+                    <Input
+                      type="file"
+                      onChange={(event) =>
+                        setAnimalDocumentFile(event.target.files?.[0] ?? null)
+                      }
+                    />
+                  </div>
+                  <Button
+                    disabled={
+                      !animalDocumentAnimalId ||
+                      !animalDocumentFile ||
+                      uploadAnimalDocument.isPending
+                    }
+                  >
+                    <FileUp className="mr-1 h-4 w-4" />
+                    Anexar documento
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Arquivos veterinários recentes
+              </CardTitle>
+              <CardDescription>
+                Visíveis somente à equipe autorizada da clínica.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {animalDocuments.isLoading ? (
+                <p className="text-sm text-muted-foreground">
+                  Carregando documentos…
+                </p>
+              ) : animalDocuments.data?.length ? (
+                animalDocuments.data.map((item: any) => (
+                  <div key={item.id} className="rounded border p-3 text-sm">
+                    <strong>{item.file_name}</strong>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {animals.find(
+                        (animal: any) => animal.id === item.animal_id,
+                      )?.name ?? "Animal"}{" "}
+                      · {new Date(item.created_at).toLocaleString("pt-BR")}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum documento veterinário anexado.
+                </p>
+              )}
+            </CardContent>
+          </Card>
         </div>
         <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
           <Card>
