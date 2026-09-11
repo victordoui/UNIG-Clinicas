@@ -93,6 +93,9 @@ export default function Especialidades() {
   const [diagnosis, setDiagnosis] = useState("");
   const [plan, setPlan] = useState("");
   const [protocolName, setProtocolName] = useState("");
+  const [assessmentId, setAssessmentId] = useState("");
+  const [sessionGoals, setSessionGoals] = useState("");
+  const [exercisePlan, setExercisePlan] = useState("");
   const moduleContext = MODULE_CONTEXT[searchParams.get("module") ?? ""];
 
   const availableSpecialties = useMemo(
@@ -127,6 +130,7 @@ export default function Especialidades() {
         physioResult,
         protocolResult,
         dentalPlansResult,
+        physioSessionsResult,
       ] = await Promise.all([
         supabase
           .from("clinics")
@@ -163,6 +167,11 @@ export default function Especialidades() {
           .select("id,title,status,patient_id,notes,updated_at,items:dental_treatment_plan_items(id,tooth_code,surface,finding,recommended_procedure,status)")
           .order("updated_at", { ascending: false })
           .limit(8),
+        (supabase as any)
+          .from("physiotherapy_sessions")
+          .select("id,assessment_id,session_number,status,goals,exercise_plan,session_date")
+          .order("session_date", { ascending: false })
+          .limit(20),
       ]);
       for (const result of [
         clinicResult,
@@ -171,6 +180,7 @@ export default function Especialidades() {
         physioResult,
         protocolResult,
         dentalPlansResult,
+        physioSessionsResult,
       ])
         if (result.error) throw result.error;
       return {
@@ -180,6 +190,7 @@ export default function Especialidades() {
         physio: physioResult.data ?? [],
         protocols: protocolResult.data ?? [],
         dentalPlans: dentalPlansResult.data ?? [],
+        physioSessions: physioSessionsResult.data ?? [],
       };
     },
   });
@@ -203,6 +214,9 @@ export default function Especialidades() {
     setDiagnosis("");
     setPlan("");
     setProtocolName("");
+    setAssessmentId("");
+    setSessionGoals("");
+    setExercisePlan("");
   };
   const patientLabel = (id: string) => {
     const patient = workspace.data?.patients.find((item) => item.id === id);
@@ -322,6 +336,17 @@ export default function Especialidades() {
     event.preventDefault();
     save.mutate();
   };
+  const registerPhysioSession = useMutation({
+    mutationFn: async () => {
+      if (!assessmentId) throw new Error("Selecione uma avaliação.");
+      const sessions = (workspace.data?.physioSessions ?? []).filter((session: any) => session.assessment_id === assessmentId);
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await (supabase as any).from("physiotherapy_sessions").insert({ assessment_id: assessmentId, session_number: sessions.length + 1, status: "completed", goals: sessionGoals || null, exercise_plan: exercisePlan || null, created_by: auth.user?.id });
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); setAssessmentId(""); setSessionGoals(""); setExercisePlan(""); toast({ title: "Sessão registrada" }); },
+    onError: (error: Error) => toast({ title: "Não foi possível registrar a sessão", description: error.message, variant: "destructive" }),
+  });
   const current = SETTINGS[active];
   const Icon = current.Icon;
   const recent =
@@ -556,6 +581,24 @@ export default function Especialidades() {
                   )}
                 </CardContent>
               </Card>
+              {active === "fisio" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Linha do tempo terapêutica</CardTitle>
+                    <CardDescription>Avaliação → sessões → reavaliação → alta.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-3 rounded-lg border p-3">
+                      <div className="space-y-1"><Label>Avaliação</Label><Select value={assessmentId} onValueChange={setAssessmentId}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{(workspace.data?.physio as any[])?.map((assessment) => <SelectItem key={assessment.id} value={assessment.id}>{patientLabel(assessment.patient_id)} · {assessment.physiotherapy_diagnosis || "Avaliação"}</SelectItem>)}</SelectContent></Select></div>
+                      <div className="space-y-1"><Label>Objetivos da sessão</Label><Textarea value={sessionGoals} onChange={(event) => setSessionGoals(event.target.value)} /></div>
+                      <div className="space-y-1"><Label>Exercícios e condutas</Label><Textarea value={exercisePlan} onChange={(event) => setExercisePlan(event.target.value)} /></div>
+                      <Button onClick={() => registerPhysioSession.mutate()} disabled={!assessmentId || registerPhysioSession.isPending}>Registrar sessão concluída</Button>
+                    </div>
+                    {(workspace.data?.physioSessions as any[])?.map((session) => <div key={session.id} className="rounded-lg border-l-4 border-primary bg-muted/40 p-3"><p className="font-medium">Sessão {session.session_number} · {session.status}</p><p className="mt-1 text-sm text-muted-foreground">{session.goals || session.exercise_plan || "Sem observações."}</p></div>)}
+                    {!workspace.data?.physioSessions?.length && <p className="text-sm text-muted-foreground">Registre a primeira sessão após criar uma avaliação.</p>}
+                  </CardContent>
+                </Card>
+              )}
               {active === "odonto" && (
                 <Card>
                   <CardHeader>
