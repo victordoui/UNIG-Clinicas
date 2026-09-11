@@ -115,6 +115,7 @@ export default function AgendaFila() {
   const [agendaDate, setAgendaDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
   );
+  const [checkInQuery, setCheckInQuery] = useState("");
 
   const data = useQuery({
     queryKey: ["care-operation"],
@@ -131,12 +132,12 @@ export default function AgendaFila() {
             .order("name"),
           supabase
             .from("patients")
-            .select("id,record_number,person:persons(full_name)")
+            .select("id,record_number,person:persons(full_name,document_number)")
             .eq("status", "active"),
           supabase
             .from("appointments")
             .select(
-              "id,scheduled_at,status,reason,clinic:clinics(name,code),patient:patients(record_number,person:persons(full_name))",
+              "id,scheduled_at,status,reason,clinic:clinics(name,code),patient:patients(record_number,person:persons(full_name,document_number))",
             )
             .order("scheduled_at")
             .limit(50),
@@ -411,6 +412,21 @@ export default function AgendaFila() {
       return scheduled >= start && scheduled < end;
     });
   }, [activeClinicCode, agendaDate, agendaView, appointments]);
+  const checkInMatches = useMemo(() => {
+    const normalized = checkInQuery.trim().toLocaleLowerCase();
+    if (normalized.length < 2) return [];
+    return appointments
+      .filter((item) => !activeClinicCode || item.clinic?.code === activeClinicCode)
+      .filter((item) => ["scheduled", "confirmed"].includes(item.status))
+      .filter((item) => {
+        const patientInfo = item.patient;
+        return [
+          patientInfo?.person?.full_name,
+          patientInfo?.record_number,
+          patientInfo?.person?.document_number,
+        ].some((value) => String(value ?? "").toLocaleLowerCase().includes(normalized));
+      });
+  }, [activeClinicCode, appointments, checkInQuery]);
 
   return (
     <MainLayout>
@@ -439,6 +455,37 @@ export default function AgendaFila() {
             <TabsTrigger value="fila">Fila</TabsTrigger>
           </TabsList>
           <TabsContent value="agenda" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Check-in rápido</CardTitle>
+                <CardDescription>
+                  Localize o agendamento por nome, prontuário ou CPF/documento e registre a chegada.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Input
+                  value={checkInQuery}
+                  onChange={(event) => setCheckInQuery(event.target.value)}
+                  placeholder="Nome, prontuário ou CPF/documento"
+                  aria-label="Localizar paciente para check-in"
+                />
+                {checkInQuery.trim().length >= 2 && (
+                  <div className="space-y-2">
+                    {checkInMatches.length ? checkInMatches.map((item) => (
+                      <div key={item.id} className="flex flex-col gap-2 rounded border p-3 text-sm sm:flex-row sm:items-center">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium">{item.patient?.person?.full_name ?? item.patient?.record_number}</p>
+                          <p className="text-xs text-muted-foreground">{item.patient?.record_number} · {item.clinic?.name} · {new Date(item.scheduled_at).toLocaleString("pt-BR")}</p>
+                        </div>
+                        <Button size="sm" disabled={!canManage || updateAppointment.isPending} onClick={() => updateAppointment.mutate({ id: item.id, status: "checked_in" })}>
+                          <Check className="mr-1 h-3 w-3" />Registrar chegada
+                        </Button>
+                      </div>
+                    )) : <p className="text-sm text-muted-foreground">Nenhum agendamento em aberto encontrado para esta clínica.</p>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
             <Card>
               <CardHeader>
                 <CardTitle className="text-base">Novo agendamento</CardTitle>
