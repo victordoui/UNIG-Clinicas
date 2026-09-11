@@ -45,7 +45,7 @@ Concluído para o escopo atual. Os módulos especializados permanecem separados 
 
 O portal do paciente está concluído no escopo atual. No portal do tutor, a interface de documentos de animais e as migrations correspondentes estão prontas, mas sua ativação depende de aplicar no projeto Supabase, nesta ordem: `20260911220000_tutor_animal_documents.sql` e `20260911220500_validate_animal_document_clinic.sql`. Até isso ocorrer, a tela informa a indisponibilidade sem expor ou misturar dados.
 
-A avaliação pós-atendimento do paciente está preparada localmente: formulário no portal, médias agregadas no painel de indicadores e migration com acesso exclusivo do titular. A aplicação no Supabase e a validação com contas reais ainda são necessárias. A avaliação específica da jornada veterinária pelo tutor permanece uma evolução futura, pois os atendimentos veterinários não usam o mesmo identificador de agenda do paciente.
+A avaliação pós-atendimento está preparada localmente para paciente e tutor: formulários nos portais, médias agregadas no painel de indicadores e migrations com acesso exclusivo do titular. A aplicação no Supabase e a validação com contas reais ainda são necessárias.
 
 ### Ciclo 10 — gestão e hardening
 
@@ -60,6 +60,6 @@ Os testes automatizados unitários, integração, E2E e matriz de RLS permanecem
 ## Ordem de continuidade
 
 1. Aplicar as duas migrations de documentos veterinários no Supabase e validar o isolamento com uma conta de tutor.
-2. Aplicar `20260911230000_post_visit_feedback.sql` e validar avaliação do paciente e médias agregadas por clínica.
+2. Aplicar `20260911230000_post_visit_feedback.sql` e `20260911231000_tutor_veterinary_feedback.sql`; validar avaliações de paciente e tutor, além das médias agregadas por clínica.
 3. Quando o escopo adiado for retomado, executar testes unitários, integração, E2E e matriz de RLS.
 4. Concluir MFA, backups, retenção e revisão institucional de produção.
