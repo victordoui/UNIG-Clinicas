@@ -80,6 +80,7 @@ import Indicadores from './pages/reporting/Indicadores';
 import DocumentosConsentimentos from './pages/care/DocumentosConsentimentos';
 import Supervisoes from './pages/care/Supervisoes';
 import Veterinaria from './pages/care/Veterinaria';
+import Especialidades from './pages/care/Especialidades';
 import ProcedimentosExames from './pages/care/ProcedimentosExames';
 import PainelTV from './pages/care/PainelTV';
 import FilaQR from './pages/care/FilaQR';
@@ -118,6 +119,7 @@ const App = () => (
             <Route path="/documentos-consentimentos" element={<ProtectedRoute><DocumentosConsentimentos /></ProtectedRoute>} />
             <Route path="/supervisoes" element={<ProtectedRoute><Supervisoes /></ProtectedRoute>} />
             <Route path="/veterinaria" element={<ProtectedRoute><Veterinaria /></ProtectedRoute>} />
+            <Route path="/especialidades" element={<ProtectedRoute><Especialidades /></ProtectedRoute>} />
             <Route path="/procedimentos-exames" element={<ProtectedRoute><ProcedimentosExames /></ProtectedRoute>} />
 
             {/* Portal do Aluno */}

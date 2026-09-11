@@ -39,7 +39,7 @@ Este documento mantém o plano rastreável e evita que funcionalidades do UNIG A
 
 ### Ciclo 8 — especialidades
 
-As tabelas e políticas dos módulos já estão criadas. Falta entregar as interfaces clínicas de odontograma/histórico dental; avaliação e sequência de sessões de fisioterapia; protocolos, regiões e fotografias de estética; e consulta veterinária com prescrição, cirurgia e internação.
+As tabelas e políticas dos módulos já estão criadas. A tela **Especialidades clínicas** agora permite registrar odontograma inicial com dente/condição, avaliação fisioterapêutica e protocolos de estética, todos filtrados pela clínica e RLS. Ainda faltam o histórico dental detalhado, sessões sequenciais de fisioterapia, sessões estéticas com regiões/fotos e o prontuário veterinário completo (consulta, prescrição, cirurgia e internação).
 
 ### Ciclo 9 — portais
 
