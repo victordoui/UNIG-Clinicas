@@ -56,6 +56,7 @@ interface NavItem {
   icon: LucideIcon;
   badge?: number;
   badgeKey?: 'notifications';
+  clinicCode?: string;
 }
 
 interface NavGroup {
@@ -82,7 +83,7 @@ const NAV_GROUPS: NavGroup[] = [
       { title: 'Atendimentos', url: '/atendimentos', icon: ClipboardList },
       { title: 'Documentos', url: '/documentos-consentimentos', icon: FileText },
       { title: 'Supervisões', url: '/supervisoes', icon: GraduationCap },
-      { title: 'Veterinária', url: '/veterinaria', icon: PawPrint },
+      { title: 'Veterinária', url: '/veterinaria', icon: PawPrint, clinicCode: 'VET' },
       { title: 'Especialidades', url: '/especialidades', icon: Stethoscope },
       { title: 'Procedimentos e exames', url: '/procedimentos-exames', icon: FlaskConical },
       { title: 'Indicadores', url: '/indicadores-clinicos', icon: BarChart3 },
@@ -220,7 +221,7 @@ function matchesPath(pathname: string, url: string) {
 
 export function AppSidebar() {
   const { state, setOpen, openMobile, setOpenMobile, isMobile } = useSidebar();
-  const { unigRole, profile, signOut } = useAuth();
+  const { unigRole, profile, signOut, clinicCodes } = useAuth();
   const { data: unreadNotifications = 0 } = useUnreadNotificationCount();
   const { pathname } = useLocation();
   const collapsed = state === 'collapsed';
@@ -228,8 +229,8 @@ export function AppSidebar() {
   const scrollStorageKey = `uniga-sidebar-scroll:${unigRole}`;
 
   const visibleGroups = useMemo(
-    () => NAV_GROUPS.filter((group) => CLINICAL_NAVIGATION_GROUPS.has(group.id) && group.roles.includes(unigRole)),
-    [unigRole],
+    () => NAV_GROUPS.filter((group) => CLINICAL_NAVIGATION_GROUPS.has(group.id) && group.roles.includes(unigRole)).map((group) => ({ ...group, items: group.items.filter((item) => unigRole === 'super_admin' || !item.clinicCode || clinicCodes.includes(item.clinicCode)) })).filter((group) => group.items.length > 0),
+    [unigRole, clinicCodes],
   );
   const activeGroup = visibleGroups.find((group) => group.items.some((item) => matchesPath(pathname, item.url)))?.id;
   const [openGroup, setOpenGroup] = useState<string | null>(() => activeGroup ?? null);

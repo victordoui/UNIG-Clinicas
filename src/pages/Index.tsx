@@ -157,6 +157,7 @@ const actions = [
     description: "Animais e tutores",
     icon: PawPrint,
     to: "/veterinaria",
+    clinicCode: "VET",
   },
   {
     title: "Procedimentos e exames",
@@ -167,7 +168,7 @@ const actions = [
 ];
 
 export default function Index() {
-  const { unigRole, profile } = useAuth();
+  const { unigRole, profile, clinicCodes } = useAuth();
   const summary = useQuery({
     queryKey: ["unig-clinicas-summary"],
     queryFn: loadSummary,
@@ -265,7 +266,7 @@ export default function Index() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              {actions.map((action) => (
+          {actions.filter((action) => unigRole === 'super_admin' || !action.clinicCode || clinicCodes.includes(action.clinicCode)).map((action) => (
                 <a
                   key={action.to}
                   href={action.to}
