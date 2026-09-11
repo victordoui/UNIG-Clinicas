@@ -20,45 +20,45 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 ## Fase 3 — Fluxos das especialidades
 
-**Status: em andamento.**
+**Status: concluída.**
 
 - Odontologia: odontograma visual, achados por dente/face, planos e execução inicial: entregue.
 - Fisioterapia: avaliação, sessões, reavaliação e alta: entregue.
 - Estética: protocolos, sessões, áreas, produtos, evolução e consentimento de imagem: entregue.
 - Veterinária: animais, tutores, consultas, peso e vacinação: entregue.
-- Internação veterinária, boxes, prescrições e mapa de execução: pendente.
+- Internação veterinária: admissão por box, programação de medicação/exame/procedimento/parâmetro, conclusão rastreável e alta: entregue.
 
 ## Fase 4 — Prontuário e documentos clínicos completos
 
-**Status: pendente.**
+**Status: em andamento.**
 
-- Anamnese estruturada por especialidade.
-- Exames, imagens e anexos vinculados ao prontuário.
-- Central de documentos: receitas, atestados, declarações, termos e consentimentos.
-- Assinatura eletrônica e histórico de versões.
+- Anamnese estruturada, contexto de encounter e resumo longitudinal por paciente: entregues.
+- Exames, imagens e anexos vinculados ao prontuário: entregues.
+- Central de documentos e consentimentos, com arquivo protegido: entregue.
+- Assinatura eletrônica e histórico de versões dos documentos: pendentes.
 
 ## Fase 5 — Operação e gestão clínica
 
 **Status: em andamento.**
 
 - Agenda dia/semana/mês/lista, serviços e check-in por prontuário/CPF/documento: entregues.
-- Tela de encounter com início, evolução, rascunho, envio para supervisão, conclusão, exames, documentos e supervisões no mesmo contexto: entregue. Resumo longitudinal por paciente: pendente.
+- Tela de encounter com início, evolução, rascunho, envio para supervisão, conclusão, exames, documentos e supervisões no mesmo contexto; resumo longitudinal por paciente: entregues.
 - Indicadores por clínica e exportação CSV operacional: entregue. Relatórios acadêmicos e por serviço: pendentes.
 - Busca global e central de notificações clínicas: entregues.
 
 ## Fase 6 — Insumos e comunicação
 
-**Status: pendente.**
+**Status: em andamento.**
 
-- Estoque por clínica, validade, mínimo/máximo, inventário e alertas.
-- Lembretes, confirmação/remarcação e preparação para WhatsApp.
+- Estoque por clínica, lotes, validade, mínimo/máximo, inventário, movimentação e alertas: entregue.
+- Lembretes, confirmação/remarcação e preparação para WhatsApp: pendentes.
 
 ## Fase 7 — Portais
 
-**Status: pendente.**
+**Status: em andamento.**
 
-- Portal do paciente: agenda detalhada, histórico, documentos e notificações.
-- Portal do tutor: animais, vacinas, consultas e documentos.
+- Portal do paciente: agenda detalhada, histórico e documentos: entregues; notificações próprias: pendentes.
+- Portal do tutor: animais, vacinas e consultas: entregues; documentos do animal: pendentes.
 
 ## Fase 8 — Qualidade e produção
 
@@ -69,6 +69,6 @@ Este roteiro organiza a continuidade do Plano Mestre. Uma fase só é marcada co
 
 ## Próxima fase
 
-**Fase 3 — Internação veterinária.**
+**Fase 4 — Assinatura eletrônica e histórico de documentos.**
 
-Entrega prevista: cadastro de internação e box, plano de medicação/procedimento, agenda por horário e mapa de execução do dia com rastreabilidade de quem prescreveu e executou.
+Entrega prevista: assinatura eletrônica auditável, versão de documento e consulta controlada pelo prontuário.
