@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
 
   try {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const requestBody = await req.json().catch(() => ({})) as { action?: string };
     const { data: existingOrganization, error: lookupError } = await admin
       .from('organizations').select('id').eq('display_name', DEMO_ORGANIZATION).maybeSingle();
     if (lookupError) throw lookupError;
@@ -61,6 +62,37 @@ Deno.serve(async (req) => {
         .insert({ legal_name: DEMO_ORGANIZATION, display_name: DEMO_ORGANIZATION, is_active: true }).select('id').single();
       if (error) throw error;
       organizationId = data.id;
+    }
+
+    if (requestBody.action === 'reset_odonto_demo_queue') {
+      const { data: odontoClinic, error: odontoError } = await admin.from('clinics')
+        .select('id').eq('organization_id', organizationId).eq('code', 'ODONTO').single();
+      if (odontoError) throw odontoError;
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: session, error: sessionError } = await admin.from('queue_sessions')
+        .select('id').eq('clinic_id', odontoClinic.id).eq('service_date', today).maybeSingle();
+      if (sessionError) throw sessionError;
+      if (!session) return json({ ok: true, removedTickets: 0, removedSession: false });
+      const { data: tickets, error: ticketsError } = await admin.from('queue_tickets')
+        .select('id,status,appointment:appointments(reason),patient:patients(record_number)')
+        .eq('queue_session_id', session.id);
+      if (ticketsError) throw ticketsError;
+      const allDemo = (tickets ?? []).every((ticket: any) =>
+        ticket.patient?.record_number?.startsWith('DEMO-')
+        && (ticket.appointment?.reason === 'Consulta de demonstração' || ticket.appointment?.reason?.startsWith('Teste de fila Odonto —'))
+        && ticket.status === 'waiting',
+      );
+      if (!allDemo) throw new Error('A fila contém senha real ou já atendida e não pode ser limpa automaticamente.');
+      const ticketIds = (tickets ?? []).map((ticket: { id: string }) => ticket.id);
+      if (ticketIds.length) {
+        const { error: eventError } = await admin.from('queue_events').delete().eq('queue_session_id', session.id);
+        if (eventError) throw eventError;
+        const { error: ticketError } = await admin.from('queue_tickets').delete().in('id', ticketIds);
+        if (ticketError) throw ticketError;
+      }
+      const { error: deleteSessionError } = await admin.from('queue_sessions').delete().eq('id', session.id);
+      if (deleteSessionError) throw deleteSessionError;
+      return json({ ok: true, removedTickets: ticketIds.length, removedSession: true });
     }
 
     const { data: existingUnit, error: unitLookupError } = await admin.from('units')
