@@ -133,8 +133,8 @@ export default function FilaQR() {
           <CardHeader className="text-center">
             <CardTitle>Entrar na fila</CardTitle>
             <CardDescription>
-              O QR identifica uma sessão específica. Nenhuma informação clínica
-              é exibida nesta tela.
+              O QR identifica esta clínica. Ele permite entrar somente quando a
+              fila do dia estiver aberta. Nenhuma informação clínica é exibida nesta tela.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

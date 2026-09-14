@@ -1,5 +1,4 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CalendarDays,
@@ -91,9 +90,7 @@ type Session = {
 export default function AgendaFila() {
   const qc = useQueryClient();
   const { unigRole, activeClinicCode } = useAuth();
-  const [searchParams] = useSearchParams();
-  const requestedSection = searchParams.get("section");
-  const defaultTab = requestedSection === "fila" ? "fila" : "agenda";
+  const defaultTab = "agenda";
   const canManage = [
     "super_admin",
     "administrador",
@@ -577,23 +574,20 @@ export default function AgendaFila() {
             <CalendarDays className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Agenda e fila</h1>
+            <h1 className="text-2xl font-bold">Agenda</h1>
             <p className="text-sm text-muted-foreground">
-              Acompanhe horários, chegada e andamento do atendimento sem expor o
-              conteúdo do prontuário.
+              Acompanhe horários, chegada e lista de espera sem expor o conteúdo do prontuário.
             </p>
           </div>
         </div>
         {!canManage && (
           <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-            Seu papel tem acesso de consulta. Operações de agenda e fila ficam
-            disponíveis para a equipe de recepção e gestão.
+            Seu papel tem acesso de consulta. Operações de agenda ficam disponíveis para a equipe de recepção e gestão.
           </p>
         )}
         <Tabs key={defaultTab} defaultValue={defaultTab}>
-          <TabsList className="grid w-full grid-cols-3 sm:w-auto">
+          <TabsList className="grid w-full grid-cols-2 sm:w-auto">
             <TabsTrigger className="min-h-11" value="agenda">Agenda</TabsTrigger>
-            <TabsTrigger className="min-h-11" value="fila">Fila</TabsTrigger>
             <TabsTrigger className="min-h-11" value="espera">Espera</TabsTrigger>
           </TabsList>
           <TabsContent value="agenda" className="space-y-4">
