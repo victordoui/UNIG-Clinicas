@@ -24,6 +24,9 @@ const DEMO_ACCOUNTS = [
   ]),
   { key: 'academic_supervisor_odonto', role: 'academic_supervisor', email: 'academic-supervisor-odonto@unig.demo', label: 'Supervisor acadêmico', clinicCode: 'ODONTO' },
   { key: 'student_odonto', role: 'student', email: 'student-odonto@unig.demo', label: 'Estudante', clinicCode: 'ODONTO' },
+  { key: 'receptionist_test_odonto', role: 'receptionist', email: 'receptionist-teste-odonto@unig.demo', label: 'Recepção e fila — posto 2', clinicCode: 'ODONTO' },
+  { key: 'patient_test_odonto_1', role: 'patient', email: 'patient-teste-odonto-1@unig.demo', label: 'Paciente teste 1 — Odonto', clinicCode: 'ODONTO', patientDocument: 'demo-005' },
+  { key: 'patient_test_odonto_2', role: 'patient', email: 'patient-teste-odonto-2@unig.demo', label: 'Paciente teste 2 — Odonto', clinicCode: 'ODONTO', patientDocument: 'demo-006' },
   { key: 'auditor', role: 'auditor', email: 'auditor@unig.demo', label: 'Auditoria transversal', clinicCode: null },
 ] as const;
 
@@ -102,6 +105,8 @@ Deno.serve(async (req) => {
       ['DEMO-002', 'Bruno Oliveira', 'demo-002'],
       ['DEMO-003', 'Carla Santos', 'demo-003'],
       ['DEMO-004', 'Diego Lima', 'demo-004'],
+      ['DEMO-005', 'Larissa Ferreira', 'demo-005'],
+      ['DEMO-006', 'Rafael Mendes', 'demo-006'],
     ] as const;
     const patientByCode = new Map<string, string>();
     for (const [recordNumber, fullName, documentNumber] of demoPatients) {
@@ -190,6 +195,51 @@ Deno.serve(async (req) => {
       if (examLookupError) throw examLookupError;
       if (!existingExam) {
         const { error } = await admin.from('exam_orders').insert({ organization_id: organizationId, clinic_id: clinic.id, patient_id: patientId, exam_name: 'Exame demonstrativo', status: 'requested' });
+        if (error) throw error;
+      }
+    }
+
+    // Two extra Odonto patients are intentionally placed in the same daily
+    // session. This makes it possible to validate the panel, a call, recall,
+    // and a second receptionist without creating a competing queue.
+    const { data: odontoClinic, error: odontoClinicError } = await admin.from('clinics')
+      .select('id').eq('organization_id', organizationId).eq('code', 'ODONTO').single();
+    if (odontoClinicError) throw odontoClinicError;
+    const { data: odontoService, error: odontoServiceError } = await admin.from('clinic_services')
+      .select('id').eq('clinic_id', odontoClinic.id).eq('code', 'AVALIACAO').single();
+    if (odontoServiceError) throw odontoServiceError;
+    const { data: odontoSession, error: odontoSessionError } = await admin.from('queue_sessions')
+      .select('id').eq('clinic_id', odontoClinic.id).eq('service_date', today).single();
+    if (odontoSessionError) throw odontoSessionError;
+    for (const [offset, [recordNumber, , documentNumber]] of demoPatients.slice(4).entries()) {
+      const patientId = patientByCode.get(documentNumber)!;
+      const reason = `Teste de fila Odonto — ${recordNumber}`;
+      const appointmentAt = new Date(Date.now() + (offset + 1) * 15 * 60 * 1000).toISOString();
+      const { data: existingAppointment, error: appointmentLookupError } = await admin.from('appointments')
+        .select('id').eq('organization_id', organizationId).eq('patient_id', patientId).eq('reason', reason).maybeSingle();
+      if (appointmentLookupError) throw appointmentLookupError;
+      let appointmentId = existingAppointment?.id;
+      if (!appointmentId) {
+        const { data, error } = await admin.from('appointments').insert({
+          organization_id: organizationId, clinic_id: odontoClinic.id, patient_id: patientId,
+          clinic_service_id: odontoService.id, scheduled_at: appointmentAt, duration_minutes: 30,
+          status: 'checked_in', reason,
+        }).select('id').single();
+        if (error) throw error;
+        appointmentId = data.id;
+      }
+      const { data: existingTicket, error: ticketLookupError } = await admin.from('queue_tickets')
+        .select('id').eq('queue_session_id', odontoSession.id).eq('appointment_id', appointmentId).maybeSingle();
+      if (ticketLookupError) throw ticketLookupError;
+      if (!existingTicket) {
+        const { data: lastTicket, error: lastTicketError } = await admin.from('queue_tickets')
+          .select('ticket_number').eq('queue_session_id', odontoSession.id)
+          .order('ticket_number', { ascending: false }).limit(1).maybeSingle();
+        if (lastTicketError) throw lastTicketError;
+        const { error } = await admin.from('queue_tickets').insert({
+          queue_session_id: odontoSession.id, patient_id: patientId, appointment_id: appointmentId,
+          ticket_number: (lastTicket?.ticket_number ?? 0) + 1, status: 'waiting', priority: 'normal',
+        });
         if (error) throw error;
       }
     }

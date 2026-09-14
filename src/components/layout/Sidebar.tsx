@@ -131,7 +131,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { title: "Painel", url: "/", icon: LayoutGrid },
       { title: "Recepção", url: "/recepcao-operacional", icon: Monitor },
-      { title: "Fila", url: "/agenda-fila?section=fila", icon: ClipboardList },
+      { title: "Fila", url: "/fila", icon: ClipboardList },
       {
         title: "Agenda",
         url: "/agenda-fila?section=agenda",
