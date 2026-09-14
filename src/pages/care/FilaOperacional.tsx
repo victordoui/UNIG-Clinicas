@@ -89,6 +89,18 @@ export default function FilaOperacional() {
     setSaving(true);
     const { error } = await supabase.rpc("transition_queue_session", { target_session_id: queue.id, target_status: targetStatus });
     setSaving(false);
+    if (error && targetStatus === "open" && error.message.includes("closed -> open")) {
+      const { error: reopenError } = await supabase.functions.invoke("queue-transition", {
+        body: { sessionId: queue.id, targetStatus },
+      });
+      if (!reopenError) {
+        toast({ title: "Atendimento reaberto" });
+        await load();
+        return;
+      }
+      toast({ title: "Não foi possível reabrir a fila", description: reopenError.message, variant: "destructive" });
+      return;
+    }
     if (error) {
       toast({ title: "Não foi possível alterar a fila", description: error.message, variant: "destructive" });
       return;

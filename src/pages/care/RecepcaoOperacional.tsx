@@ -264,6 +264,18 @@ export default function RecepcaoOperacional() {
       target_session_id: queueSessionId,
       target_status: targetStatus,
     });
+    if (error && targetStatus === "open" && error.message.includes("closed -> open")) {
+      const { error: reopenError } = await supabase.functions.invoke("queue-transition", {
+        body: { sessionId: queueSessionId, targetStatus },
+      });
+      if (!reopenError) {
+        toast({ title: "Fila reaberta", description: "A recepção e os clientes desta clínica já podem utilizá-la." });
+        await loadRemoteQueue();
+        return;
+      }
+      toast({ title: "Não foi possível reabrir a fila", description: reopenError.message, variant: "destructive" });
+      return;
+    }
     if (error) {
       toast({ title: "Não foi possível alterar a fila", description: error.message, variant: "destructive" });
       return;
