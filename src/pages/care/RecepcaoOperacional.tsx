@@ -228,7 +228,36 @@ export default function RecepcaoOperacional() {
       return;
     }
     if (!queueSessionId) {
-      toast({ title: "Não há uma sessão de fila para alterar", description: "Crie ou selecione uma sessão da clínica antes de abrir a fila.", variant: "destructive" });
+      if (targetStatus !== "open" || !activeClinicCode) {
+        toast({ title: "Não há uma sessão de fila para alterar", description: "Atualize a página e tente novamente.", variant: "destructive" });
+        return;
+      }
+      const { data: scopes, error: scopeError } = await supabase
+        .from("user_clinic_scopes")
+        .select("clinic_id,clinic:clinics(code),user_role:user_roles(organization_id)")
+        .is("revoked_at", null);
+      const activeScope = (scopes ?? []).find((scope: any) => scope.clinic?.code === activeClinicCode);
+      const organizationId = (activeScope as any)?.user_role?.organization_id;
+      if (scopeError || !activeScope?.clinic_id || !organizationId) {
+        toast({ title: "Não foi possível identificar sua clínica", description: "Entre novamente e tente abrir a fila.", variant: "destructive" });
+        return;
+      }
+      const { data: auth } = await supabase.auth.getUser();
+      const { error: createError } = await supabase.from("queue_sessions").insert({
+        organization_id: organizationId,
+        clinic_id: activeScope.clinic_id,
+        service_date: new Date().toISOString().slice(0, 10),
+        status: "open",
+        created_by: auth.user?.id ?? null,
+        updated_by: auth.user?.id ?? null,
+      });
+      if (createError) {
+        await loadRemoteQueue();
+        toast({ title: "Não foi possível abrir a fila", description: createError.message.includes("duplicate") ? "A fila desta clínica já foi aberta por outro acesso." : createError.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Fila aberta", description: "A recepção e os clientes desta clínica já podem utilizá-la." });
+      await loadRemoteQueue();
       return;
     }
     const { error } = await supabase.rpc("transition_queue_session", {
