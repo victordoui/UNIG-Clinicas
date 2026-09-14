@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
+  AlertTriangle,
   CalendarDays,
   Clock3,
   FlaskConical,
@@ -28,6 +29,17 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type Clinic = { id: string; name: string; code: string };
 type Counts = {
@@ -50,6 +62,32 @@ type AcademicSummary = {
   total: number;
   active: number;
   completed: number;
+};
+type OperationalAnalytics = {
+  kpis: {
+    appointments: number;
+    completed_appointments: number;
+    no_shows: number;
+    queue_entries: number;
+    queue_completed: number;
+    guest_entries: number;
+    average_wait_minutes: number;
+  };
+  daily: Array<{
+    date: string;
+    appointments: number;
+    completed: number;
+    queue_entries: number;
+    no_shows: number;
+  }>;
+  funnel: {
+    joined: number;
+    called: number;
+    checked_in: number;
+    completed: number;
+    no_show: number;
+  };
+  wait_by_hour: Array<{ hour: number; average_wait_minutes: number }>;
 };
 
 const metrics = [
@@ -105,6 +143,7 @@ async function countRows(query: any) {
 
 export default function Indicadores() {
   const [clinicId, setClinicId] = useState("all");
+  const [periodDays, setPeriodDays] = useState("30");
   const { activeClinicCode } = useAuth();
   const report = useQuery({
     queryKey: ["clinical-indicators", clinicId],
@@ -367,7 +406,77 @@ export default function Indicadores() {
       }>;
     },
   });
+  const operationalAnalytics = useQuery({
+    queryKey: ["clinic-operational-analytics", clinicId, periodDays],
+    queryFn: async (): Promise<OperationalAnalytics> => {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - (Number(periodDays) - 1));
+      const { data, error } = await (supabase.rpc as any)(
+        "get_clinic_operational_analytics",
+        {
+          target_clinic_id: clinicId === "all" ? null : clinicId,
+          date_from: start.toISOString().slice(0, 10),
+          date_to: end.toISOString().slice(0, 10),
+        },
+      );
+      if (error) throw error;
+      return data as OperationalAnalytics;
+    },
+  });
+  const previousOperationalAnalytics = useQuery({
+    queryKey: ["clinic-operational-analytics-previous", clinicId, periodDays],
+    queryFn: async (): Promise<OperationalAnalytics> => {
+      const period = Number(periodDays);
+      const end = new Date();
+      end.setDate(end.getDate() - period);
+      const start = new Date(end);
+      start.setDate(start.getDate() - (period - 1));
+      const { data, error } = await (supabase.rpc as any)(
+        "get_clinic_operational_analytics",
+        {
+          target_clinic_id: clinicId === "all" ? null : clinicId,
+          date_from: start.toISOString().slice(0, 10),
+          date_to: end.toISOString().slice(0, 10),
+        },
+      );
+      if (error) throw error;
+      return data as OperationalAnalytics;
+    },
+  });
   const counts = report.data?.counts;
+  const analytics = operationalAnalytics.data;
+  const previousAnalytics = previousOperationalAnalytics.data;
+  const changeLabel = (current: number | undefined, previous: number | undefined, inverse = false) => {
+    if (current === undefined || previous === undefined) return "sem comparação";
+    if (previous === 0) return current === 0 ? "sem variação" : "novo no período";
+    const change = Math.round(((current - previous) / previous) * 100);
+    const isPositive = inverse ? change <= 0 : change >= 0;
+    return `${change > 0 ? "+" : ""}${change}% vs. anterior${isPositive ? "" : " · atenção"}`;
+  };
+  const funnelData = analytics
+    ? [
+        { label: "Entraram", value: analytics.funnel.joined },
+        { label: "Chamados", value: analytics.funnel.called },
+        { label: "Chegaram", value: analytics.funnel.checked_in },
+        { label: "Concluídos", value: analytics.funnel.completed },
+        { label: "Faltas", value: analytics.funnel.no_show },
+      ]
+    : [];
+  const operationalAlerts = [
+    analytics && analytics.kpis.average_wait_minutes > 30
+      ? { title: "Espera acima da meta", detail: `A espera média é de ${analytics.kpis.average_wait_minutes} min no período selecionado.` }
+      : null,
+    analytics && analytics.kpis.appointments > 0 && (analytics.kpis.no_shows / analytics.kpis.appointments) >= 0.1
+      ? { title: "Faltas em atenção", detail: `${Math.round((analytics.kpis.no_shows / analytics.kpis.appointments) * 100)}% dos agendamentos/senhas resultaram em falta.` }
+      : null,
+    feedbackSummary.data?.some((item) => item.response_count >= 3 && Number(item.average_overall) < 4)
+      ? { title: "Satisfação abaixo do alvo", detail: "Há clínica com média geral abaixo de 4,0 nas avaliações disponíveis." }
+      : null,
+    counts && counts.waiting >= 10
+      ? { title: "Fila em atenção", detail: `${counts.waiting} senha(s) aguardam ou estão em atendimento no escopo atual.` }
+      : null,
+  ].filter(Boolean) as Array<{ title: string; detail: string }>;
   useEffect(() => {
     if (!activeClinicCode || !report.data?.clinics?.length) return;
     const activeClinic = report.data.clinics.find(
@@ -452,6 +561,17 @@ export default function Indicadores() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="w-full space-y-1 md:w-[160px]">
+              <Label>Período</Label>
+              <Select value={periodDays} onValueChange={setPeriodDays}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 dias</SelectItem>
+                  <SelectItem value="30">30 dias</SelectItem>
+                  <SelectItem value="90">90 dias</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -489,6 +609,50 @@ export default function Indicadores() {
             );
           })}
         </div>
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-bold">Análise operacional</h2>
+            <p className="text-sm text-muted-foreground">Demanda, capacidade e espera no período selecionado. Os dados são agregados por clínica.</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              ["Entradas na fila", analytics?.kpis.queue_entries, previousAnalytics?.kpis.queue_entries, false],
+              ["Tempo médio de espera", analytics ? `${analytics.kpis.average_wait_minutes} min` : undefined, previousAnalytics?.kpis.average_wait_minutes, true],
+              ["Visitantes sem conta", analytics?.kpis.guest_entries, previousAnalytics?.kpis.guest_entries, false],
+              ["Faltas / no-show", analytics?.kpis.no_shows, previousAnalytics?.kpis.no_shows, true],
+            ].map(([label, value, previous, inverse]) => (
+              <Card key={String(label)}><CardContent className="p-5"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold">{operationalAnalytics.isLoading ? "—" : value ?? 0}</p><p className="mt-1 text-xs text-muted-foreground">{previousOperationalAnalytics.isLoading ? "Comparando…" : changeLabel(typeof value === "string" ? Number.parseInt(value, 10) : value as number | undefined, previous as number | undefined, Boolean(inverse))}</p></CardContent></Card>
+            ))}
+          </div>
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><AlertTriangle className="h-4 w-4 text-amber-600" />Alertas operacionais</CardTitle><CardDescription>Limites iniciais para priorização de gestão; devem ser calibrados por clínica.</CardDescription></CardHeader>
+            <CardContent className="space-y-2">{operationalAlerts.length ? operationalAlerts.map((alert) => <div key={alert.title} className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"><p className="font-medium text-amber-900">{alert.title}</p><p className="mt-1 text-amber-800">{alert.detail}</p></div>) : <p className="text-sm text-muted-foreground">Nenhum alerta nos limites atuais para o período selecionado.</p>}</CardContent>
+          </Card>
+          {operationalAnalytics.isError ? (
+            <Card><CardContent className="p-5 text-sm text-muted-foreground">Os gráficos serão habilitados assim que a atualização de indicadores estiver disponível para esta conta.</CardContent></Card>
+          ) : (
+            <div className="grid gap-5 xl:grid-cols-2">
+              <Card>
+                <CardHeader><CardTitle className="text-base">Demanda e atendimentos</CardTitle><CardDescription>Volume diário de agendamentos, conclusões e entradas na fila.</CardDescription></CardHeader>
+                <CardContent className="h-[280px] p-3 sm:p-5">
+                  <ResponsiveContainer width="100%" height="100%"><LineChart data={analytics?.daily ?? []}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" tickFormatter={(value) => new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} minTickGap={28} /><YAxis allowDecimals={false} /><Tooltip labelFormatter={(value) => new Date(`${value}T12:00:00`).toLocaleDateString("pt-BR")} /><Line type="monotone" dataKey="appointments" name="Agendamentos" stroke="#0f766e" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="completed" name="Concluídos" stroke="#16a34a" strokeWidth={2} dot={false} /><Line type="monotone" dataKey="queue_entries" name="Entradas na fila" stroke="#d97706" strokeWidth={2} dot={false} /></LineChart></ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader><CardTitle className="text-base">Funil da fila</CardTitle><CardDescription>Da emissão da senha à conclusão do atendimento.</CardDescription></CardHeader>
+                <CardContent className="h-[280px] p-3 sm:p-5">
+                  <ResponsiveContainer width="100%" height="100%"><BarChart data={funnelData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="label" tick={{ fontSize: 12 }} /><YAxis allowDecimals={false} /><Tooltip /><Bar dataKey="value" name="Quantidade" fill="#0f766e" radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer>
+                </CardContent>
+              </Card>
+              <Card className="xl:col-span-2">
+                <CardHeader><CardTitle className="text-base">Espera média por hora de chegada</CardTitle><CardDescription>Identifique os horários que precisam de reforço de equipe ou capacidade.</CardDescription></CardHeader>
+                <CardContent className="h-[260px] p-3 sm:p-5">
+                  <ResponsiveContainer width="100%" height="100%"><BarChart data={analytics?.wait_by_hour ?? []}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="hour" tickFormatter={(value) => `${value}h`} /><YAxis allowDecimals={false} /><Tooltip labelFormatter={(value) => `${value}h`} formatter={(value) => [`${value} min`, "Espera média"]} /><Bar dataKey="average_wait_minutes" name="Espera média" fill="#0891b2" radius={[5, 5, 0, 0]} /></BarChart></ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </section>
         <div className="grid gap-5 xl:grid-cols-2">
           <Card>
             <CardHeader>

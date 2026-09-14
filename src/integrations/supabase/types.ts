@@ -1280,6 +1280,85 @@ export type Database = {
           },
         ]
       }
+      reception_sessions: {
+        Row: {
+          call_next_automatically: boolean
+          clinic_id: string
+          created_at: string
+          destination: string | null
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          observation: string | null
+          organization_id: string
+          queue_ticket_id: string
+          reason: string | null
+          started_at: string
+          started_by: string
+          tags: string[]
+          updated_at: string
+          workstation_id: string
+        }
+        Insert: {
+          call_next_automatically?: boolean
+          clinic_id: string
+          created_at?: string
+          destination?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          observation?: string | null
+          organization_id: string
+          queue_ticket_id: string
+          reason?: string | null
+          started_at?: string
+          started_by: string
+          tags?: string[]
+          updated_at?: string
+          workstation_id: string
+        }
+        Update: {
+          call_next_automatically?: boolean
+          clinic_id?: string
+          created_at?: string
+          destination?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          observation?: string | null
+          organization_id?: string
+          queue_ticket_id?: string
+          reason?: string | null
+          started_at?: string
+          started_by?: string
+          tags?: string[]
+          updated_at?: string
+          workstation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reception_sessions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reception_sessions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reception_sessions_queue_ticket_id_fkey"
+            columns: ["queue_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "queue_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string
@@ -1565,6 +1644,41 @@ export type Database = {
         }
         Returns: string
       }
+      get_clinic_operational_analytics: {
+        Args: {
+          date_from?: string
+          date_to?: string
+          target_clinic_id?: string
+        }
+        Returns: Json
+      }
+      join_queue_as_guest: {
+        Args: {
+          accepted_data_terms?: boolean
+          accepted_policy_version?: string
+          guest_birth_date?: string
+          guest_document_number?: string
+          guest_full_name: string
+          guest_phone: string
+          target_token: string
+        }
+        Returns: {
+          queue_session_id: string
+          ticket_id: string
+          ticket_number: number
+        }[]
+      }
+      finish_reception_session: {
+        Args: {
+          target_call_next: boolean
+          target_destination: string
+          target_observation: string
+          target_reason: string
+          target_session_id: string
+          target_tags: string[]
+        }
+        Returns: Database["public"]["Tables"]["reception_sessions"]["Row"]
+      }
       register_patient: {
         Args: {
           patient_birth_date?: string
@@ -1578,6 +1692,25 @@ export type Database = {
           target_clinic_id?: string
         }
         Returns: string
+      }
+      recall_reception_ticket: {
+        Args: { target_ticket_id: string }
+        Returns: undefined
+      }
+      save_reception_session: {
+        Args: {
+          target_call_next: boolean
+          target_destination: string
+          target_observation: string
+          target_reason: string
+          target_session_id: string
+          target_tags: string[]
+        }
+        Returns: Database["public"]["Tables"]["reception_sessions"]["Row"]
+      }
+      start_reception_session: {
+        Args: { target_ticket_id: string; target_workstation_id: string }
+        Returns: Database["public"]["Tables"]["reception_sessions"]["Row"]
       }
     }
     Enums: {

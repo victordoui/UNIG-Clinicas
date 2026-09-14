@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
   ArrowRight,
   Clock3,
   Info,
+  Maximize2,
   Megaphone,
+  Minimize2,
   RefreshCw,
   UsersRound,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import unigSymbol from "@/assets/unig-clinicas-symbol.png";
+import campaignDemo from "@/assets/campaign-demo-preventive-care.png";
+import campaignHealth from "@/assets/campaign-demo-health.png";
+import campaignWelcome from "@/assets/campaign-demo-welcome.png";
 
 type Clinic = { id: string; name: string; code: string };
 type QueueSession = {
@@ -119,10 +122,27 @@ export default function PainelTV() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [clinicId, setClinicId] = useState(searchParams.get("clinic") ?? "");
   const [now, setNow] = useState(() => new Date());
+  const [showDemoCampaign, setShowDemoCampaign] = useState(false);
+  const [demoCampaignIndex, setDemoCampaignIndex] = useState(0);
+  const [forcedCampaign] = useState<{ title: string; message: string; media_url: string | null; media_type: string } | null>(() => {
+    try { return JSON.parse(localStorage.getItem("unig-tv-forced-campaign") ?? "null"); } catch { return null; }
+  });
   const [simulation, setSimulation] = useState<ReceptionSimulation | null>(
     () => readSimulation(),
   );
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [announcementSignal, setAnnouncementSignal] = useState<string | null>(
+    null,
+  );
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setDemoCampaignIndex((current) => (current + 1) % 3);
+      setShowDemoCampaign(true);
+      window.setTimeout(() => setShowDemoCampaign(false), 6000);
+    }, 18000);
+    return () => window.clearInterval(interval);
+  }, []);
+  const demoCampaigns = [campaignDemo, campaignHealth, campaignWelcome];
   const audioContextRef = useRef<AudioContext | null>(null);
   const lastAnnouncementRef = useRef<string | null>(null);
   const { data, isLoading, error, dataUpdatedAt } = useQuery({
@@ -242,28 +262,42 @@ export default function PainelTV() {
       document.title = "UNIG Clínicas";
     };
   }, []);
-  const activateSound = async () => {
+  const ensureAudio = useCallback(async () => {
     const AudioContextConstructor = window.AudioContext;
     const context = audioContextRef.current ?? new AudioContextConstructor();
     audioContextRef.current = context;
-    await context.resume();
-    setSoundEnabled(context.state === "running");
-  };
+    try {
+      await context.resume();
+      return context.state === "running";
+    } catch {
+      return false;
+    }
+  }, []);
   const playAnnouncement = () => {
     const context = audioContextRef.current;
     if (!context || context.state !== "running") return;
     const start = context.currentTime;
-    [0, 0.23].forEach((offset, index) => {
+    const masterGain = context.createGain();
+    masterGain.gain.setValueAtTime(0.38, start);
+    masterGain.connect(context.destination);
+    [
+      { frequency: 659.25, offset: 0, duration: 0.16 },
+      { frequency: 880, offset: 0.2, duration: 0.16 },
+      { frequency: 1046.5, offset: 0.4, duration: 0.34 },
+    ].forEach(({ frequency, offset, duration }) => {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(index ? 880 : 659, start + offset);
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(frequency, start + offset);
       gain.gain.setValueAtTime(0.0001, start + offset);
-      gain.gain.exponentialRampToValueAtTime(0.16, start + offset + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + offset + 0.18);
-      oscillator.connect(gain).connect(context.destination);
+      gain.gain.exponentialRampToValueAtTime(0.72, start + offset + 0.015);
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        start + offset + duration,
+      );
+      oscillator.connect(gain).connect(masterGain);
       oscillator.start(start + offset);
-      oscillator.stop(start + offset + 0.2);
+      oscillator.stop(start + offset + duration + 0.02);
     });
   };
   useEffect(() => {
@@ -276,12 +310,48 @@ export default function PainelTV() {
     };
   }, []);
   useEffect(() => {
-    const announcedAt = simulation?.updatedAt;
-    if (!announcedAt) return;
+    const startAudioOnFirstInteraction = () => {
+      void ensureAudio();
+    };
+    void ensureAudio();
+    window.addEventListener("pointerdown", startAudioOnFirstInteraction, {
+      once: true,
+    });
+    window.addEventListener("keydown", startAudioOnFirstInteraction, {
+      once: true,
+    });
+    return () => {
+      window.removeEventListener("pointerdown", startAudioOnFirstInteraction);
+      window.removeEventListener("keydown", startAudioOnFirstInteraction);
+    };
+  }, [ensureAudio]);
+  useEffect(() => {
+    const announcementKey = isSimulation
+      ? simulation?.updatedAt
+      : announcementSignal;
+    if (!announcementKey) return;
     const previous = lastAnnouncementRef.current;
-    lastAnnouncementRef.current = announcedAt;
-    if (previous && soundEnabled) playAnnouncement();
-  }, [simulation?.updatedAt, soundEnabled]);
+    lastAnnouncementRef.current = announcementKey;
+    if (!isSimulation || previous) {
+      void ensureAudio().then((audioReady) => {
+        if (audioReady) playAnnouncement();
+      });
+    }
+  }, [announcementSignal, ensureAudio, isSimulation, simulation?.updatedAt]);
+  useEffect(() => {
+    const syncFullscreenState = () =>
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
+  }, []);
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch {
+      // Alguns navegadores ou dispositivos administrados podem bloquear tela cheia.
+    }
+  };
   useEffect(() => {
     if (selectedClinicId && selectedClinicId !== searchParams.get("clinic"))
       setSearchParams({ clinic: selectedClinicId }, { replace: true });
@@ -298,7 +368,20 @@ export default function PainelTV() {
           table: "queue_events",
           filter: `clinic_id=eq.${selectedClinicId}`,
         },
-        () => {
+        (payload) => {
+          const event = payload.new as {
+            id?: string;
+            event_type?: string;
+            created_at?: string;
+          };
+          if (
+            event.event_type === "ticket.called" ||
+            event.event_type === "reception.recalled"
+          ) {
+            setAnnouncementSignal(
+              `${event.id ?? "event"}:${event.created_at ?? Date.now()}`,
+            );
+          }
           void queryClient.invalidateQueries({ queryKey: ["queue-tv", TODAY] });
         },
       )
@@ -345,12 +428,18 @@ export default function PainelTV() {
             </Select>
             <button
               type="button"
-              onClick={() => void activateSound()}
-              className={`flex h-12 shrink-0 items-center gap-2 rounded-full px-4 text-sm font-bold shadow-lg shadow-black/10 transition lg:h-14 ${soundEnabled ? "bg-[#0AAE9B] text-white" : "bg-white/15 text-white hover:bg-white/25"}`}
-              aria-label={soundEnabled ? "Som do painel ativado" : "Ativar som do painel"}
+              onClick={() => void toggleFullscreen()}
+              className="flex h-12 shrink-0 items-center gap-2 rounded-full bg-white/15 px-4 text-sm font-bold text-white shadow-lg shadow-black/10 transition hover:bg-white/25 lg:h-14"
+              aria-label={isFullscreen ? "Sair da tela cheia" : "Exibir em tela cheia"}
             >
-              {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-              <span className="hidden xl:inline">{soundEnabled ? "Som ativo" : "Ativar som"}</span>
+              {isFullscreen ? (
+                <Minimize2 className="h-5 w-5" />
+              ) : (
+                <Maximize2 className="h-5 w-5" />
+              )}
+              <span className="hidden xl:inline">
+                {isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+              </span>
             </button>
             <div className="hidden text-right sm:block">
               <p className="text-4xl font-extrabold leading-none tracking-tight lg:text-5xl">
@@ -391,7 +480,18 @@ export default function PainelTV() {
                 Modo de simulação ativo · a chamada é recebida da tela Recepção neste navegador.
               </div>
             )}
-            <section className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
+            {!isFullscreen && (
+              <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/90">
+                <Maximize2 className="h-5 w-5 shrink-0 text-[#8DEBDD]" />
+                Para TV ou monitor, clique em “Tela cheia”. Pressione Esc para sair.
+              </div>
+            )}
+            {(forcedCampaign || (showDemoCampaign && !current)) ? (
+              <section className="relative min-h-[390px] overflow-hidden rounded-2xl border border-white/15 bg-[#004e48] shadow-xl">
+                {forcedCampaign?.media_url ? forcedCampaign.media_type === "video" ? <video src={forcedCampaign.media_url} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" /> : <img src={forcedCampaign.media_url} alt={forcedCampaign.title} className="absolute inset-0 h-full w-full object-cover opacity-85" /> : <img src={demoCampaigns[demoCampaignIndex]} alt="Demonstração de campanha institucional da UNIG Clínicas" className="absolute inset-0 h-full w-full object-cover opacity-85" />}
+                <div className="relative flex min-h-[390px] flex-col justify-end bg-gradient-to-t from-[#003f3a]/90 via-transparent p-8 sm:p-10"><span className="mb-3 w-fit rounded-full bg-white/15 px-3 py-1 text-xs font-bold tracking-wider">{forcedCampaign ? "TESTE DE INSERÇÃO" : "INSERÇÃO COMERCIAL · DEMONSTRAÇÃO"}</span>{forcedCampaign && <><h2 className="text-3xl font-black">{forcedCampaign.title}</h2><p className="mt-2 text-white/90">{forcedCampaign.message}</p></>}<p className="mt-3 text-sm text-white/80">A próxima chamada aparece automaticamente ao receber uma senha.</p></div>
+              </section>
+            ) : <section className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
               <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#005D55] to-[#004943] p-6 shadow-xl shadow-black/15 sm:p-8 lg:min-h-[390px] lg:p-10">
                 <div className="flex items-center gap-3 text-sm font-bold uppercase tracking-[0.32em] text-[#8DEBDD] sm:text-lg">
                   <Megaphone className="h-7 w-7" />
@@ -426,7 +526,7 @@ export default function PainelTV() {
                   </p>
                 </div>
               </div>
-            </section>
+            </section>}
 
             <section className="grid gap-5 rounded-2xl border border-white/[0.08] bg-gradient-to-r from-[#00564F] to-[#004A45] p-5 shadow-xl shadow-black/15 sm:p-6 lg:grid-cols-[1.35fr_1fr] lg:p-7">
               <div>

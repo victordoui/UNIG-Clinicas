@@ -11,6 +11,7 @@ import {
   PhoneCall,
   QrCode,
   Ticket,
+  UserPlus,
   X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -118,11 +119,13 @@ export default function AgendaFila() {
     new Date().toISOString().slice(0, 10),
   );
   const [checkInQuery, setCheckInQuery] = useState("");
+  const [waitlistNotes, setWaitlistNotes] = useState("");
+  const [waitlistChannel, setWaitlistChannel] = useState("phone");
 
   const data = useQuery({
     queryKey: ["care-operation"],
     queryFn: async () => {
-      const [clinics, services, patients, appointments, sessions, tickets] =
+      const [clinics, services, patients, appointments, sessions, tickets, waitlist] =
         await Promise.all([
           supabase
             .from("clinics")
@@ -158,6 +161,10 @@ export default function AgendaFila() {
             )
             .order("created_at", { ascending: false })
             .limit(50),
+          (supabase.from("appointment_waitlist_entries") as any)
+            .select("id,organization_id,clinic_id,patient_id,status,priority,contact_channel,notes,created_at,contacted_at,patient:patients(record_number,person:persons(full_name)),clinic:clinics(name),service:clinic_services(name)")
+            .order("created_at", { ascending: false })
+            .limit(50),
         ]);
       for (const result of [
         clinics,
@@ -166,6 +173,7 @@ export default function AgendaFila() {
         appointments,
         sessions,
         tickets,
+        waitlist,
       ])
         if (result.error) throw result.error;
       return {
@@ -175,6 +183,7 @@ export default function AgendaFila() {
         appointments: appointments.data ?? [],
         sessions: sessions.data ?? [],
         tickets: tickets.data ?? [],
+        waitlist: waitlist.data ?? [],
       };
     },
   });
@@ -341,6 +350,42 @@ export default function AgendaFila() {
         variant: "destructive",
       }),
   });
+  const addToWaitlist = useMutation({
+    mutationFn: async () => {
+      const selectedClinic = (data.data?.clinics as Clinic[]).find((item) => item.id === clinic);
+      if (!selectedClinic || !patient) throw new Error("Selecione clínica e paciente.");
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await (supabase.from("appointment_waitlist_entries") as any).insert({
+        organization_id: selectedClinic.organization_id,
+        clinic_id: clinic,
+        patient_id: patient,
+        clinic_service_id: service || null,
+        contact_channel: waitlistChannel,
+        notes: waitlistNotes.trim() || null,
+        created_by: auth.user?.id,
+        updated_by: auth.user?.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => { refresh(); setWaitlistNotes(""); toast({ title: "Paciente incluído na lista de espera" }); },
+    onError: (error: Error) => toast({ title: "Não foi possível incluir na lista", description: error.message, variant: "destructive" }),
+  });
+  const updateWaitlist = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const resolved = ["accepted", "declined", "expired", "cancelled"].includes(status);
+      const { error } = await (supabase.from("appointment_waitlist_entries") as any).update({
+        status,
+        contacted_at: new Date().toISOString(),
+        contacted_by: auth.user?.id,
+        resolved_at: resolved ? new Date().toISOString() : null,
+        updated_by: auth.user?.id,
+      }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: refresh,
+    onError: (error: Error) => toast({ title: "Não foi possível atualizar a lista", description: error.message, variant: "destructive" }),
+  });
 
   const openSession = useMutation({
     mutationFn: async () => {
@@ -501,6 +546,7 @@ export default function AgendaFila() {
       return scheduled >= start && scheduled < end;
     });
   }, [activeClinicCode, agendaDate, agendaView, appointments]);
+  const waitlist = (data.data?.waitlist ?? []).filter((item: any) => !clinic || item.clinic_id === clinic);
   const checkInMatches = useMemo(() => {
     const normalized = checkInQuery.trim().toLocaleLowerCase();
     if (normalized.length < 2) return [];
@@ -545,9 +591,10 @@ export default function AgendaFila() {
           </p>
         )}
         <Tabs key={defaultTab} defaultValue={defaultTab}>
-          <TabsList>
-            <TabsTrigger value="agenda">Agenda</TabsTrigger>
-            <TabsTrigger value="fila">Fila</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 sm:w-auto">
+            <TabsTrigger className="min-h-11" value="agenda">Agenda</TabsTrigger>
+            <TabsTrigger className="min-h-11" value="fila">Fila</TabsTrigger>
+            <TabsTrigger className="min-h-11" value="espera">Espera</TabsTrigger>
           </TabsList>
           <TabsContent value="agenda" className="space-y-4">
             <Card>
@@ -560,6 +607,7 @@ export default function AgendaFila() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <Input
+                  type="search"
                   value={checkInQuery}
                   onChange={(event) => setCheckInQuery(event.target.value)}
                   placeholder="Nome, prontuário ou CPF/documento"
@@ -588,6 +636,7 @@ export default function AgendaFila() {
                           </div>
                           <Button
                             size="sm"
+                            className="min-h-11 w-full sm:w-auto"
                             disabled={!canManage || updateAppointment.isPending}
                             onClick={() =>
                               updateAppointment.mutate({
@@ -666,7 +715,7 @@ export default function AgendaFila() {
                   </div>
                   <div className="flex items-end">
                     <Button
-                      className="w-full"
+                      className="min-h-11 w-full"
                       disabled={
                         !canManage ||
                         !clinic ||
@@ -699,6 +748,7 @@ export default function AgendaFila() {
                         key={view}
                         type="button"
                         size="sm"
+                        className="min-h-11 flex-1 sm:flex-none"
                         variant={agendaView === view ? "default" : "outline"}
                         onClick={() => setAgendaView(view)}
                       >
@@ -930,6 +980,7 @@ export default function AgendaFila() {
                     </div>
                   </div>
                   <Button
+                    className="min-h-11 w-full sm:w-auto"
                     disabled={!canManage || !clinic || openSession.isPending}
                     onClick={() => openSession.mutate()}
                   >
@@ -1100,6 +1151,7 @@ export default function AgendaFila() {
                       }
                     />
                     <Button
+                      className="min-h-11 w-full sm:w-auto"
                       disabled={
                         !canManage || !session || !patient || issue.isPending
                       }
@@ -1231,6 +1283,24 @@ export default function AgendaFila() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+          <TabsContent value="espera" className="space-y-4">
+            <Card>
+              <CardHeader><CardTitle className="text-base">Lista de espera e encaixes</CardTitle><CardDescription>Registre a disponibilidade do paciente e audite cada tentativa de contato. Nenhuma mensagem externa é enviada automaticamente.</CardDescription></CardHeader>
+              <CardContent>
+                <form onSubmit={submit(() => addToWaitlist.mutate())} className="grid gap-3 md:grid-cols-4">
+                  <Picker label="Clínica" value={clinic} onValue={setClinic} options={clinics} labelOf={(item: Clinic) => item.name} />
+                  <Picker label="Paciente" value={patient} onValue={setPatient} options={patients} labelOf={(item: any) => `${item.record_number} — ${item.person?.full_name ?? ""}`} />
+                  <Picker label="Serviço (opcional)" value={service} onValue={setService} options={services.filter((item) => item.clinic_id === clinic)} labelOf={(item: Service) => item.name} />
+                  <Picker label="Canal preferido" value={waitlistChannel} onValue={setWaitlistChannel} options={[{ id: "phone", name: "Telefone" }, { id: "whatsapp", name: "WhatsApp" }, { id: "email", name: "E-mail" }]} labelOf={(item: any) => item.name} />
+                  <div className="space-y-1 md:col-span-3"><Label>Observação</Label><Input value={waitlistNotes} onChange={(event) => setWaitlistNotes(event.target.value)} placeholder="Melhor período, prioridade ou condição para encaixe" /></div>
+                  <div className="flex items-end"><Button className="min-h-11 w-full" disabled={!canManage || !clinic || !patient || addToWaitlist.isPending}><UserPlus className="mr-1 h-4 w-4" />Incluir</Button></div>
+                </form>
+              </CardContent>
+            </Card>
+            <Card><CardHeader><CardTitle className="text-base">Pacientes aguardando</CardTitle></CardHeader><CardContent className="space-y-2">
+              {waitlist.length ? waitlist.map((item: any) => <div key={item.id} className="flex flex-col gap-3 rounded border p-3 text-sm md:flex-row md:items-center"><div className="min-w-0 flex-1"><p className="font-medium">{item.patient?.person?.full_name ?? item.patient?.record_number}</p><p className="text-xs text-muted-foreground">{item.clinic?.name}{item.service?.name ? ` · ${item.service.name}` : ""} · contato por {item.contact_channel}</p>{item.notes && <p className="mt-1 text-xs text-muted-foreground">{item.notes}</p>}</div><Badge variant={item.status === "waiting" ? "outline" : "secondary"}>{item.status === "waiting" ? "Aguardando" : item.status === "offered" ? "Oferta enviada" : item.status}</Badge><div className="flex flex-wrap gap-1">{item.status === "waiting" && <Button size="sm" variant="outline" disabled={!canManage || updateWaitlist.isPending} onClick={() => updateWaitlist.mutate({ id: item.id, status: "offered" })}><PhoneCall className="mr-1 h-3 w-3" />Registrar oferta</Button>}{item.status === "offered" && <><Button size="sm" disabled={!canManage || updateWaitlist.isPending} onClick={() => updateWaitlist.mutate({ id: item.id, status: "accepted" })}>Aceitou</Button><Button size="sm" variant="ghost" disabled={!canManage || updateWaitlist.isPending} onClick={() => updateWaitlist.mutate({ id: item.id, status: "declined" })}>Recusou</Button></>}</div></div>) : <p className="py-4 text-center text-sm text-muted-foreground">Nenhum paciente aguardando encaixe nesta clínica.</p>}
+            </CardContent></Card>
           </TabsContent>
         </Tabs>
       </div>

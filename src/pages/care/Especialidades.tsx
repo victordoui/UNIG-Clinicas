@@ -89,18 +89,30 @@ export default function Especialidades() {
   const [notes, setNotes] = useState("");
   const [treatmentPlanTitle, setTreatmentPlanTitle] = useState("");
   const [recommendedProcedure, setRecommendedProcedure] = useState("");
+  const [treatmentEstimatedCost, setTreatmentEstimatedCost] = useState("");
+  const [treatmentFollowUpDueDate, setTreatmentFollowUpDueDate] = useState("");
   const [complaint, setComplaint] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [plan, setPlan] = useState("");
+  const [functionalScaleName, setFunctionalScaleName] = useState("");
+  const [baselineScore, setBaselineScore] = useState("");
+  const [targetScore, setTargetScore] = useState("");
   const [protocolName, setProtocolName] = useState("");
+  const [protocolSessionsIncluded, setProtocolSessionsIncluded] = useState("");
+  const [protocolPackagePrice, setProtocolPackagePrice] = useState("");
+  const [protocolMinimumIntervalDays, setProtocolMinimumIntervalDays] = useState("");
+  const [protocolContraindications, setProtocolContraindications] = useState("");
   const [assessmentId, setAssessmentId] = useState("");
   const [sessionGoals, setSessionGoals] = useState("");
   const [exercisePlan, setExercisePlan] = useState("");
+  const [sessionFunctionalScore, setSessionFunctionalScore] = useState("");
+  const [adherenceNotes, setAdherenceNotes] = useState("");
   const [aestheticProtocolId, setAestheticProtocolId] = useState("");
   const [aestheticRegions, setAestheticRegions] = useState("");
   const [aestheticProducts, setAestheticProducts] = useState("");
   const [aestheticResult, setAestheticResult] = useState("");
   const [photoConsent, setPhotoConsent] = useState(false);
+  const [contraindicationsReviewed, setContraindicationsReviewed] = useState(false);
   const moduleContext = MODULE_CONTEXT[searchParams.get("module") ?? ""];
 
   const availableSpecialties = useMemo(
@@ -158,29 +170,29 @@ export default function Especialidades() {
         (supabase as any)
           .from("physiotherapy_assessments")
           .select(
-            "id,patient_id,chief_complaint,physiotherapy_diagnosis,functional_assessment,status,updated_at",
+            "id,patient_id,chief_complaint,physiotherapy_diagnosis,functional_assessment,functional_scale_name,baseline_score,target_score,status,updated_at",
           )
           .order("updated_at", { ascending: false })
           .limit(8),
         (supabase as any)
           .from("aesthetic_protocols")
-          .select("id,name,description,active,updated_at")
+          .select("id,name,description,active,updated_at,sessions_included,package_price,contraindication_notes,minimum_interval_days")
           .eq("active", true)
           .order("updated_at", { ascending: false })
           .limit(8),
         (supabase as any)
           .from("dental_treatment_plans")
-          .select("id,title,status,patient_id,notes,updated_at,items:dental_treatment_plan_items(id,tooth_code,surface,finding,recommended_procedure,status)")
+          .select("id,title,status,patient_id,notes,estimated_cost,follow_up_due_at,patient_accepted_at,acceptance_note,updated_at,items:dental_treatment_plan_items(id,tooth_code,surface,finding,recommended_procedure,status)")
           .order("updated_at", { ascending: false })
           .limit(8),
         (supabase as any)
           .from("physiotherapy_sessions")
-          .select("id,assessment_id,session_number,status,goals,exercise_plan,session_date")
+          .select("id,assessment_id,session_number,status,goals,exercise_plan,functional_score,adherence_notes,session_date")
           .order("session_date", { ascending: false })
           .limit(20),
         (supabase as any)
           .from("aesthetic_sessions")
-          .select("id,protocol_id,patient_id,session_number,regions,products,photo_consent,result_notes,session_date,protocol:aesthetic_protocols(name)")
+          .select("id,protocol_id,patient_id,session_number,regions,products,photo_consent,contraindications_reviewed,result_notes,session_date,protocol:aesthetic_protocols(name)")
           .order("session_date", { ascending: false })
           .limit(20),
       ]);
@@ -223,18 +235,30 @@ export default function Especialidades() {
     setNotes("");
     setTreatmentPlanTitle("");
     setRecommendedProcedure("");
+    setTreatmentEstimatedCost("");
+    setTreatmentFollowUpDueDate("");
     setComplaint("");
     setDiagnosis("");
     setPlan("");
+    setFunctionalScaleName("");
+    setBaselineScore("");
+    setTargetScore("");
     setProtocolName("");
+    setProtocolSessionsIncluded("");
+    setProtocolPackagePrice("");
+    setProtocolMinimumIntervalDays("");
+    setProtocolContraindications("");
     setAssessmentId("");
     setSessionGoals("");
     setExercisePlan("");
+    setSessionFunctionalScore("");
+    setAdherenceNotes("");
     setAestheticProtocolId("");
     setAestheticRegions("");
     setAestheticProducts("");
     setAestheticResult("");
     setPhotoConsent(false);
+    setContraindicationsReviewed(false);
   };
   const patientLabel = (id: string) => {
     const patient = workspace.data?.patients.find((item) => item.id === id);
@@ -289,6 +313,8 @@ export default function Especialidades() {
               odontogram_id: data.id,
               title: treatmentPlanTitle.trim(),
               notes: notes || null,
+              estimated_cost: treatmentEstimatedCost.trim() ? Number(treatmentEstimatedCost.replace(",", ".")) : null,
+              follow_up_due_at: treatmentFollowUpDueDate || null,
               ...actor,
             })
             .select("id")
@@ -319,6 +345,9 @@ export default function Especialidades() {
             chief_complaint: complaint || null,
             physiotherapy_diagnosis: diagnosis || null,
             therapeutic_plan: plan || null,
+            functional_scale_name: functionalScaleName.trim() || null,
+            baseline_score: baselineScore.trim() ? Number(baselineScore.replace(",", ".")) : null,
+            target_score: targetScore.trim() ? Number(targetScore.replace(",", ".")) : null,
             functional_assessment: { notes },
             ...actor,
           });
@@ -333,6 +362,10 @@ export default function Especialidades() {
             clinic_id: selectedClinic.id,
             name: protocolName.trim(),
             description: notes || null,
+            sessions_included: protocolSessionsIncluded ? Number(protocolSessionsIncluded) : null,
+            package_price: protocolPackagePrice ? Number(protocolPackagePrice.replace(",", ".")) : null,
+            minimum_interval_days: protocolMinimumIntervalDays ? Number(protocolMinimumIntervalDays) : null,
+            contraindication_notes: protocolContraindications.trim() || null,
             ...actor,
           });
         if (error) throw error;
@@ -359,10 +392,10 @@ export default function Especialidades() {
       if (!assessmentId) throw new Error("Selecione uma avaliação.");
       const sessions = (workspace.data?.physioSessions ?? []).filter((session: any) => session.assessment_id === assessmentId);
       const { data: auth } = await supabase.auth.getUser();
-      const { error } = await (supabase as any).from("physiotherapy_sessions").insert({ assessment_id: assessmentId, session_number: sessions.length + 1, status: "completed", goals: sessionGoals || null, exercise_plan: exercisePlan || null, created_by: auth.user?.id });
+      const { error } = await (supabase as any).from("physiotherapy_sessions").insert({ assessment_id: assessmentId, session_number: sessions.length + 1, status: "completed", goals: sessionGoals || null, exercise_plan: exercisePlan || null, functional_score: sessionFunctionalScore.trim() ? Number(sessionFunctionalScore.replace(",", ".")) : null, adherence_notes: adherenceNotes.trim() || null, created_by: auth.user?.id });
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); setAssessmentId(""); setSessionGoals(""); setExercisePlan(""); toast({ title: "Sessão registrada" }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); setAssessmentId(""); setSessionGoals(""); setExercisePlan(""); setSessionFunctionalScore(""); setAdherenceNotes(""); toast({ title: "Sessão registrada" }); },
     onError: (error: Error) => toast({ title: "Não foi possível registrar a sessão", description: error.message, variant: "destructive" }),
   });
   const updateTreatmentItem = useMutation({
@@ -372,6 +405,15 @@ export default function Especialidades() {
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); toast({ title: "Item do plano atualizado" }); },
     onError: (error: Error) => toast({ title: "Não foi possível atualizar", description: error.message, variant: "destructive" }),
+  });
+  const acceptTreatmentPlan = useMutation({
+    mutationFn: async (planId: string) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const { error } = await (supabase as any).from("dental_treatment_plans").update({ status: "approved", patient_accepted_at: new Date().toISOString(), patient_accepted_by: auth.user?.id, updated_by: auth.user?.id }).eq("id", planId);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); toast({ title: "Aceite do plano registrado" }); },
+    onError: (error: Error) => toast({ title: "Não foi possível registrar o aceite", description: error.message, variant: "destructive" }),
   });
   const updatePhysioAssessment = useMutation({
     mutationFn: async ({ id, status, reassessment, functionalAssessment }: { id: string; status: "active" | "discharged"; reassessment: string; functionalAssessment?: Record<string, unknown> }) => {
@@ -385,11 +427,18 @@ export default function Especialidades() {
     mutationFn: async () => {
       if (!selectedClinic || !patientId || !aestheticProtocolId) throw new Error("Selecione clínica, paciente e protocolo.");
       const sessions = (workspace.data?.aestheticSessions ?? []).filter((session: any) => session.protocol_id === aestheticProtocolId && session.patient_id === patientId);
+      const protocol = (workspace.data?.protocols as any[])?.find((item) => item.id === aestheticProtocolId);
+      if (protocol?.contraindication_notes && !contraindicationsReviewed) throw new Error("Revise e confirme os alertas do protocolo antes de registrar a sessão.");
+      const mostRecentSession = [...sessions].sort((left: any, right: any) => String(right.session_date).localeCompare(String(left.session_date)))[0];
+      if (protocol?.minimum_interval_days && mostRecentSession?.session_date) {
+        const elapsedDays = (Date.now() - new Date(mostRecentSession.session_date).getTime()) / 86_400_000;
+        if (elapsedDays < Number(protocol.minimum_interval_days)) throw new Error(`O intervalo de referência deste protocolo é de ${protocol.minimum_interval_days} dias. Revise a indicação clínica antes de registrar uma nova sessão.`);
+      }
       const { data: auth } = await supabase.auth.getUser();
-      const { error } = await (supabase as any).from("aesthetic_sessions").insert({ organization_id: selectedClinic.organization_id, clinic_id: selectedClinic.id, patient_id: patientId, protocol_id: aestheticProtocolId, session_number: sessions.length + 1, regions: aestheticRegions.split(",").map((value) => value.trim()).filter(Boolean), products: aestheticProducts.split(",").map((value) => value.trim()).filter(Boolean), photo_consent: photoConsent, result_notes: aestheticResult || null, created_by: auth.user?.id });
+      const { error } = await (supabase as any).from("aesthetic_sessions").insert({ organization_id: selectedClinic.organization_id, clinic_id: selectedClinic.id, patient_id: patientId, protocol_id: aestheticProtocolId, session_number: sessions.length + 1, regions: aestheticRegions.split(",").map((value) => value.trim()).filter(Boolean), products: aestheticProducts.split(",").map((value) => value.trim()).filter(Boolean), photo_consent: photoConsent, contraindications_reviewed: contraindicationsReviewed, result_notes: aestheticResult || null, created_by: auth.user?.id });
       if (error) throw error;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); setAestheticProtocolId(""); setAestheticRegions(""); setAestheticProducts(""); setAestheticResult(""); setPhotoConsent(false); toast({ title: "Sessão estética registrada" }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["specialty-workspace"] }); setAestheticProtocolId(""); setAestheticRegions(""); setAestheticProducts(""); setAestheticResult(""); setPhotoConsent(false); setContraindicationsReviewed(false); toast({ title: "Sessão estética registrada" }); },
     onError: (error: Error) => toast({ title: "Não foi possível registrar a sessão", description: error.message, variant: "destructive" }),
   });
   const current = SETTINGS[active];
@@ -520,6 +569,14 @@ export default function Especialidades() {
                             <Label>Procedimento recomendado</Label>
                             <Input value={recommendedProcedure} onChange={(event) => setRecommendedProcedure(event.target.value)} placeholder="Ex.: Restauração em resina" />
                           </div>
+                          <div className="space-y-1">
+                            <Label>Estimativa de custo <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+                            <Input type="number" min="0" step="0.01" inputMode="decimal" value={treatmentEstimatedCost} onChange={(event) => setTreatmentEstimatedCost(event.target.value)} placeholder="0,00" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Retorno preventivo sugerido <span className="font-normal text-muted-foreground">(opcional)</span></Label>
+                            <Input type="date" value={treatmentFollowUpDueDate} onChange={(event) => setTreatmentFollowUpDueDate(event.target.value)} />
+                          </div>
                           <p className="text-xs text-muted-foreground">Ao preencher os dois campos, o achado ficará associado ao plano e ao procedimento recomendado.</p>
                         </div>
                       </>
@@ -571,6 +628,31 @@ export default function Especialidades() {
                             value={notes}
                             onChange={(event) => setNotes(event.target.value)}
                           />
+                        </div>
+                        <div className="grid gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 sm:grid-cols-3">
+                          <div className="space-y-1 sm:col-span-3"><Label>Escala funcional escolhida pelo profissional</Label><Input value={functionalScaleName} onChange={(event) => setFunctionalScaleName(event.target.value)} placeholder="Ex.: escala definida pelo protocolo clínico" /></div>
+                          <div className="space-y-1"><Label>Pontuação inicial</Label><Input type="number" step="0.01" inputMode="decimal" value={baselineScore} onChange={(event) => setBaselineScore(event.target.value)} /></div>
+                          <div className="space-y-1"><Label>Meta funcional</Label><Input type="number" step="0.01" inputMode="decimal" value={targetScore} onChange={(event) => setTargetScore(event.target.value)} /></div>
+                          <p className="self-end text-xs text-muted-foreground">A interpretação da escala é responsabilidade do profissional.</p>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <div className="space-y-1">
+                            <Label>Sessões no pacote</Label>
+                            <Input type="number" min="1" inputMode="numeric" value={protocolSessionsIncluded} onChange={(event) => setProtocolSessionsIncluded(event.target.value)} placeholder="Ex.: 6" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Valor estimado</Label>
+                            <Input type="number" min="0" step="0.01" inputMode="decimal" value={protocolPackagePrice} onChange={(event) => setProtocolPackagePrice(event.target.value)} placeholder="0,00" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Intervalo mínimo (dias)</Label>
+                            <Input type="number" min="0" inputMode="numeric" value={protocolMinimumIntervalDays} onChange={(event) => setProtocolMinimumIntervalDays(event.target.value)} placeholder="Ex.: 30" />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Alertas e contraindicações para revisão profissional</Label>
+                          <Textarea value={protocolContraindications} onChange={(event) => setProtocolContraindications(event.target.value)} placeholder="Ex.: revisar anamnese, alergias, gestação, intervalo entre procedimentos..." />
+                          <p className="text-xs text-muted-foreground">Este lembrete não substitui avaliação ou decisão do profissional responsável.</p>
                         </div>
                       </>
                     )}
@@ -637,9 +719,16 @@ export default function Especialidades() {
                       <div className="space-y-1"><Label>Avaliação</Label><Select value={assessmentId} onValueChange={setAssessmentId}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{(workspace.data?.physio as any[])?.map((assessment) => <SelectItem key={assessment.id} value={assessment.id}>{patientLabel(assessment.patient_id)} · {assessment.physiotherapy_diagnosis || "Avaliação"}</SelectItem>)}</SelectContent></Select></div>
                       <div className="space-y-1"><Label>Objetivos da sessão</Label><Textarea value={sessionGoals} onChange={(event) => setSessionGoals(event.target.value)} /></div>
                       <div className="space-y-1"><Label>Exercícios e condutas</Label><Textarea value={exercisePlan} onChange={(event) => setExercisePlan(event.target.value)} /></div>
+                      <div className="grid gap-3 sm:grid-cols-2"><div className="space-y-1"><Label>Pontuação funcional da sessão</Label><Input type="number" step="0.01" inputMode="decimal" value={sessionFunctionalScore} onChange={(event) => setSessionFunctionalScore(event.target.value)} placeholder="Na escala da avaliação" /></div><div className="space-y-1"><Label>Adesão ao plano domiciliar</Label><Input value={adherenceNotes} onChange={(event) => setAdherenceNotes(event.target.value)} placeholder="Ex.: relatou realizar 3x/semana" /></div></div>
                       <Button onClick={() => registerPhysioSession.mutate()} disabled={!assessmentId || registerPhysioSession.isPending}>Registrar sessão concluída</Button>
                     </div>
-                    {(workspace.data?.physioSessions as any[])?.map((session) => <div key={session.id} className="rounded-lg border-l-4 border-primary bg-muted/40 p-3"><p className="font-medium">Sessão {session.session_number} · {session.status}</p><p className="mt-1 text-sm text-muted-foreground">{session.goals || session.exercise_plan || "Sem observações."}</p></div>)}
+                    {(workspace.data?.physio as any[])?.map((assessment) => {
+                      const scores = (workspace.data?.physioSessions as any[])
+                        .filter((session) => session.assessment_id === assessment.id && session.functional_score != null)
+                        .sort((left, right) => left.session_number - right.session_number);
+                      return <div key={assessment.id} className="rounded-lg border p-3 text-sm"><p className="font-medium">{patientLabel(assessment.patient_id)}{assessment.functional_scale_name ? ` · ${assessment.functional_scale_name}` : ""}</p><p className="mt-1 text-muted-foreground">Inicial: {assessment.baseline_score ?? "não informada"} · Meta: {assessment.target_score ?? "não definida"}</p>{scores.length ? <div className="mt-2 flex flex-wrap gap-2">{scores.map((session) => <Badge key={session.id} variant="outline">S{session.session_number}: {session.functional_score}</Badge>)}</div> : <p className="mt-2 text-muted-foreground">Ainda não há pontuações de evolução.</p>}</div>;
+                    })}
+                    {(workspace.data?.physioSessions as any[])?.map((session) => <div key={session.id} className="rounded-lg border-l-4 border-primary bg-muted/40 p-3"><p className="font-medium">Sessão {session.session_number} · {session.status}{session.functional_score != null ? ` · pontuação ${session.functional_score}` : ""}</p><p className="mt-1 text-sm text-muted-foreground">{session.goals || session.exercise_plan || "Sem observações."}</p>{session.adherence_notes && <p className="mt-1 text-xs text-muted-foreground">Adesão: {session.adherence_notes}</p>}</div>)}
                     {!workspace.data?.physioSessions?.length && <p className="text-sm text-muted-foreground">Registre a primeira sessão após criar uma avaliação.</p>}
                   </CardContent>
                 </Card>
@@ -657,13 +746,19 @@ export default function Especialidades() {
                     <div className="grid gap-3 rounded-lg border p-3">
                       <div className="space-y-1"><Label>Paciente</Label><Select value={patientId} onValueChange={setPatientId}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{workspace.data?.patients.map((patient) => <SelectItem key={patient.id} value={patient.id}>{patient.record_number} · {patient.person?.full_name ?? "Paciente"}</SelectItem>)}</SelectContent></Select></div>
                       <div className="space-y-1"><Label>Protocolo</Label><Select value={aestheticProtocolId} onValueChange={setAestheticProtocolId}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent>{(workspace.data?.protocols as any[])?.map((protocol) => <SelectItem key={protocol.id} value={protocol.id}>{protocol.name}</SelectItem>)}</SelectContent></Select></div>
+                      {(() => {
+                        const protocol = (workspace.data?.protocols as any[])?.find((item) => item.id === aestheticProtocolId);
+                        const completed = (workspace.data?.aestheticSessions as any[])?.filter((session) => session.protocol_id === aestheticProtocolId && session.patient_id === patientId).length ?? 0;
+                        if (!protocol) return null;
+                        return <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"><p className="font-medium">{protocol.sessions_included ? `${Math.max(Number(protocol.sessions_included) - completed, 0)} sessão(ões) restante(s) do pacote` : "Protocolo sem pacote definido"}</p>{protocol.package_price != null && <p className="text-muted-foreground">Estimativa: {Number(protocol.package_price).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>}{protocol.minimum_interval_days != null && <p className="text-muted-foreground">Intervalo de referência: {protocol.minimum_interval_days} dia(s).</p>}{protocol.contraindication_notes && <><p className="font-medium text-amber-800">Revisar antes da sessão</p><p className="whitespace-pre-wrap text-muted-foreground">{protocol.contraindication_notes}</p><label className="flex items-center gap-2"><input type="checkbox" checked={contraindicationsReviewed} onChange={(event) => setContraindicationsReviewed(event.target.checked)} /> Revisei os alertas e a indicação clínica.</label></>}</div>;
+                      })()}
                       <div className="space-y-1"><Label>Áreas tratadas</Label><Input value={aestheticRegions} onChange={(event) => setAestheticRegions(event.target.value)} placeholder="Ex.: Face, pescoço" /></div>
                       <div className="space-y-1"><Label>Produtos utilizados</Label><Input value={aestheticProducts} onChange={(event) => setAestheticProducts(event.target.value)} placeholder="Ex.: Gel, sérum" /></div>
                       <div className="space-y-1"><Label>Evolução / resultado</Label><Textarea value={aestheticResult} onChange={(event) => setAestheticResult(event.target.value)} /></div>
                       <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={photoConsent} onChange={(event) => setPhotoConsent(event.target.checked)} /> Consentimento para registro fotográfico</label>
                       <Button onClick={() => registerAestheticSession.mutate()} disabled={!clinicId || !patientId || !aestheticProtocolId || registerAestheticSession.isPending}>Registrar sessão</Button>
                     </div>
-                    {(workspace.data?.aestheticSessions as any[])?.map((session) => <div key={session.id} className="rounded-lg border p-3"><p className="font-medium">{session.protocol?.name ?? "Protocolo"} · Sessão {session.session_number}</p><p className="mt-1 text-sm text-muted-foreground">{patientLabel(session.patient_id)} · {(session.regions ?? []).join(", ") || "Área não informada"}</p><p className="mt-1 text-sm">{session.result_notes || "Sem observações."}</p></div>)}
+                    {(workspace.data?.aestheticSessions as any[])?.map((session) => <div key={session.id} className="rounded-lg border p-3"><p className="font-medium">{session.protocol?.name ?? "Protocolo"} · Sessão {session.session_number}</p><p className="mt-1 text-sm text-muted-foreground">{patientLabel(session.patient_id)} · {(session.regions ?? []).join(", ") || "Área não informada"}</p><p className="mt-1 text-sm">{session.result_notes || "Sem observações."}</p>{session.contraindications_reviewed && <Badge variant="outline" className="mt-2">Alertas revisados</Badge>}</div>)}
                   </CardContent>
                 </Card>
               )}
@@ -686,6 +781,7 @@ export default function Especialidades() {
                           <Badge variant="outline">{treatmentPlan.status}</Badge>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">{patientLabel(treatmentPlan.patient_id)}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>Estimativa: {treatmentPlan.estimated_cost == null ? "Não informada" : Number(treatmentPlan.estimated_cost).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>{treatmentPlan.follow_up_due_at && <span className="rounded bg-primary/10 px-2 py-1 text-primary">Retorno: {new Date(`${treatmentPlan.follow_up_due_at}T12:00:00`).toLocaleDateString("pt-BR")}</span>}{treatmentPlan.patient_accepted_at ? <span className="text-emerald-700">Aceite registrado em {new Date(treatmentPlan.patient_accepted_at).toLocaleDateString("pt-BR")}</span> : <Button size="sm" variant="outline" disabled={acceptTreatmentPlan.isPending || treatmentPlan.status === "cancelled"} onClick={() => acceptTreatmentPlan.mutate(treatmentPlan.id)}>Registrar aceite</Button>}</div>
                         {(treatmentPlan.items ?? []).map((item: any) => (
                           <div key={item.id} className="mt-2 flex flex-wrap items-center gap-2 rounded bg-muted px-2 py-2 text-sm"><span className="flex-1">Dente {item.tooth_code}{item.surface ? ` · ${item.surface}` : ""} → {item.recommended_procedure}</span><Badge variant="outline">{item.status}</Badge>{item.status === "planned" && <Button size="sm" variant="outline" onClick={() => updateTreatmentItem.mutate({ id: item.id, status: "approved" })}>Aprovar</Button>}{item.status === "approved" && <Button size="sm" onClick={() => updateTreatmentItem.mutate({ id: item.id, status: "performed" })}>Registrar execução</Button>}</div>
                         ))}

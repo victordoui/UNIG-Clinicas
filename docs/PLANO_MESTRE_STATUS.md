@@ -20,11 +20,22 @@ Este documento mantém o plano rastreável e evita que funcionalidades do UNIG A
 - Token UUID por sessão e rota pública `/fila/qr/:token`; o QR nunca escolhe a clínica por query string.
 - Máquina de estados de senha validada no banco (`waiting → called → checked_in → in_service → waiting_supervision/completed`) com estados alternativos e limite de concorrência.
 - `queue_events` append-only, disponível para Realtime e histórico operacional.
-- Funções de transição de fila com implementação privilegiada em `private` e wrapper público sem `SECURITY DEFINER`.
+- Funções de transição de fila com implementação privilegiada em `private`; os wrappers públicos de QR, conversão e indicadores usam `SECURITY DEFINER` com `search_path` fixo e permissões explícitas, para não exigir execução direta das funções privadas.
 - `patient_contacts` e `patient_addresses` com RLS no escopo do paciente.
 - `encounter_participants`, `exam_results` e `security_events` como extensões do núcleo.
 - Estruturas isoladas de especialidade para odontograma, avaliação/sessões de fisioterapia, protocolos/sessões de estética e consulta/peso/vacinação veterinária, com permissões próprias.
 - Papéis `patient`/`tutor`, vínculo opcional de conta com `profiles.person_id`, jornada QR autenticada e shells dos portais `/portal/paciente` e `/portal/tutor`.
+- Migrations remotas dos documentos de animais e avaliações pós-atendimento, com políticas de visibilidade para gestão; a base remota está alinhada a esses portais.
+- Entrada de visitante na fila QR: consentimento administrativo separado, emissão transacional de senha, origem `qr_guest`, deduplicação conservadora e limitação de repetição por contato/sessão.
+- Camada analítica agregada por clínica e período, com tendências de demanda, funil de fila e tempo de espera por horário no painel de indicadores.
+- Jornada mobile da fila, pacientes, agenda, recepção e autenticação; a autenticação agora inclui cadastro, recuperação de senha e retorno à sessão de fila pendente após entrar.
+- Lista de espera por clínica/serviço com oferta de encaixe, canal preferido e transições auditadas de contato, aceite e recusa; preferências administrativas de comunicação e acessibilidade foram adicionadas ao modelo do paciente.
+- Conversão de visitante em conta: a senha QR pode registrar e-mail opcional; após confirmação do e-mail pelo Supabase, a conta é vinculada automaticamente ao paciente mínimo correspondente, com rejeição de correspondência ambígua, conta já vinculada e e-mail não confirmado.
+- Carteira vacinal veterinária: o registro aceita a data do próximo reforço e destaca a prevenção vencendo nos próximos 30 dias, sem disparar contato externo automaticamente.
+- Estética: protocolos podem registrar pacote, estimativa administrativa, intervalo de referência e alertas de contraindicação; cada sessão registra a confirmação de revisão desses alertas pelo profissional.
+- Fisioterapia: avaliações registram escala funcional, linha de base e meta definidas pelo profissional; sessões acompanham pontuação de evolução e adesão ao plano domiciliar.
+- Odontologia: planos registram aceite, estimativa e data sugerida de retorno preventivo, visível na linha do tratamento sem comunicação externa automática.
+- Gestão: o painel de indicadores destaca alertas agregados de espera, faltas, volume de fila e satisfação, com limites iniciais declarados para calibração por clínica.
 
 ## Entregue nas fases operacionais
 
@@ -43,9 +54,7 @@ Concluído para o escopo atual. Os módulos especializados permanecem separados 
 
 ### Ciclo 9 — portais
 
-O portal do paciente está concluído no escopo atual. No portal do tutor, a interface de documentos de animais e as migrations correspondentes estão prontas, mas sua ativação depende de aplicar no projeto Supabase, nesta ordem: `20260911220000_tutor_animal_documents.sql` e `20260911220500_validate_animal_document_clinic.sql`. Até isso ocorrer, a tela informa a indisponibilidade sem expor ou misturar dados.
-
-A avaliação pós-atendimento está preparada localmente para paciente e tutor: formulários nos portais, médias agregadas no painel de indicadores e migrations com acesso exclusivo do titular. A aplicação no Supabase e a validação com contas reais ainda são necessárias.
+O portal do paciente está concluído no escopo atual. Os documentos de animais e as avaliações pós-atendimento de paciente/tutor estão aplicados no Supabase com controles de visibilidade. Falta validar os fluxos com contas reais de paciente e tutor sem usar dados clínicos fora de escopo.
 
 ### Ciclo 10 — gestão e hardening
 
@@ -53,14 +62,16 @@ Dashboard executivo e por clínica, versões documentais, assinatura autenticada
 
 O Security Advisor do projeto está sem achados de RLS ou `SECURITY DEFINER`; resta habilitar no painel do Supabase a proteção contra senhas comprometidas (Auth → Password Security).
 
+O [runbook de homologação e hardening](RUNBOOK_HOMOLOGACAO_E_HARDENING.md) consolida os gates institucionais de Auth, MFA, backup/restauração e LGPD.
+
 ### Qualidade
 
-Os testes automatizados unitários, integração, E2E e matriz de RLS permanecem explicitamente fora do escopo desta execução, conforme orientação do usuário. O CI executa typecheck, lint e build.
+O build de produção, typecheck, testes unitários da entrada de visitante e das regras de recepção, E2E local e a verificação de diff passam. A cobertura unitária protege a normalização de telefone, nome/consentimento/e-mail do visitante, seleção da clínica ativa para contas multi-clínica e os estados permitidos para rechamar uma senha. O E2E sem login verifica autenticação sem rolagem horizontal em 360, 390, 768 e desktop, foco em zoom de 200%, navegação de teclado com alvos de 44 px, proteção do Painel TV e dos portais sem sessão e a entrada QR de visitante com validação local e RPC simulada. A recepção remota agora usa RPCs para abrir/encerrar fila e chamar a próxima senha, sem alterar apenas a prévia local. O lint fecha sem erros, com avisos legados de tipagem a reduzir gradualmente. A [matriz de validação de refinamento](MATRIZ_VALIDACAO_REFINAMENTO.md) documenta os cenários por papel, viewport e TV física. Ainda faltam a execução com papéis de homologação, a integração real das RPCs, a aplicação/validação da migração de wrappers e o dispositivo físico para concluir o ciclo de produção.
 
 ## Ordem de continuidade
 
-1. Aplicar `20260911232000_seed_clinical_demo_accesses.sql` para habilitar os acessos rápidos de teste e validar o isolamento entre clínicas.
-2. Aplicar as duas migrations de documentos veterinários no Supabase e validar o isolamento com uma conta de tutor.
-3. Aplicar `20260911230000_post_visit_feedback.sql` e `20260911231000_tutor_veterinary_feedback.sql`; validar avaliações de paciente e tutor, além das médias agregadas por clínica.
-4. Quando o escopo adiado for retomado, executar testes unitários, integração, E2E e matriz de RLS.
-5. Concluir MFA, backups, retenção e revisão institucional de produção.
+1. Validar os acessos de teste por clínica e o isolamento entre recepção, profissional, gestor, paciente e tutor.
+2. Validar chamada/repetição e som do Painel TV em TV ou monitor físico.
+3. Validar em homologação a conversão por e-mail confirmado do visitante para conta e decidir se SMS/WhatsApp OTP será uma segunda alternativa de prova de posse.
+4. Executar testes unitários, integração, E2E e matriz de RLS.
+5. Concluir MFA, backups/restauração, retenção e revisão institucional de produção.

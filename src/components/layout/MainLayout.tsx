@@ -13,7 +13,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
             <Header />
           </header>
           <main className="flex-1 overflow-y-auto">
-            <div className="p-4 md:p-5 max-w-[1500px] mx-auto w-full animate-in fade-in-0 duration-300">
+            <div className="p-4 md:p-5 max-w-[1500px] mx-auto w-full">
               {children}
             </div>
           </main>

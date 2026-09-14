@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { LogIn, Sparkles, Zap, Loader2 } from 'lucide-react';
+import { ArrowLeft, KeyRound, LogIn, Mail, Sparkles, UserPlus, Zap, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -20,10 +20,19 @@ export default function Auth() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => window.sessionStorage.getItem('unig-pending-guest-email') ?? '');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'recovery' | 'new-password'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('type') === 'recovery' || window.location.hash.includes('type=recovery') ? 'new-password' : 'signin';
+  });
   const [submitting, setSubmitting] = useState(false);
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
+  const postAuthDestination = useRef<string | null>(null);
+  const pendingGuestClaim = useRef<Promise<void> | null>(null);
   const demoGroups = useMemo(() => {
     const groups = new Map<string, typeof DEMO_USERS>();
     DEMO_USERS.forEach((demoUser) => {
@@ -34,9 +43,34 @@ export default function Auth() {
     return Array.from(groups.entries());
   }, []);
 
+  const navigateAfterAuth = async (preferredPath?: string) => {
+    if (!postAuthDestination.current) {
+      const queueToken = window.sessionStorage.getItem('unig-pending-queue-token');
+      if (queueToken) window.sessionStorage.removeItem('unig-pending-queue-token');
+      postAuthDestination.current = preferredPath ?? (queueToken ? `/fila/qr/${queueToken}` : '/');
+    }
+    if (!pendingGuestClaim.current) {
+      pendingGuestClaim.current = (async () => {
+        const pendingEmail = window.sessionStorage.getItem('unig-pending-guest-email');
+        if (!pendingEmail) return;
+        const { data, error } = await (supabase.rpc as any)('claim_verified_guest_patient_account');
+        if (error) {
+          if (error.message.toLocaleLowerCase().includes('confirme seu e-mail')) {
+            toast({ title: 'Confirme seu e-mail para concluir o vínculo', description: 'Depois de confirmar, entre novamente para vincular seu cadastro de visitante.' });
+          }
+          return;
+        }
+        if (Array.isArray(data) && data.length) toast({ title: 'Cadastro vinculado', description: 'Sua conta foi vinculada com segurança ao atendimento iniciado na fila.' });
+        window.sessionStorage.removeItem('unig-pending-guest-email');
+      })();
+    }
+    await pendingGuestClaim.current;
+    navigate(postAuthDestination.current, { replace: true });
+  };
+
   useEffect(() => {
-    if (!loading && user) navigate('/', { replace: true });
-  }, [user, loading, navigate]);
+    if (!loading && user && authMode !== 'new-password') void navigateAfterAuth();
+  }, [user, loading, navigate, authMode]);
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +80,66 @@ export default function Auth() {
     if (error) {
       toast({ title: 'Erro ao entrar', description: error.message, variant: 'destructive' });
     } else {
-      navigate('/', { replace: true });
+      await navigateAfterAuth();
+    }
+  };
+
+  const signUp = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (password.length < 8) {
+      toast({ title: 'Senha muito curta', description: 'Use ao menos 8 caracteres.', variant: 'destructive' });
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast({ title: 'As senhas não conferem', description: 'Revise a confirmação da senha.', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: fullName.trim(), phone: phone.trim() },
+        emailRedirectTo: `${window.location.origin}/auth`,
+      },
+    });
+    setSubmitting(false);
+    if (error) {
+      toast({ title: 'Não foi possível criar a conta', description: error.message, variant: 'destructive' });
+      return;
+    }
+    if (data.session) {
+      toast({ title: 'Conta criada', description: 'Seu acesso foi criado. Complete seu cadastro na recepção antes de acessar dados clínicos.' });
+      await navigateAfterAuth();
+    } else {
+      toast({ title: 'Confirme seu e-mail', description: 'Enviamos um link de confirmação para você ativar a conta.' });
+      setAuthMode('signin');
+    }
+  };
+
+  const sendRecovery = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setSubmitting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/auth?type=recovery` });
+    setSubmitting(false);
+    if (error) toast({ title: 'Não foi possível enviar o link', description: error.message, variant: 'destructive' });
+    else toast({ title: 'Confira seu e-mail', description: 'Se houver uma conta com este e-mail, enviaremos as instruções de recuperação.' });
+  };
+
+  const updatePassword = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (password.length < 8 || password !== confirmPassword) {
+      toast({ title: 'Revise a nova senha', description: 'Use ao menos 8 caracteres e confirme a senha corretamente.', variant: 'destructive' });
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setSubmitting(false);
+    if (error) toast({ title: 'Não foi possível atualizar a senha', description: error.message, variant: 'destructive' });
+    else {
+      toast({ title: 'Senha atualizada', description: 'Agora você já pode entrar com a nova senha.' });
+      setAuthMode('signin');
+      navigate('/auth', { replace: true });
     }
   };
 
@@ -65,7 +158,7 @@ export default function Auth() {
         toast({ title: `Erro no acesso rápido (${label})`, description: error.message, variant: 'destructive' });
       }
     } else {
-      navigate(role === 'paciente' ? '/portal/paciente' : role === 'tutor' ? '/portal/tutor' : '/', { replace: true });
+      await navigateAfterAuth(role === 'paciente' ? '/portal/paciente' : role === 'tutor' ? '/portal/tutor' : '/');
     }
     setDemoLoading(null);
   };
@@ -112,30 +205,45 @@ export default function Auth() {
 
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle>Entrar</CardTitle>
-              <CardDescription>Acesse com seu e-mail institucional e senha.</CardDescription>
+              <CardTitle>{authMode === 'signup' ? 'Criar conta' : authMode === 'recovery' ? 'Recuperar senha' : authMode === 'new-password' ? 'Definir nova senha' : 'Entrar'}</CardTitle>
+              <CardDescription>{authMode === 'signup' ? 'Use seu e-mail para acompanhar próximos atendimentos e avisos.' : authMode === 'recovery' ? 'Enviaremos um link seguro para seu e-mail.' : authMode === 'new-password' ? 'Escolha uma senha nova e segura.' : 'Acesse com seu e-mail e senha.'}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="senha">
-                <TabsList className="grid grid-cols-1 mb-4">
-                  <TabsTrigger value="senha"><LogIn className="h-4 w-4 mr-1.5" /> E-mail e senha</TabsTrigger>
+              <Tabs value={authMode === 'signup' ? 'signup' : 'signin'} onValueChange={(value) => setAuthMode(value as 'signin' | 'signup')}>
+                <TabsList className="grid grid-cols-2 mb-4" hidden={authMode === 'recovery' || authMode === 'new-password'}>
+                  <TabsTrigger value="signin" className="min-h-11"><LogIn className="h-4 w-4 mr-1.5" /> Entrar</TabsTrigger>
+                  <TabsTrigger value="signup" className="min-h-11"><UserPlus className="h-4 w-4 mr-1.5" /> Criar conta</TabsTrigger>
                 </TabsList>
-                <TabsContent value="senha">
+                <TabsContent value="signin" forceMount hidden={authMode !== 'signin'}>
                   <form onSubmit={signIn} className="space-y-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="email">E-mail</Label>
-                      <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@unig.br" />
+                      <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@exemplo.com" />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor="password">Senha</Label>
-                      <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+                      <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
                     </div>
-                    <Button type="submit" className="w-full" disabled={submitting}>
+                    <Button type="submit" className="min-h-11 w-full" disabled={submitting}>
                       {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <LogIn className="h-4 w-4 mr-2" />}
                       Entrar
                     </Button>
+                    <Button type="button" variant="link" className="h-auto w-full px-0 text-sm" onClick={() => setAuthMode('recovery')}>Esqueci minha senha</Button>
                   </form>
                 </TabsContent>
+                <TabsContent value="signup" forceMount hidden={authMode !== 'signup'}>
+                  <form onSubmit={signUp} className="space-y-3">
+                    <div className="space-y-1.5"><Label htmlFor="signup-name">Nome completo</Label><Input id="signup-name" autoComplete="name" required value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Como devemos chamar você" /></div>
+                    <div className="space-y-1.5"><Label htmlFor="signup-phone">Celular com DDD</Label><Input id="signup-phone" type="tel" inputMode="tel" autoComplete="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(21) 99999-9999" /></div>
+                    <div className="space-y-1.5"><Label htmlFor="signup-email">E-mail</Label><Input id="signup-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@exemplo.com" /></div>
+                    <div className="space-y-1.5"><Label htmlFor="signup-password">Senha</Label><Input id="signup-password" type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Pelo menos 8 caracteres" /></div>
+                    <div className="space-y-1.5"><Label htmlFor="signup-password-confirm">Confirmar senha</Label><Input id="signup-password-confirm" type="password" autoComplete="new-password" minLength={8} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repita sua senha" /></div>
+                    <p className="text-xs leading-relaxed text-muted-foreground">O cadastro cria seu acesso. Para proteger seu prontuário, a vinculação aos dados clínicos é validada pela clínica.</p>
+                    <Button type="submit" className="h-11 w-full" disabled={submitting}>{submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}Criar conta</Button>
+                  </form>
+                </TabsContent>
+                {authMode === 'recovery' && <form onSubmit={sendRecovery} className="space-y-3"><div className="space-y-1.5"><Label htmlFor="recovery-email">E-mail</Label><Input id="recovery-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="voce@exemplo.com" /></div><Button type="submit" className="h-11 w-full" disabled={submitting}>{submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}Enviar link de recuperação</Button><Button type="button" variant="ghost" className="w-full" onClick={() => setAuthMode('signin')}><ArrowLeft className="h-4 w-4 mr-2" />Voltar para entrar</Button></form>}
+                {authMode === 'new-password' && <form onSubmit={updatePassword} className="space-y-3"><div className="space-y-1.5"><Label htmlFor="new-password">Nova senha</Label><Input id="new-password" type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Pelo menos 8 caracteres" /></div><div className="space-y-1.5"><Label htmlFor="new-password-confirm">Confirmar nova senha</Label><Input id="new-password-confirm" type="password" autoComplete="new-password" minLength={8} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Repita a nova senha" /></div><Button type="submit" className="h-11 w-full" disabled={submitting}>{submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <KeyRound className="h-4 w-4 mr-2" />}Atualizar senha</Button></form>}
               </Tabs>
             </CardContent>
           </Card>

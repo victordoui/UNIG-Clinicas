@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -29,6 +28,7 @@ import { UNIG_ROLE_LABEL, type UnigRole } from "@/lib/unigRoles";
 import unigSymbol from "@/assets/unig-clinicas-symbol.png";
 import unigLogo from "@/assets/unig-clinicas-logo.png";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Activity,
   BarChart3,
@@ -72,6 +72,7 @@ interface NavItem {
   badgeKey?: "notifications";
   clinicCode?: string;
   clinicCodes?: string[];
+  exact?: boolean;
 }
 
 interface NavGroup {
@@ -97,6 +98,7 @@ const CLINIC_LABELS: Record<string, string> = {
 };
 const CLINICAL_NAVIGATION_GROUPS = new Set([
   "clinical-operations",
+  "public-displays",
   "dental-clinical",
   "physio-clinical",
   "veterinary-clinical",
@@ -137,7 +139,36 @@ const NAV_GROUPS: NavGroup[] = [
       },
       { title: "Pacientes", url: "/pacientes", icon: Users },
       { title: "Atendimentos", url: "/atendimentos", icon: ClipboardList },
-      { title: "Painel da TV", url: "/painel-tv", icon: Tv },
+    ],
+  },
+  {
+    id: "public-displays",
+    section: "COMUNICAÇÃO",
+    label: "Painéis e mídia",
+    icon: Tv,
+    roles: [
+      "super_admin",
+      "administrador",
+      "gestor_unidade",
+      "secretaria",
+      "professor",
+      "coordenacao",
+      "atendimento",
+      "aluno",
+      "financeiro",
+    ],
+    items: [
+      {
+        title: "Painel de chamadas",
+        url: "/painel-tv",
+        icon: Tv,
+        exact: true,
+      },
+      {
+        title: "Campanhas institucionais",
+        url: "/painel-tv/campanhas",
+        icon: Megaphone,
+      },
     ],
   },
   {
@@ -660,10 +691,13 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-function matchesPath(pathname: string, url: string) {
-  if (url === "/") return pathname === "/";
-  if (url.split("/").filter(Boolean).length === 1) return pathname === url;
-  return pathname === url || pathname.startsWith(`${url}/`);
+function matchesPath(pathname: string, url: string, exact = false) {
+  const targetPath = url.split(/[?#]/)[0];
+  if (targetPath === "/") return pathname === "/";
+  if (exact) return pathname === targetPath;
+  if (targetPath.split("/").filter(Boolean).length === 1)
+    return pathname === targetPath;
+  return pathname === targetPath || pathname.startsWith(`${targetPath}/`);
 }
 
 export function AppSidebar() {
@@ -681,6 +715,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const contentRef = useRef<HTMLDivElement>(null);
   const scrollStorageKey = `uniga-sidebar-scroll:${unigRole}`;
+  const groupsStorageKey = `unig-clinicas:sidebar-groups:${unigRole}`;
 
   const availableClinicCodes =
     unigRole === "super_admin" ? Object.keys(CLINIC_LABELS) : clinicCodes;
@@ -711,15 +746,26 @@ export function AppSidebar() {
     [unigRole, menuClinicCodes],
   );
   const activeGroup = visibleGroups.find((group) =>
-    group.items.some((item) => matchesPath(pathname, item.url)),
+    group.items.some((item) => matchesPath(pathname, item.url, item.exact)),
   )?.id;
-  const [openGroup, setOpenGroup] = useState<string | null>(
-    () => activeGroup ?? null,
-  );
+  const [openGroups, setOpenGroups] = useState<string[]>(() => {
+    const savedGroups = localStorage.getItem(groupsStorageKey);
+    if (savedGroups) {
+      try {
+        const parsedGroups: unknown = JSON.parse(savedGroups);
+        if (Array.isArray(parsedGroups)) {
+          return parsedGroups.filter((id): id is string => typeof id === "string");
+        }
+      } catch {
+        // A sidebar continua utilizável mesmo que uma preferência antiga seja inválida.
+      }
+    }
+    return activeGroup ? [activeGroup] : [];
+  });
 
   useEffect(() => {
-    if (activeGroup) setOpenGroup(activeGroup);
-  }, [activeGroup]);
+    localStorage.setItem(groupsStorageKey, JSON.stringify(openGroups));
+  }, [groupsStorageKey, openGroups]);
 
   useLayoutEffect(() => {
     if (isMobile && !openMobile) return;
@@ -731,9 +777,6 @@ export function AppSidebar() {
       Number(sessionStorage.getItem(scrollStorageKey) ?? 0);
     const frame = window.requestAnimationFrame(() => {
       content.scrollTop = Number.isFinite(savedPosition) ? savedPosition : 0;
-      content
-        .querySelector<HTMLElement>('a[aria-current="page"]')
-        ?.scrollIntoView({ block: "nearest" });
     });
 
     return () => {
@@ -742,7 +785,7 @@ export function AppSidebar() {
       sidebarScrollMemory.set(scrollStorageKey, position);
       sessionStorage.setItem(scrollStorageKey, String(position));
     };
-  }, [isMobile, openMobile, pathname, scrollStorageKey]);
+  }, [isMobile, openMobile, scrollStorageKey]);
 
   const rememberScrollPosition = () => {
     if (contentRef.current) {
@@ -751,39 +794,6 @@ export function AppSidebar() {
       sessionStorage.setItem(scrollStorageKey, String(position));
     }
   };
-
-  const activeLinkRef = useCallback((node: HTMLAnchorElement | null) => {
-    if (!node) return;
-    window.setTimeout(() => {
-      const content = contentRef.current;
-      if (!content || !node.isConnected) return;
-      const contentRect = content.getBoundingClientRect();
-      const activeRect = node.getBoundingClientRect();
-      if (activeRect.bottom > contentRect.bottom)
-        content.scrollTop += activeRect.bottom - contentRect.bottom + 12;
-      if (activeRect.top < contentRect.top)
-        content.scrollTop -= contentRect.top - activeRect.top + 12;
-    }, 450);
-  }, []);
-
-  useLayoutEffect(() => {
-    if (isMobile && !openMobile) return;
-    if (!activeGroup || openGroup !== activeGroup) return;
-    const timer = window.setTimeout(() => {
-      const content = contentRef.current;
-      const activeLink = content?.querySelector<HTMLElement>(
-        'a[aria-current="page"]',
-      );
-      if (!content || !activeLink) return;
-      const contentRect = content.getBoundingClientRect();
-      const activeRect = activeLink.getBoundingClientRect();
-      if (activeRect.bottom > contentRect.bottom)
-        content.scrollTop += activeRect.bottom - contentRect.bottom + 12;
-      if (activeRect.top < contentRect.top)
-        content.scrollTop -= contentRect.top - activeRect.top + 12;
-    }, 450);
-    return () => window.clearTimeout(timer);
-  }, [activeGroup, isMobile, openGroup, openMobile, pathname]);
 
   const name = profile?.full_name || profile?.email || "Usuário";
   const initials = name
@@ -805,28 +815,34 @@ export function AppSidebar() {
   const toggleGroup = (id: string) => {
     if (collapsed) {
       setOpen(true);
-      setOpenGroup(id);
+      setOpenGroups((current) =>
+        current.includes(id) ? current : [...current, id],
+      );
       return;
     }
-    setOpenGroup((current) => (current === id ? null : id));
+    setOpenGroups((current) =>
+      current.includes(id)
+        ? current.filter((openGroupId) => openGroupId !== id)
+        : [...current, id],
+    );
   };
 
   let lastSection = "";
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarHeader className="shrink-0 border-b border-white/10 px-3 pb-5 pt-6">
+      <SidebarHeader className="shrink-0 border-b border-white/10 px-3 pb-3 pt-4">
         <div className={cn("flex flex-col items-center", collapsed && "py-0")}>
           <img
             src={collapsed ? unigSymbol : unigLogo}
             alt="UNIG Clínicas"
             className={cn(
               "object-contain brightness-0 invert",
-              collapsed ? "h-10 w-10" : "h-auto w-full max-w-[205px]",
+              collapsed ? "h-9 w-9" : "h-auto w-full max-w-[188px]",
             )}
           />
           {!collapsed && (
-            <div className="mt-4 flex w-full items-center gap-2 rounded-xl border border-white/15 bg-white/[0.07] px-3 py-2 text-xs font-semibold text-white/90">
+            <div className="mt-3 flex w-full items-center gap-2 rounded-xl border border-white/15 bg-white/[0.07] px-3 py-2 text-xs font-semibold text-white/90">
               <Building2 className="h-3.5 w-3.5 shrink-0" />
               <select
                 aria-label="Clínica atual"
@@ -856,15 +872,15 @@ export function AppSidebar() {
       <SidebarContent
         ref={contentRef}
         onScroll={rememberScrollPosition}
-        className="sidebar-scroll-invisible gap-0 px-3 py-4"
+        className="sidebar-scroll-invisible gap-0 px-2 py-1.5"
       >
-        <SidebarMenu className="mb-3">
+        <SidebarMenu className="mb-1">
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
               isActive={pathname === "/"}
               tooltip="Início"
-              className="h-11 rounded-2xl px-3 font-bold text-white hover:bg-white/10 data-[active=true]:bg-white data-[active=true]:text-primary data-[active=true]:shadow-lg"
+              className="h-10 rounded-xl px-3 text-[13px] font-bold text-white hover:bg-white/10 data-[active=true]:bg-white data-[active=true]:text-primary data-[active=true]:shadow-lg"
             >
               <NavLink
                 to="/"
@@ -883,12 +899,12 @@ export function AppSidebar() {
         {visibleGroups.map((group) => {
           const showSection = group.section !== lastSection;
           lastSection = group.section;
-          const open = openGroup === group.id;
+          const open = openGroups.includes(group.id);
           const GroupIcon = group.icon;
           return (
-            <div key={group.id} className="mb-1">
+            <div key={group.id} className="mb-0">
               {showSection && !collapsed && (
-                <div className="mb-2 mt-4 flex items-center gap-2 px-2 first:mt-0">
+                <div className="mb-1 mt-2.5 flex items-center gap-2 px-2 first:mt-0">
                   <span className="text-[10px] font-medium tracking-[0.16em] text-white/45">
                     {group.section}
                   </span>
@@ -905,7 +921,7 @@ export function AppSidebar() {
                     type="button"
                     title={collapsed ? group.label : undefined}
                     className={cn(
-                      "flex h-11 w-full items-center gap-3 rounded-2xl px-3 text-left text-sm font-bold text-white outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50",
+                      "flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-left text-[13px] font-bold text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50",
                       open && !collapsed && "bg-white/10 shadow-sm",
                       collapsed && "justify-center px-0",
                     )}
@@ -928,10 +944,14 @@ export function AppSidebar() {
                 </CollapsibleTrigger>
 
                 {!collapsed && (
-                  <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-                    <SidebarMenu className="gap-1 px-2 pb-2 pt-1">
+                  <CollapsibleContent className="overflow-hidden">
+                    <SidebarMenu className="gap-0 px-2 pb-0.5 pt-0">
                       {group.items.map((item) => {
-                        const active = matchesPath(pathname, item.url);
+                        const active = matchesPath(
+                          pathname,
+                          item.url,
+                          item.exact,
+                        );
                         const ItemIcon = item.icon;
                         const badge =
                           item.badgeKey === "notifications"
@@ -943,10 +963,9 @@ export function AppSidebar() {
                               asChild
                               isActive={active}
                               tooltip={item.title}
-                              className="h-10 rounded-xl px-3 text-[13px] font-semibold text-white/90 hover:bg-white/10 hover:text-white data-[active=true]:bg-white data-[active=true]:font-bold data-[active=true]:text-primary data-[active=true]:shadow-md"
+                              className="h-8 rounded-md px-3 text-[12px] font-semibold text-white/90 hover:bg-white/10 hover:text-white data-[active=true]:bg-white data-[active=true]:font-bold data-[active=true]:text-primary data-[active=true]:shadow-sm"
                             >
                               <NavLink
-                                ref={active ? activeLinkRef : undefined}
                                 to={item.url}
                                 onClick={() => {
                                   rememberScrollPosition();
@@ -974,24 +993,27 @@ export function AppSidebar() {
         })}
       </SidebarContent>
 
-      <SidebarFooter className="shrink-0 border-t border-white/10 p-3">
+      <SidebarFooter className="shrink-0 border-t border-white/10 p-2">
         <div
           className={cn(
-            "flex items-center gap-3 rounded-2xl bg-white/10 p-3 shadow-lg ring-1 ring-white/10",
+            "flex items-center gap-3 rounded-xl bg-white/10 p-2.5 shadow-lg ring-1 ring-white/10 transition-colors hover:bg-white/[0.16]",
             collapsed && "justify-center p-2",
           )}
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-light text-sm font-extrabold text-white">
-            {initials}
-          </div>
-          {!collapsed && (
-            <div className="min-w-0 flex-1 leading-tight">
-              <p className="truncate text-sm font-bold text-white">{name}</p>
-              <p className="mt-1 truncate text-[11px] text-white/65">
-                {UNIG_ROLE_LABEL[unigRole]}
-              </p>
-            </div>
-          )}
+          <NavLink to="/perfil" className="flex min-w-0 flex-1 items-center gap-3">
+            <Avatar className="h-9 w-9 shrink-0 ring-2 ring-white/15">
+              <AvatarImage src={profile?.avatar_url ?? undefined} alt={name} />
+              <AvatarFallback className="bg-primary-light text-xs font-extrabold text-white">{initials}</AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="truncate text-sm font-bold text-white">{name}</p>
+                <p className="mt-1 truncate text-[11px] text-white/65">
+                  {UNIG_ROLE_LABEL[unigRole]}
+                </p>
+              </div>
+            )}
+          </NavLink>
           {!collapsed && (
             <button
               type="button"

@@ -160,19 +160,22 @@ export default function PortalPaciente() {
                     ? new Date(data.next_appointment_at).toLocaleString("pt-BR")
                     : "Nenhum próximo atendimento"
                 }
+                href="#minha-agenda"
               />
               <ActionCard
                 icon={History}
                 title="Histórico"
                 description={`${appointments.data?.filter((item) => new Date(item.scheduled_at) < new Date()).length ?? 0} agendamento(s)`}
+                href="#minha-agenda"
               />
               <ActionCard
                 icon={FileHeart}
                 title="Documentos"
                 description={`${documents.data?.length ?? 0} disponível(is)`}
+                href="#meus-documentos"
               />
             </div>
-            <Card>
+            <Card id="minha-agenda">
               <CardHeader>
                 <CardTitle className="text-base">Minha agenda</CardTitle>
               </CardHeader>
@@ -200,7 +203,7 @@ export default function PortalPaciente() {
                 )}
               </CardContent>
             </Card>
-            <Card>
+            <Card id="meus-documentos">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Star className="h-4 w-4 text-primary" />
@@ -433,14 +436,16 @@ function ActionCard({
   title,
   description,
   disabled = false,
+  href,
 }: {
   icon: typeof QrCode;
   title: string;
   description: string;
   disabled?: boolean;
+  href?: string;
 }) {
   return (
-    <Card>
+    <Card className={href ? "transition-colors hover:bg-muted/50" : undefined}>
       <CardContent className="flex items-start gap-3 p-4">
         <div className="rounded-lg bg-primary/10 p-2">
           <Icon className="h-5 w-5 text-primary" />
@@ -448,6 +453,7 @@ function ActionCard({
         <div className="min-w-0">
           <p className="font-semibold">{title}</p>
           <p className="text-xs text-muted-foreground">{description}</p>
+          {href && <a href={href} className="mt-2 inline-block min-h-11 py-2 text-xs font-medium text-primary underline underline-offset-4">Ver detalhes</a>}
           {disabled && (
             <Button variant="link" className="h-auto px-0 text-xs" disabled>
               Disponível pelo QR

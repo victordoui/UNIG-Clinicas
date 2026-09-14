@@ -6,6 +6,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  test: {
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
+  },
   server: {
     host: "::",
     port: 8080,

@@ -34,6 +34,7 @@ import {
   Home as HomeIcon,
 } from "lucide-react";
 const Auth = lazy(() => import("./pages/Auth"));
+const Perfil = lazy(() => import("./pages/Perfil"));
 const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Install = lazy(() => import("./pages/Install"));
@@ -144,6 +145,9 @@ const ProcedimentosExames = lazy(
 );
 const Estoque = lazy(() => import("./pages/care/Estoque"));
 const PainelTV = lazy(() => import("./pages/care/PainelTV"));
+const PainelTVCampanhas = lazy(
+  () => import("./pages/care/PainelTVCampanhas"),
+);
 const FilaQR = lazy(() => import("./pages/care/FilaQR"));
 const PortalPaciente = lazy(() => import("./pages/portal/PortalPaciente"));
 const PortalTutor = lazy(() => import("./pages/portal/PortalTutor"));
@@ -177,6 +181,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/install" element={<Install />} />
+              <Route path="/perfil" element={<ProtectedRoute><Perfil /></ProtectedRoute>} />
               <Route path="/fila/qr/:token" element={<FilaQR />} />
 
               <Route
@@ -216,6 +221,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <PainelTV />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/painel-tv/campanhas"
+                element={
+                  <ProtectedRoute>
+                    <PainelTVCampanhas />
                   </ProtectedRoute>
                 }
               />

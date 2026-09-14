@@ -46,6 +46,7 @@ export default function Veterinaria() {
   const [vaccineDate, setVaccineDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
+  const [vaccineNextDueDate, setVaccineNextDueDate] = useState("");
   const [hospitalAnimalId, setHospitalAnimalId] = useState("");
   const [boxCode, setBoxCode] = useState("");
   const [admissionReason, setAdmissionReason] = useState("");
@@ -244,6 +245,7 @@ export default function Veterinaria() {
           animal_id: animal.id,
           vaccine_name: vaccineName.trim(),
           administered_at: vaccineDate,
+          next_due_at: vaccineNextDueDate || null,
           created_by: auth.user?.id,
         });
       if (error) throw error;
@@ -251,6 +253,7 @@ export default function Veterinaria() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["veterinary"] });
       setVaccineName("");
+      setVaccineNextDueDate("");
       toast({ title: "Vacinação registrada" });
     },
     onError: (error: Error) =>
@@ -474,6 +477,13 @@ export default function Veterinaria() {
   const consultations = (data.data?.consultations as any[]) ?? [];
   const weights = (data.data?.weights as any[]) ?? [];
   const vaccinations = (data.data?.vaccinations as any[]) ?? [];
+  const upcomingPrevention = vaccinations.filter((item: any) => {
+    if (!item.next_due_at) return false;
+    const due = new Date(`${item.next_due_at}T12:00:00`).getTime();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const limit = new Date(today); limit.setDate(limit.getDate() + 30);
+    return due >= today.getTime() && due <= limit.getTime();
+  }).sort((left: any, right: any) => String(left.next_due_at).localeCompare(String(right.next_due_at)));
   const hospitalizations = (data.data?.hospitalizations as any[]) ?? [];
   const hospitalizationTasks = (data.data?.hospitalizationTasks as any[]) ?? [];
 
@@ -1114,6 +1124,12 @@ export default function Veterinaria() {
                   value={vaccineDate}
                   onChange={(event) => setVaccineDate(event.target.value)}
                 />
+                <Input
+                  type="date"
+                  value={vaccineNextDueDate}
+                  onChange={(event) => setVaccineNextDueDate(event.target.value)}
+                  aria-label="Próxima dose ou reforço"
+                />
                 <Button
                   disabled={
                     !vaccineAnimalId ||
@@ -1132,9 +1148,14 @@ export default function Veterinaria() {
                   {new Date(
                     `${item.administered_at}T12:00:00`,
                   ).toLocaleDateString("pt-BR")}
+                  {item.next_due_at ? ` · próximo reforço ${new Date(`${item.next_due_at}T12:00:00`).toLocaleDateString("pt-BR")}` : ""}
                 </p>
               ))}
             </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle className="text-base">Prevenção nos próximos 30 dias</CardTitle><CardDescription>Use esta lista para preparar contato no canal autorizado pelo tutor. Nenhuma mensagem é enviada automaticamente.</CardDescription></CardHeader>
+            <CardContent className="space-y-2">{upcomingPrevention.length ? upcomingPrevention.map((item: any) => <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border p-3 text-sm"><span>{animals.find((animal: any) => animal.id === item.animal_id)?.name ?? "Animal"} · <strong>{item.vaccine_name}</strong></span><Badge variant="outline">{new Date(`${item.next_due_at}T12:00:00`).toLocaleDateString("pt-BR")}</Badge></div>) : <p className="py-2 text-sm text-muted-foreground">Não há reforços programados para os próximos 30 dias.</p>}</CardContent>
           </Card>
         </div>
       </div>
