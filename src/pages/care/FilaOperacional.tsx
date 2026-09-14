@@ -36,8 +36,19 @@ export default function FilaOperacional() {
       setLoading(false);
       return;
     }
-    const { data: clinic, error: clinicError } = await (supabase.from("clinics") as any).select("id,organization_id,name,queue_qr_token").eq("code", activeClinicCode).maybeSingle();
-    if (clinicError || !clinic) {
+    const { data: scopes } = await supabase
+      .from("user_clinic_scopes")
+      .select("clinic_id,clinic:clinics(code,name),user_role:user_roles(organization_id)")
+      .is("revoked_at", null);
+    const scope = (scopes ?? []).find((item: any) => item.clinic?.code === activeClinicCode) as any;
+    const directClinic = scope ? null : await (supabase.from("clinics") as any)
+      .select("id,organization_id,name,queue_qr_token")
+      .eq("code", activeClinicCode)
+      .maybeSingle();
+    const clinic = scope
+      ? { id: scope.clinic_id, organization_id: scope.user_role?.organization_id, name: scope.clinic?.name ?? activeClinicCode, queue_qr_token: null }
+      : directClinic?.data;
+    if (!clinic?.id || !clinic.organization_id) {
       setLoading(false);
       return;
     }
@@ -88,12 +99,31 @@ export default function FilaOperacional() {
 
   const startQueue = async () => {
     if (queue) return void setStatus("open");
-    if (!clinicMeta) return;
+    let targetClinic = clinicMeta;
+    if (!targetClinic && activeClinicCode) {
+      const { data: scopes, error: scopeError } = await supabase
+        .from("user_clinic_scopes")
+        .select("clinic_id,clinic:clinics(code,name),user_role:user_roles(organization_id)")
+        .is("revoked_at", null);
+      const scope = (scopes ?? []).find((item: any) => item.clinic?.code === activeClinicCode) as any;
+      if (!scopeError && scope?.clinic_id && scope?.user_role?.organization_id) {
+        targetClinic = {
+          id: scope.clinic_id,
+          organization_id: scope.user_role.organization_id,
+          name: scope.clinic?.name ?? activeClinicCode,
+        };
+        setClinicMeta(targetClinic);
+      }
+    }
+    if (!targetClinic) {
+      toast({ title: "Não foi possível identificar a clínica", description: "Atualize a sessão e tente novamente.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     const { data: auth } = await supabase.auth.getUser();
     const { error } = await supabase.from("queue_sessions").insert({
-      organization_id: clinicMeta.organization_id,
-      clinic_id: clinicMeta.id,
+      organization_id: targetClinic.organization_id,
+      clinic_id: targetClinic.id,
       service_date: today,
       status: "open",
       created_by: auth.user?.id ?? null,

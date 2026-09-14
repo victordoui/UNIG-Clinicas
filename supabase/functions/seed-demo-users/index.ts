@@ -84,9 +84,9 @@ Deno.serve(async (req) => {
       );
       if (!allDemo) throw new Error('A fila contém senha real ou já atendida e não pode ser limpa automaticamente.');
       const ticketIds = (tickets ?? []).map((ticket: { id: string }) => ticket.id);
+      const { error: eventError } = await admin.from('queue_events').delete().eq('queue_session_id', session.id);
+      if (eventError) throw eventError;
       if (ticketIds.length) {
-        const { error: eventError } = await admin.from('queue_events').delete().eq('queue_session_id', session.id);
-        if (eventError) throw eventError;
         const { error: ticketError } = await admin.from('queue_tickets').delete().in('id', ticketIds);
         if (ticketError) throw ticketError;
       }
@@ -435,7 +435,7 @@ Deno.serve(async (req) => {
     }
     return json({ ok: true, created, existed, total: DEMO_ACCOUNTS.length });
   } catch (error) {
-    return json({ ok: false, error: error instanceof Error ? error.message : String(error) }, 500);
+    return json({ ok: false, error: error instanceof Error ? error.message : JSON.stringify(error) }, 500);
   }
 });
 
