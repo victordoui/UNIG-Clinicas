@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
+  ArrowRight,
   BellRing,
   CheckCircle2,
   ChevronRight,
@@ -12,10 +13,10 @@ import {
   UsersRound,
   Volume2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ReceptionAttendanceDrawer, type ReceptionDraft } from "@/components/reception/ReceptionAttendanceDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,6 +24,7 @@ import { toast } from "@/hooks/use-toast";
 import { canRecallReceptionTicket, formatQueueTicketCode, formatReceptionClinicLabel, getActiveReceptionClinicId } from "@/lib/queueReception";
 
 type Ticket = { id?: string; code: string; patient: string; wait: number; status?: string };
+type QueueStatus = "open" | "paused" | "closing" | "closed" | null;
 
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
@@ -32,8 +34,10 @@ const formatTime = (seconds: number) => {
 
 export default function RecepcaoOperacional() {
   const { activeClinicCode, user } = useAuth();
+  const navigate = useNavigate();
   const clinicLabel = formatReceptionClinicLabel(activeClinicCode);
   const [queueOpen, setQueueOpen] = useState(false);
+  const [queueStatus, setQueueStatus] = useState<QueueStatus>(null);
   const [queue, setQueue] = useState<Ticket[]>([]);
   const [current, setCurrent] = useState<Ticket | null>(null);
   const [serviceStarted, setServiceStarted] = useState(false);
@@ -43,9 +47,7 @@ export default function RecepcaoOperacional() {
   const [announcement, setAnnouncement] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [receptionSessionId, setReceptionSessionId] = useState<string | null>(null);
-  const [queueSessionId, setQueueSessionId] = useState<string | null>(null);
   const [usingRemoteQueue, setUsingRemoteQueue] = useState(false);
-  const [queueConfirmationOpen, setQueueConfirmationOpen] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
 
   useEffect(() => {
@@ -84,10 +86,10 @@ export default function RecepcaoOperacional() {
     if (sessionError) return;
     if (!queueSession) {
       setQueueOpen(false);
+      setQueueStatus(null);
       setQueue([]);
       setCurrent(null);
       setReceptionSessionId(null);
-      setQueueSessionId(null);
       setServiceStarted(false);
       setServiceStartedAt(null);
       return;
@@ -117,7 +119,7 @@ export default function RecepcaoOperacional() {
       : undefined;
     const active = receptionTicket ?? mapped.find((ticket: any) => ["called", "checked_in", "in_service"].includes(ticket.status));
     setQueueOpen(queueSession.status === "open");
-    setQueueSessionId(queueSession.id);
+    setQueueStatus(queueSession.status as QueueStatus);
     setQueue(mapped.filter((ticket: any) => ticket.status === "waiting"));
     if (active) {
       setCurrent(active);
@@ -210,62 +212,6 @@ export default function RecepcaoOperacional() {
     advanceQueue();
   };
 
-  const changeQueueStatus = async (targetStatus: "open" | "closed") => {
-    if (!usingRemoteQueue) {
-      setQueueOpen(targetStatus === "open");
-      return;
-    }
-    if (!queueSessionId) {
-      if (targetStatus !== "open" || !activeClinicCode) {
-        toast({ title: "Não há uma sessão de fila para alterar", description: "Atualize a página e tente novamente.", variant: "destructive" });
-        return;
-      }
-      const { data: scopes, error: scopeError } = await supabase
-        .from("user_clinic_scopes")
-        .select("clinic_id,clinic:clinics(code),user_role:user_roles(organization_id)")
-        .is("revoked_at", null);
-      const activeScope = (scopes ?? []).find((scope: any) => scope.clinic?.code === activeClinicCode);
-      const organizationId = (activeScope as any)?.user_role?.organization_id;
-      if (scopeError || !activeScope?.clinic_id || !organizationId) {
-        toast({ title: "Não foi possível identificar sua clínica", description: "Entre novamente e tente abrir a fila.", variant: "destructive" });
-        return;
-      }
-      const { error: createError } = await supabase.rpc("open_clinic_queue" as never, {
-        target_clinic_id: activeScope.clinic_id,
-      } as never);
-      if (createError) {
-        await loadRemoteQueue();
-        toast({ title: "Não foi possível abrir a fila", description: createError.message.includes("duplicate") ? "A fila desta clínica já foi aberta por outro acesso." : createError.message, variant: "destructive" });
-        return;
-      }
-      toast({ title: "Fila aberta", description: "A recepção e os clientes desta clínica já podem utilizá-la." });
-      await loadRemoteQueue();
-      return;
-    }
-    const { error } = await supabase.rpc("transition_queue_session", {
-      target_session_id: queueSessionId,
-      target_status: targetStatus,
-    });
-    if (error && targetStatus === "open" && error.message.includes("closed -> open")) {
-      const { error: reopenError } = await supabase.functions.invoke("queue-transition", {
-        body: { sessionId: queueSessionId, targetStatus },
-      });
-      if (!reopenError) {
-        toast({ title: "Fila reaberta", description: "A recepção e os clientes desta clínica já podem utilizá-la." });
-        await loadRemoteQueue();
-        return;
-      }
-      toast({ title: "Não foi possível reabrir a fila", description: reopenError.message, variant: "destructive" });
-      return;
-    }
-    if (error) {
-      toast({ title: "Não foi possível alterar a fila", description: error.message, variant: "destructive" });
-      return;
-    }
-    setQueueOpen(targetStatus === "open");
-    await loadRemoteQueue();
-  };
-
   const recallCurrent = async () => {
     if (!current) return;
     if (usingRemoteQueue && (!current.id || !canRecallReceptionTicket(current.status))) {
@@ -355,8 +301,8 @@ export default function RecepcaoOperacional() {
         <section className="grid gap-4 xl:grid-cols-[1.55fr_repeat(4,0.62fr)]">
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3"><span className={`h-3 w-3 rounded-full ${queueOpen ? "bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,.14)]" : "bg-slate-400"}`} /><div><h2 className="font-bold text-slate-900">{queueOpen ? "Fila aberta" : "Fila encerrada"}</h2><p className="text-sm text-slate-600">{queueOpen ? "Fila compartilhada com os demais acessos desta clínica" : "Novas senhas temporariamente indisponíveis"}</p></div></div>
-              <Button onClick={() => queueOpen ? setQueueConfirmationOpen(true) : void changeQueueStatus("open")} variant={queueOpen ? "outline" : "default"} className={queueOpen ? "min-h-11 border-emerald-300 text-emerald-800 hover:bg-emerald-100" : "min-h-11 bg-emerald-700 hover:bg-emerald-800"}>{queueOpen ? "Encerrar fila" : "Abrir fila"}</Button>
+              <div className="flex items-center gap-3"><span className={`h-3 w-3 rounded-full ${queueOpen ? "bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,.14)]" : "bg-slate-400"}`} /><div><h2 className="font-bold text-slate-900">{queueOpen ? "Fila aberta" : queueStatus === "closing" ? "Fila em encerramento" : queueStatus === "paused" ? "Fila pausada" : "Fila fechada"}</h2><p className="text-sm text-slate-600">{queueOpen ? "Fila compartilhada com os demais acessos desta clínica" : "A abertura e a gestão da fila são feitas na página Fila."}</p></div></div>
+              <Button onClick={() => navigate("/fila")} variant={queueOpen ? "outline" : "default"} className={queueOpen ? "min-h-11 border-emerald-300 text-emerald-800 hover:bg-emerald-100" : "min-h-11 bg-emerald-700 hover:bg-emerald-800"}>Ver fila<ArrowRight className="ml-2 h-4 w-4" /></Button>
             </div>
           </div>
           <Metric icon={<UsersRound />} label="Aguardando" value={queue.length} />
@@ -396,7 +342,6 @@ export default function RecepcaoOperacional() {
         </section>
       </div>
       <ReceptionAttendanceDrawer open={drawerOpen} ticket={current} startedAt={serviceStarted ? serviceStartedAt : null} clinicLabel={clinicLabel} onOpenChange={setDrawerOpen} onSave={saveAttendance} onFinish={finishAttendance} />
-      <AlertDialog open={queueConfirmationOpen} onOpenChange={setQueueConfirmationOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Encerrar a fila?</AlertDialogTitle><AlertDialogDescription>Novas senhas deixarão de ser emitidas até que a fila seja aberta novamente. Os pacientes já aguardando continuam visíveis.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction className="bg-emerald-700 hover:bg-emerald-800" onClick={() => void changeQueueStatus("closed")}>Encerrar fila</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </MainLayout>
   );
 }

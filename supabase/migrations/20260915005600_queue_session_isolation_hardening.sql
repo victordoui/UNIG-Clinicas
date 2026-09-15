@@ -9,6 +9,18 @@ alter table public.queue_sessions
   add column if not exists accepting_new_entries boolean not null default true,
   add column if not exists last_ticket_number integer not null default 0;
 
+-- A clinic owns one stable public QR token. The token resolves the current
+-- operational session and never embeds a date or a transient session ID.
+alter table public.clinics
+  add column if not exists queue_qr_token uuid;
+update public.clinics
+set queue_qr_token = coalesce(queue_qr_token, gen_random_uuid());
+alter table public.clinics
+  alter column queue_qr_token set default gen_random_uuid(),
+  alter column queue_qr_token set not null;
+create unique index if not exists clinics_queue_qr_token_unique
+  on public.clinics(queue_qr_token);
+
 update public.queue_sessions
 set opened_at = coalesce(opened_at, created_at),
     opened_by = coalesce(opened_by, created_by),
@@ -239,7 +251,7 @@ create or replace function public.configure_queue_session(
   target_starts_at timestamptz default null,
   target_ends_at timestamptz default null
 )
-returns public.queue_sessions language sql security definer set search_path = public, private
+returns public.queue_sessions language sql security invoker set search_path = public, private
 as $function$
   select private.configure_queue_session(
     target_session_id, target_clinic_service_id, target_entry_mode,
@@ -251,14 +263,14 @@ revoke execute on function public.configure_queue_session(uuid, uuid, text, inte
 grant execute on function public.configure_queue_session(uuid, uuid, text, integer, integer, timestamptz, timestamptz) to authenticated;
 
 -- Public queue entry must allocate from the session counter, never MAX()+1.
-create or replace function private.allocate_queue_ticket_number(target_session_id uuid)
+create or replace function private.allocate_queue_ticket_number(p_session uuid)
 returns integer language plpgsql security definer set search_path = public, private
 as $function$
 declare result integer;
 begin
   update public.queue_sessions
   set last_ticket_number = last_ticket_number + 1, updated_at = now()
-  where id = target_session_id and status = 'open' and accepting_new_entries
+  where id = p_session and status = 'open' and accepting_new_entries
   returning last_ticket_number into result;
   if result is null then raise exception 'A fila não aceita novas entradas'; end if;
   return result;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CirclePlay, CirclePause, ClipboardList, Copy, QrCode, RefreshCw, Ticket, Trash2, UsersRound } from "lucide-react";
+import { CirclePlay, CirclePause, ClipboardList, Copy, QrCode, RefreshCw, Ticket, UsersRound } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ export default function FilaOperacional() {
   const [saving, setSaving] = useState(false);
   const [availableClinics, setAvailableClinics] = useState<Array<{ code: string; name: string }>>([]);
   const canManage = ["super_admin", "administrador", "gestor_unidade", "atendimento"].includes(unigRole);
+  const canManageQr = ["super_admin", "administrador", "gestor_unidade"].includes(unigRole);
 
   const load = async () => {
     setLoading(true);
@@ -41,7 +42,7 @@ export default function FilaOperacional() {
     }
     const { data: scopes } = await supabase
       .from("user_clinic_scopes")
-      .select("clinic_id,clinic:clinics(code,name),user_role:user_roles(organization_id)")
+      .select("clinic_id,clinic:clinics(code,name,queue_qr_token),user_role:user_roles(organization_id)")
       .is("revoked_at", null);
     const scope = (scopes ?? []).find((item: any) => item.clinic?.code === activeClinicCode) as any;
     const directClinic = scope ? null : await (supabase.from("clinics") as any)
@@ -49,7 +50,7 @@ export default function FilaOperacional() {
       .eq("code", activeClinicCode)
       .maybeSingle();
     const clinic = scope
-      ? { id: scope.clinic_id, organization_id: scope.user_role?.organization_id, name: scope.clinic?.name ?? activeClinicCode, queue_qr_token: null }
+      ? { id: scope.clinic_id, organization_id: scope.user_role?.organization_id, name: scope.clinic?.name ?? activeClinicCode, queue_qr_token: scope.clinic?.queue_qr_token ?? null }
       : directClinic?.data;
     if (!clinic?.id || !clinic.organization_id) {
       setLoading(false);
@@ -159,16 +160,16 @@ export default function FilaOperacional() {
     await load();
   };
 
-  const changeQr = async (revoke: boolean) => {
+  const rotateQr = async () => {
     if (!clinicMeta) return;
     setSaving(true);
-    const { error } = await supabase.rpc("rotate_clinic_queue_qr_token" as never, { target_clinic_id: clinicMeta.id, revoke_token: revoke } as never);
+    const { error } = await supabase.rpc("rotate_clinic_queue_qr_token" as never, { target_clinic_id: clinicMeta.id } as never);
     setSaving(false);
     if (error) {
       toast({ title: "Não foi possível atualizar o QR Code", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: revoke ? "QR Code excluído" : "Novo QR Code criado" });
+    toast({ title: "Novo QR Code criado", description: "O QR anterior deixou de aceitar novas entradas." });
     await load();
   };
 
@@ -182,7 +183,7 @@ export default function FilaOperacional() {
       {loading ? <p className="text-sm text-muted-foreground">Carregando operação…</p> : !activeClinicCode ? <div className="rounded-lg border border-dashed p-5"><p className="mb-3 text-sm text-muted-foreground">Selecione a clínica cuja fila você deseja administrar.</p><select aria-label="Selecionar clínica para fila" className="h-11 w-full max-w-md rounded-md border bg-background px-3 text-sm" defaultValue="" onChange={(event) => setActiveClinicCode(event.target.value || null)}><option value="" disabled>Selecione uma clínica</option>{availableClinics.map((clinic) => <option key={clinic.code} value={clinic.code}>{clinic.name}</option>)}</select></div> : !queue ? <><p className="rounded-lg border border-dashed p-5 text-sm text-muted-foreground">Nenhuma fila de atendimento está aberta nesta clínica.</p>{canManage && <Button disabled={saving} onClick={() => void startQueue()}><CirclePlay className="mr-2 h-4 w-4" />Abrir fila</Button>}</> : <><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl bg-muted/60 p-4"><UsersRound className="mb-2 h-5 w-5 text-primary" /><p className="text-2xl font-bold">{waiting}</p><p className="text-sm text-muted-foreground">senhas aguardando</p></div><div className="rounded-xl bg-muted/60 p-4"><Ticket className="mb-2 h-5 w-5 text-primary" /><p className="text-sm font-semibold">Sessão operacional</p><p className="text-sm text-muted-foreground">A abertura será refletida apenas para os acessos desta clínica.</p></div></div>
       {!canManage ? <p className="text-sm text-muted-foreground">Seu acesso permite acompanhar a situação da fila.</p> : <div className="flex flex-wrap gap-2">{queue.status === "paused" && <Button disabled={saving} onClick={() => void startQueue()}><CirclePlay className="mr-2 h-4 w-4" />Retomar fila</Button>}{queue.status === "closed" && <Button disabled={saving} onClick={() => void startQueue()}><CirclePlay className="mr-2 h-4 w-4" />Reabrir atendimento</Button>}{queue.status === "open" && <Button variant="outline" disabled={saving} onClick={() => void setStatus("paused")}><CirclePause className="mr-2 h-4 w-4" />Pausar fila</Button>}{queue.status === "open" && <Button variant="outline" disabled={saving} onClick={() => void setStatus("closing")}>Encerrar novas entradas</Button>}{queue.status === "closing" && <Button variant="outline" disabled={saving} onClick={() => void setStatus("closed")}>Fechar definitivamente</Button>}{queue.status === "paused" && <Button variant="outline" disabled={saving} onClick={() => void setStatus("closed")}>Encerrar fila</Button>}</div>}
       <section className="rounded-xl border bg-muted/30 p-4"><div className="mb-3 flex items-center gap-2"><Ticket className="h-4 w-4 text-primary" /><div><p className="font-semibold">Configuração da operação</p><p className="text-xs text-muted-foreground">Informações que ficavam na antiga aba Fila da Agenda.</p></div></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><Info label="Entrada" value={entryLabel} /><Info label="Capacidade máxima" value={queue.max_capacity ? `${queue.max_capacity} pessoas` : "Não definida"} /><Info label="Atendimentos simultâneos" value={queue.concurrent_capacity ? String(queue.concurrent_capacity) : "1"} /><Info label="Horário" value={`${formatTime(queue.starts_at)} — ${formatTime(queue.ends_at)}`} /></div></section>
-      <div className="rounded-xl border bg-muted/30 p-4 text-center"><div className="mb-2 flex items-center justify-center gap-2 font-semibold"><QrCode className="h-4 w-4 text-primary" />QR Code fixo da clínica</div>{qrLink ? <><QRCodeSVG className="mx-auto rounded bg-white p-2" size={156} value={qrLink} includeMargin /><p className="mt-3 text-sm text-muted-foreground">Este é o mesmo QR em todos os dias. Ele só permite entrada quando a fila estiver aberta.</p><div className="mt-3 flex flex-wrap justify-center gap-2"><Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(qrLink); toast({ title: "Link da fila copiado" }); }}><Copy className="mr-2 h-3.5 w-3.5" />Copiar link</Button>{canManage && <Button size="sm" variant="outline" disabled={saving} onClick={() => void changeQr(false)}><RefreshCw className="mr-2 h-3.5 w-3.5" />Gerar novo</Button>}{canManage && <Button size="sm" variant="outline" disabled={saving} onClick={() => void changeQr(true)}><Trash2 className="mr-2 h-3.5 w-3.5" />Excluir QR</Button>}</div></> : <div><p className="py-3 text-sm text-muted-foreground">Nenhum QR Code ativo para esta clínica.</p>{canManage && <Button size="sm" disabled={saving} onClick={() => void changeQr(false)}><RefreshCw className="mr-2 h-3.5 w-3.5" />Criar QR Code</Button>}</div>}</div></>}
+      <div className="rounded-xl border bg-muted/30 p-4 text-center"><div className="mb-2 flex items-center justify-center gap-2 font-semibold"><QrCode className="h-4 w-4 text-primary" />QR Code da clínica</div>{qrLink ? <><QRCodeSVG className="mx-auto rounded bg-white p-2" size={156} value={qrLink} includeMargin /><p className="mt-3 text-sm text-muted-foreground">Use este QR na entrada da clínica. Ele é permanente e só permite entrar na fila quando ela estiver aberta.</p><div className="mt-3 flex flex-wrap justify-center gap-2"><Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(qrLink); toast({ title: "Link da fila copiado" }); }}><Copy className="mr-2 h-3.5 w-3.5" />Copiar link</Button>{canManageQr && <Button size="sm" variant="outline" disabled={saving} onClick={() => void rotateQr()}><RefreshCw className="mr-2 h-3.5 w-3.5" />Gerar novo QR</Button>}</div>{!canManageQr && <p className="mt-3 text-xs text-muted-foreground">Somente gestores e administradores podem gerar um novo QR Code.</p>}</> : <div><p className="py-3 text-sm text-muted-foreground">O QR Code da clínica ainda não foi criado.</p>{canManageQr ? <Button size="sm" disabled={saving} onClick={() => void rotateQr()}><RefreshCw className="mr-2 h-3.5 w-3.5" />Criar QR Code</Button> : <p className="text-xs text-muted-foreground">Solicite a criação a um gestor ou administrador.</p>}</div>}</div></>}
     </CardContent></Card>
   </div></MainLayout>;
 }
