@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import unigLogo from '@/assets/unig-clinicas-logo.png';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState(() => window.sessionStorage.getItem('unig-pending-guest-email') ?? '');
@@ -47,7 +48,15 @@ export default function Auth() {
     if (!postAuthDestination.current) {
       const queueToken = window.sessionStorage.getItem('unig-pending-queue-token');
       if (queueToken) window.sessionStorage.removeItem('unig-pending-queue-token');
-      postAuthDestination.current = preferredPath ?? (queueToken ? `/fila/qr/${queueToken}` : '/');
+      const requestedLocation = (location.state as { from?: Location } | null)?.from;
+      const requestedPath = requestedLocation
+        ? `${requestedLocation.pathname}${requestedLocation.search}${requestedLocation.hash}`
+        : null;
+      // Only accept application-relative paths to prevent an open redirect.
+      const safeRequestedPath = requestedPath?.startsWith('/') && !requestedPath.startsWith('//')
+        ? requestedPath
+        : null;
+      postAuthDestination.current = preferredPath ?? (queueToken ? `/fila/qr/${queueToken}` : safeRequestedPath ?? '/');
     }
     if (!pendingGuestClaim.current) {
       pendingGuestClaim.current = (async () => {
@@ -70,7 +79,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (!loading && user && authMode !== 'new-password') void navigateAfterAuth();
-  }, [user, loading, navigate, authMode]);
+  }, [user, loading, navigate, authMode, location.state]);
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();

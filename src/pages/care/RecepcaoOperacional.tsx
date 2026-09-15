@@ -228,13 +228,54 @@ export default function RecepcaoOperacional() {
       return;
     }
     if (!queueSessionId) {
-      toast({ title: "Não há uma sessão de fila para alterar", description: "Crie ou selecione uma sessão da clínica antes de abrir a fila.", variant: "destructive" });
+      if (targetStatus !== "open" || !activeClinicCode) {
+        toast({ title: "Não há uma sessão de fila para alterar", description: "Atualize a página e tente novamente.", variant: "destructive" });
+        return;
+      }
+      const { data: scopes, error: scopeError } = await supabase
+        .from("user_clinic_scopes")
+        .select("clinic_id,clinic:clinics(code),user_role:user_roles(organization_id)")
+        .is("revoked_at", null);
+      const activeScope = (scopes ?? []).find((scope: any) => scope.clinic?.code === activeClinicCode);
+      const organizationId = (activeScope as any)?.user_role?.organization_id;
+      if (scopeError || !activeScope?.clinic_id || !organizationId) {
+        toast({ title: "Não foi possível identificar sua clínica", description: "Entre novamente e tente abrir a fila.", variant: "destructive" });
+        return;
+      }
+      const { data: auth } = await supabase.auth.getUser();
+      const { error: createError } = await supabase.from("queue_sessions").insert({
+        organization_id: organizationId,
+        clinic_id: activeScope.clinic_id,
+        service_date: new Date().toISOString().slice(0, 10),
+        status: "open",
+        created_by: auth.user?.id ?? null,
+        updated_by: auth.user?.id ?? null,
+      });
+      if (createError) {
+        await loadRemoteQueue();
+        toast({ title: "Não foi possível abrir a fila", description: createError.message.includes("duplicate") ? "A fila desta clínica já foi aberta por outro acesso." : createError.message, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Fila aberta", description: "A recepção e os clientes desta clínica já podem utilizá-la." });
+      await loadRemoteQueue();
       return;
     }
     const { error } = await supabase.rpc("transition_queue_session", {
       target_session_id: queueSessionId,
       target_status: targetStatus,
     });
+    if (error && targetStatus === "open" && error.message.includes("closed -> open")) {
+      const { error: reopenError } = await supabase.functions.invoke("queue-transition", {
+        body: { sessionId: queueSessionId, targetStatus },
+      });
+      if (!reopenError) {
+        toast({ title: "Fila reaberta", description: "A recepção e os clientes desta clínica já podem utilizá-la." });
+        await loadRemoteQueue();
+        return;
+      }
+      toast({ title: "Não foi possível reabrir a fila", description: reopenError.message, variant: "destructive" });
+      return;
+    }
     if (error) {
       toast({ title: "Não foi possível alterar a fila", description: error.message, variant: "destructive" });
       return;
@@ -332,7 +373,7 @@ export default function RecepcaoOperacional() {
         <section className="grid gap-4 xl:grid-cols-[1.55fr_repeat(4,0.62fr)]">
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3"><span className={`h-3 w-3 rounded-full ${queueOpen ? "bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,.14)]" : "bg-slate-400"}`} /><div><h2 className="font-bold text-slate-900">{queueOpen ? "Fila aberta" : "Fila encerrada"}</h2><p className="text-sm text-slate-600">{queueOpen ? "Atendimento ao público disponível" : "Novas senhas temporariamente indisponíveis"}</p></div></div>
+              <div className="flex items-center gap-3"><span className={`h-3 w-3 rounded-full ${queueOpen ? "bg-emerald-500 shadow-[0_0_0_5px_rgba(16,185,129,.14)]" : "bg-slate-400"}`} /><div><h2 className="font-bold text-slate-900">{queueOpen ? "Fila aberta" : "Fila encerrada"}</h2><p className="text-sm text-slate-600">{queueOpen ? "Fila compartilhada com os demais acessos desta clínica" : "Novas senhas temporariamente indisponíveis"}</p></div></div>
               <Button onClick={() => queueOpen ? setQueueConfirmationOpen(true) : void changeQueueStatus("open")} variant={queueOpen ? "outline" : "default"} className={queueOpen ? "min-h-11 border-emerald-300 text-emerald-800 hover:bg-emerald-100" : "min-h-11 bg-emerald-700 hover:bg-emerald-800"}>{queueOpen ? "Encerrar fila" : "Abrir fila"}</Button>
             </div>
           </div>
@@ -345,8 +386,18 @@ export default function RecepcaoOperacional() {
         <section className="grid gap-5 xl:grid-cols-[1.55fr_0.95fr]">
           <div className="rounded-2xl border bg-white p-5 shadow-sm">
             <div className="mb-5 flex items-start justify-between"><div><p className="text-sm font-semibold text-emerald-700">ATENDIMENTO NA RECEPÇÃO</p><h2 className="text-xl font-bold text-slate-900">Paciente atual</h2></div><Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-800">{serviceStarted ? "Cronômetro ativo" : "Aguardando início"}</Badge></div>
-            {current ? <><div className="grid gap-4 md:grid-cols-[1.25fr_0.75fr]"><div className="rounded-xl bg-slate-50 p-5"><p className="text-sm font-semibold text-slate-500">SENHA</p><div className="mt-1 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:gap-4"><strong className="text-5xl font-black tracking-tight text-[#005d55]">{current.code}</strong><span className="text-xl font-bold text-slate-900 sm:mb-1 sm:border-l sm:pl-4">{current.patient}</span></div><p className="mt-3 text-sm text-slate-500">{current.wait ? `Aguardando há ${current.wait} min` : "Senha em atendimento"}</p></div><div className="rounded-xl bg-emerald-50 p-5"><div className="flex items-center gap-2 text-sm font-semibold text-emerald-800"><Clock3 className="h-5 w-5" /> TEMPO DE ATENDIMENTO</div><p className="mt-2 text-5xl font-black tracking-tight text-[#005d55]">{formatTime(elapsed)}</p><p className="mt-2 text-sm text-emerald-800">{serviceStarted ? "Em atendimento" : "Paciente chamado; aguarde a chegada"}</p></div></div>
-            <div className="sticky bottom-0 z-20 -mx-2 mt-4 grid grid-cols-2 gap-2 bg-white/95 px-2 py-3 backdrop-blur sm:static sm:mx-0 sm:mt-4 sm:grid-cols-2 sm:gap-3 sm:bg-transparent sm:px-0 sm:py-0 xl:grid-cols-4"><Button onClick={startAttendance} disabled={serviceStarted} variant="outline" className="min-h-11 border-emerald-200 text-emerald-800 sm:min-h-16"><Play className="mr-2 h-5 w-5" />Iniciar atendimento</Button><Button onClick={() => setDrawerOpen(true)} disabled={!serviceStarted} variant="outline" className="min-h-11 border-emerald-200 text-emerald-800 sm:min-h-16"><CheckCircle2 className="mr-2 h-5 w-5" />Abrir atendimento</Button><Button onClick={recallCurrent} variant="outline" className="min-h-11 border-amber-300 text-amber-900 hover:bg-amber-50 sm:min-h-16"><Volume2 className="mr-2 h-5 w-5" />Chamar novamente</Button><Button onClick={() => void callNext()} disabled={!next || !queueOpen || (usingRemoteQueue && Boolean(current))} className="min-h-11 bg-[#006d62] text-base hover:bg-[#00574f] sm:min-h-16"><BellRing className="mr-2 h-5 w-5" />Chamar próximo</Button></div></> : <div className="grid min-h-48 place-items-center rounded-xl bg-slate-50 text-slate-500">Nenhum paciente em atendimento.</div>}
+            {current ? (
+              <>
+                <div className="grid gap-4 md:grid-cols-[1.25fr_0.75fr]">
+                  <div className="rounded-xl bg-slate-50 p-5"><p className="text-sm font-semibold text-slate-500">SENHA</p><div className="mt-1 flex flex-col items-start gap-2 sm:flex-row sm:items-end sm:gap-4"><strong className="text-5xl font-black tracking-tight text-[#005d55]">{current.code}</strong><span className="text-xl font-bold text-slate-900 sm:mb-1 sm:border-l sm:pl-4">{current.patient}</span></div><p className="mt-3 text-sm text-slate-500">{current.wait ? `Aguardando há ${current.wait} min` : "Senha em atendimento"}</p></div>
+                  <div className="rounded-xl bg-emerald-50 p-5"><div className="flex items-center gap-2 text-sm font-semibold text-emerald-800"><Clock3 className="h-5 w-5" /> TEMPO DE ATENDIMENTO</div><p className="mt-2 text-5xl font-black tracking-tight text-[#005d55]">{formatTime(elapsed)}</p><p className="mt-2 text-sm text-emerald-800">{serviceStarted ? "Em atendimento" : "Paciente chamado; aguarde a chegada"}</p></div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3"><Button onClick={startAttendance} disabled={serviceStarted} variant="outline" className="min-h-11 border-emerald-200 text-emerald-800 sm:min-h-16"><Play className="mr-2 h-5 w-5" />Iniciar atendimento</Button><Button onClick={() => setDrawerOpen(true)} disabled={!serviceStarted} variant="outline" className="min-h-11 border-emerald-200 text-emerald-800 sm:min-h-16"><CheckCircle2 className="mr-2 h-5 w-5" />Abrir atendimento</Button><Button onClick={recallCurrent} variant="outline" className="min-h-11 border-amber-300 text-amber-900 hover:bg-amber-50 sm:min-h-16"><Volume2 className="mr-2 h-5 w-5" />Chamar novamente</Button></div>
+              </>
+            ) : (
+              <div className="grid min-h-48 place-items-center rounded-xl bg-slate-50 p-6 text-center text-slate-500"><div><p>Nenhum paciente em atendimento.</p><p className="mt-1 text-sm">{next ? `A senha ${next.code} está pronta para ser chamada.` : "Não há senha aguardando na fila."}</p></div></div>
+            )}
+            <div className="sticky bottom-0 z-20 -mx-2 mt-4 bg-white/95 px-2 py-3 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:py-0"><Button onClick={() => void callNext()} disabled={!next || !queueOpen || (usingRemoteQueue && Boolean(current))} className="min-h-11 w-full bg-[#006d62] text-base hover:bg-[#00574f] sm:min-h-16"><BellRing className="mr-2 h-5 w-5" />Chamar próximo</Button>{!next && <p className="mt-2 text-center text-sm text-slate-500">Gere uma nova senha na fila para habilitar o chamado.</p>}</div>
             <p className="mt-4 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800"><Volume2 className="h-4 w-4" />Ao chamar o próximo, o painel anuncia a senha com som e atualiza automaticamente.</p>
           </div>
 

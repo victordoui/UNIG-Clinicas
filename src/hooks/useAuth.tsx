@@ -97,10 +97,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // getSession reads browser storage only. Validate the initial user with the
+    // Auth service before allowing protected routes to render.
+    supabase.auth.getUser().then(async ({ data: { user }, error }) => {
+      if (error || !user) {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setDbRole(null);
+        setClinicCodes([]);
+        setActiveClinicCode(null);
+        setIsSuperAdmin(false);
+        setLoading(false);
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
+      setUser(user);
+      if (session) {
         try { await loadData(session.user.id); } catch (e) { console.error(e); }
         finally { if (!cancelled) setLoading(false); }
       } else {

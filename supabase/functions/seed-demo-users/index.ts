@@ -24,6 +24,9 @@ const DEMO_ACCOUNTS = [
   ]),
   { key: 'academic_supervisor_odonto', role: 'academic_supervisor', email: 'academic-supervisor-odonto@unig.demo', label: 'Supervisor acadêmico', clinicCode: 'ODONTO' },
   { key: 'student_odonto', role: 'student', email: 'student-odonto@unig.demo', label: 'Estudante', clinicCode: 'ODONTO' },
+  { key: 'receptionist_test_odonto', role: 'receptionist', email: 'receptionist-teste-odonto@unig.demo', label: 'Recepção e fila — posto 2', clinicCode: 'ODONTO' },
+  { key: 'patient_test_odonto_1', role: 'patient', email: 'patient-teste-odonto-1@unig.demo', label: 'Paciente teste 1 — Odonto', clinicCode: 'ODONTO', patientDocument: 'demo-005' },
+  { key: 'patient_test_odonto_2', role: 'patient', email: 'patient-teste-odonto-2@unig.demo', label: 'Paciente teste 2 — Odonto', clinicCode: 'ODONTO', patientDocument: 'demo-006' },
   { key: 'auditor', role: 'auditor', email: 'auditor@unig.demo', label: 'Auditoria transversal', clinicCode: null },
 ] as const;
 
@@ -33,6 +36,7 @@ Deno.serve(async (req) => {
 
   try {
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const requestBody = await req.json().catch(() => ({})) as { action?: string };
     const { data: existingOrganization, error: lookupError } = await admin
       .from('organizations').select('id').eq('display_name', DEMO_ORGANIZATION).maybeSingle();
     if (lookupError) throw lookupError;
@@ -58,6 +62,37 @@ Deno.serve(async (req) => {
         .insert({ legal_name: DEMO_ORGANIZATION, display_name: DEMO_ORGANIZATION, is_active: true }).select('id').single();
       if (error) throw error;
       organizationId = data.id;
+    }
+
+    if (requestBody.action === 'reset_odonto_demo_queue') {
+      const { data: odontoClinic, error: odontoError } = await admin.from('clinics')
+        .select('id').eq('organization_id', organizationId).eq('code', 'ODONTO').single();
+      if (odontoError) throw odontoError;
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: session, error: sessionError } = await admin.from('queue_sessions')
+        .select('id').eq('clinic_id', odontoClinic.id).eq('service_date', today).maybeSingle();
+      if (sessionError) throw sessionError;
+      if (!session) return json({ ok: true, removedTickets: 0, removedSession: false });
+      const { data: tickets, error: ticketsError } = await admin.from('queue_tickets')
+        .select('id,status,appointment:appointments(reason),patient:patients(record_number)')
+        .eq('queue_session_id', session.id);
+      if (ticketsError) throw ticketsError;
+      const allDemo = (tickets ?? []).every((ticket: any) =>
+        ticket.patient?.record_number?.startsWith('DEMO-')
+        && (ticket.appointment?.reason === 'Consulta de demonstração' || ticket.appointment?.reason?.startsWith('Teste de fila Odonto —'))
+        && ticket.status === 'waiting',
+      );
+      if (!allDemo) throw new Error('A fila contém senha real ou já atendida e não pode ser limpa automaticamente.');
+      const ticketIds = (tickets ?? []).map((ticket: { id: string }) => ticket.id);
+      const { error: eventError } = await admin.from('queue_events').delete().eq('queue_session_id', session.id);
+      if (eventError) throw eventError;
+      if (ticketIds.length) {
+        const { error: ticketError } = await admin.from('queue_tickets').delete().in('id', ticketIds);
+        if (ticketError) throw ticketError;
+      }
+      const { error: deleteSessionError } = await admin.from('queue_sessions').delete().eq('id', session.id);
+      if (deleteSessionError) throw deleteSessionError;
+      return json({ ok: true, removedTickets: ticketIds.length, removedSession: true });
     }
 
     const { data: existingUnit, error: unitLookupError } = await admin.from('units')
@@ -102,6 +137,8 @@ Deno.serve(async (req) => {
       ['DEMO-002', 'Bruno Oliveira', 'demo-002'],
       ['DEMO-003', 'Carla Santos', 'demo-003'],
       ['DEMO-004', 'Diego Lima', 'demo-004'],
+      ['DEMO-005', 'Larissa Ferreira', 'demo-005'],
+      ['DEMO-006', 'Rafael Mendes', 'demo-006'],
     ] as const;
     const patientByCode = new Map<string, string>();
     for (const [recordNumber, fullName, documentNumber] of demoPatients) {
@@ -190,6 +227,51 @@ Deno.serve(async (req) => {
       if (examLookupError) throw examLookupError;
       if (!existingExam) {
         const { error } = await admin.from('exam_orders').insert({ organization_id: organizationId, clinic_id: clinic.id, patient_id: patientId, exam_name: 'Exame demonstrativo', status: 'requested' });
+        if (error) throw error;
+      }
+    }
+
+    // Two extra Odonto patients are intentionally placed in the same daily
+    // session. This makes it possible to validate the panel, a call, recall,
+    // and a second receptionist without creating a competing queue.
+    const { data: odontoClinic, error: odontoClinicError } = await admin.from('clinics')
+      .select('id').eq('organization_id', organizationId).eq('code', 'ODONTO').single();
+    if (odontoClinicError) throw odontoClinicError;
+    const { data: odontoService, error: odontoServiceError } = await admin.from('clinic_services')
+      .select('id').eq('clinic_id', odontoClinic.id).eq('code', 'AVALIACAO').single();
+    if (odontoServiceError) throw odontoServiceError;
+    const { data: odontoSession, error: odontoSessionError } = await admin.from('queue_sessions')
+      .select('id').eq('clinic_id', odontoClinic.id).eq('service_date', today).single();
+    if (odontoSessionError) throw odontoSessionError;
+    for (const [offset, [recordNumber, , documentNumber]] of demoPatients.slice(4).entries()) {
+      const patientId = patientByCode.get(documentNumber)!;
+      const reason = `Teste de fila Odonto — ${recordNumber}`;
+      const appointmentAt = new Date(Date.now() + (offset + 1) * 15 * 60 * 1000).toISOString();
+      const { data: existingAppointment, error: appointmentLookupError } = await admin.from('appointments')
+        .select('id').eq('organization_id', organizationId).eq('patient_id', patientId).eq('reason', reason).maybeSingle();
+      if (appointmentLookupError) throw appointmentLookupError;
+      let appointmentId = existingAppointment?.id;
+      if (!appointmentId) {
+        const { data, error } = await admin.from('appointments').insert({
+          organization_id: organizationId, clinic_id: odontoClinic.id, patient_id: patientId,
+          clinic_service_id: odontoService.id, scheduled_at: appointmentAt, duration_minutes: 30,
+          status: 'checked_in', reason,
+        }).select('id').single();
+        if (error) throw error;
+        appointmentId = data.id;
+      }
+      const { data: existingTicket, error: ticketLookupError } = await admin.from('queue_tickets')
+        .select('id').eq('queue_session_id', odontoSession.id).eq('appointment_id', appointmentId).maybeSingle();
+      if (ticketLookupError) throw ticketLookupError;
+      if (!existingTicket) {
+        const { data: lastTicket, error: lastTicketError } = await admin.from('queue_tickets')
+          .select('ticket_number').eq('queue_session_id', odontoSession.id)
+          .order('ticket_number', { ascending: false }).limit(1).maybeSingle();
+        if (lastTicketError) throw lastTicketError;
+        const { error } = await admin.from('queue_tickets').insert({
+          queue_session_id: odontoSession.id, patient_id: patientId, appointment_id: appointmentId,
+          ticket_number: (lastTicket?.ticket_number ?? 0) + 1, status: 'waiting', priority: 'normal',
+        });
         if (error) throw error;
       }
     }
@@ -353,7 +435,7 @@ Deno.serve(async (req) => {
     }
     return json({ ok: true, created, existed, total: DEMO_ACCOUNTS.length });
   } catch (error) {
-    return json({ ok: false, error: error instanceof Error ? error.message : String(error) }, 500);
+    return json({ ok: false, error: error instanceof Error ? error.message : JSON.stringify(error) }, 500);
   }
 });
 

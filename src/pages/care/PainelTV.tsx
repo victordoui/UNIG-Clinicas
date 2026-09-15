@@ -8,7 +8,10 @@ import {
   Maximize2,
   Megaphone,
   Minimize2,
+  Pause,
+  Play,
   RefreshCw,
+  SkipForward,
   UsersRound,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -42,6 +45,19 @@ type QueueTicket = {
   called_at: string | null;
   created_at: string;
 };
+type Campaign = {
+  id: string;
+  title: string;
+  message: string;
+  media_url: string | null;
+  media_type: string;
+  status: string;
+  display_seconds: number;
+  priority: number;
+  display_mode: "integrated" | "fullscreen";
+  media_fit: "cover" | "contain";
+};
+const missingDisplayColumns = (error: { code?: string; message?: string } | null) => error?.code === "42703" || Boolean(error?.message?.includes("display_mode"));
 
 const TODAY = new Date().toLocaleDateString("en-CA");
 const PRIORITY_WEIGHT: Record<string, number> = {
@@ -122,11 +138,9 @@ export default function PainelTV() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [clinicId, setClinicId] = useState(searchParams.get("clinic") ?? "");
   const [now, setNow] = useState(() => new Date());
-  const [showDemoCampaign, setShowDemoCampaign] = useState(false);
-  const [demoCampaignIndex, setDemoCampaignIndex] = useState(0);
-  const [forcedCampaign] = useState<{ title: string; message: string; media_url: string | null; media_type: string } | null>(() => {
-    try { return JSON.parse(localStorage.getItem("unig-tv-forced-campaign") ?? "null"); } catch { return null; }
-  });
+  const [campaignIndex, setCampaignIndex] = useState(0);
+  const [carouselPaused, setCarouselPaused] = useState(false);
+  const [testActive, setTestActive] = useState(Boolean(searchParams.get("testCampaign")));
   const [simulation, setSimulation] = useState<ReceptionSimulation | null>(
     () => readSimulation(),
   );
@@ -134,14 +148,7 @@ export default function PainelTV() {
   const [announcementSignal, setAnnouncementSignal] = useState<string | null>(
     null,
   );
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setDemoCampaignIndex((current) => (current + 1) % 3);
-      setShowDemoCampaign(true);
-      window.setTimeout(() => setShowDemoCampaign(false), 6000);
-    }, 18000);
-    return () => window.clearInterval(interval);
-  }, []);
+  const [announcementPulse, setAnnouncementPulse] = useState(false);
   const demoCampaigns = [campaignDemo, campaignHealth, campaignWelcome];
   const audioContextRef = useRef<AudioContext | null>(null);
   const lastAnnouncementRef = useRef<string | null>(null);
@@ -176,6 +183,24 @@ export default function PainelTV() {
         sessions: (sessions.data ?? []) as QueueSession[],
         tickets: (tickets.data ?? []) as QueueTicket[],
       };
+    },
+  });
+  const { data: campaignRows = [], isLoading: isCampaignsLoading } = useQuery({
+    queryKey: ["tv-campaigns"],
+    refetchInterval: 30000,
+    queryFn: async () => {
+      let result = await (supabase
+        .from("tv_campaigns" as any) as any)
+        .select("id,title,message,media_url,media_type,status,display_seconds,priority,display_mode,media_fit")
+        .order("priority", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (missingDisplayColumns(result.error)) result = await (supabase
+        .from("tv_campaigns" as any) as any)
+        .select("id,title,message,media_url,media_type,status,display_seconds,priority")
+        .order("priority", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (result.error) throw result.error;
+      return (result.data ?? []).map((campaign: any) => ({ ...campaign, display_mode: campaign.display_mode ?? "integrated", media_fit: campaign.media_fit ?? "cover" })) as Campaign[];
     },
   });
 
@@ -246,6 +271,15 @@ export default function PainelTV() {
       )
     : 0;
   const queueOpen = isSimulation ? Boolean(simulation?.queueOpen) : sessions.some((session) => session.status === "open");
+  const testCampaignId = searchParams.get("testCampaign");
+  const testCampaign = campaignRows.find((campaign) => campaign.id === testCampaignId);
+  const publishedCampaigns = campaignRows.filter((campaign) => campaign.status === "published");
+  const activeCampaign = testActive && testCampaign
+    ? testCampaign
+    : publishedCampaigns[campaignIndex % publishedCampaigns.length];
+  const isShowingCampaign = !current;
+  const campaignFullscreen = searchParams.get("mode") === "fullscreen" || activeCampaign?.display_mode === "fullscreen";
+  const mediaFitClass = activeCampaign?.media_fit === "contain" ? "object-contain" : "object-cover";
   const updatedLabel = dataUpdatedAt
     ? new Date(dataUpdatedAt).toLocaleTimeString("pt-BR", {
         hour: "2-digit",
@@ -262,6 +296,31 @@ export default function PainelTV() {
       document.title = "UNIG Clínicas";
     };
   }, []);
+  useEffect(() => {
+    if (!testActive) return;
+    if (!testCampaign) {
+      if (!isCampaignsLoading) setTestActive(false);
+      return;
+    }
+    const timeout = window.setTimeout(
+      () => setTestActive(false),
+      Math.max(5, testCampaign.display_seconds) * 1000,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [isCampaignsLoading, testActive, testCampaign]);
+  useEffect(() => {
+    if (testActive || carouselPaused || current || publishedCampaigns.length < 2) return;
+    const seconds = Math.max(5, activeCampaign?.display_seconds ?? 12);
+    const timeout = window.setTimeout(
+      () => setCampaignIndex((index) => (index + 1) % publishedCampaigns.length),
+      seconds * 1000,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [activeCampaign?.display_seconds, carouselPaused, current, publishedCampaigns.length, testActive]);
+  const showNextCampaign = () => {
+    if (publishedCampaigns.length > 1)
+      setCampaignIndex((index) => (index + 1) % publishedCampaigns.length);
+  };
   const ensureAudio = useCallback(async () => {
     const AudioContextConstructor = window.AudioContext;
     const context = audioContextRef.current ?? new AudioContextConstructor();
@@ -278,16 +337,16 @@ export default function PainelTV() {
     if (!context || context.state !== "running") return;
     const start = context.currentTime;
     const masterGain = context.createGain();
-    masterGain.gain.setValueAtTime(0.38, start);
+    masterGain.gain.setValueAtTime(0.3, start);
     masterGain.connect(context.destination);
     [
-      { frequency: 659.25, offset: 0, duration: 0.16 },
-      { frequency: 880, offset: 0.2, duration: 0.16 },
-      { frequency: 1046.5, offset: 0.4, duration: 0.34 },
+      { frequency: 523.25, offset: 0, duration: 0.18 },
+      { frequency: 659.25, offset: 0.22, duration: 0.18 },
+      { frequency: 783.99, offset: 0.5, duration: 0.32 },
     ].forEach(({ frequency, offset, duration }) => {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
-      oscillator.type = "triangle";
+      oscillator.type = "sine";
       oscillator.frequency.setValueAtTime(frequency, start + offset);
       gain.gain.setValueAtTime(0.0001, start + offset);
       gain.gain.exponentialRampToValueAtTime(0.72, start + offset + 0.015);
@@ -333,9 +392,12 @@ export default function PainelTV() {
     const previous = lastAnnouncementRef.current;
     lastAnnouncementRef.current = announcementKey;
     if (!isSimulation || previous) {
+      setAnnouncementPulse(true);
+      const timer = window.setTimeout(() => setAnnouncementPulse(false), 2800);
       void ensureAudio().then((audioReady) => {
         if (audioReady) playAnnouncement();
       });
+      return () => window.clearTimeout(timer);
     }
   }, [announcementSignal, ensureAudio, isSimulation, simulation?.updatedAt]);
   useEffect(() => {
@@ -392,9 +454,9 @@ export default function PainelTV() {
   }, [queryClient, selectedClinicId]);
 
   return (
-    <main className="min-h-screen bg-[#003E3A] px-4 py-4 text-white sm:px-6 lg:px-7 lg:py-5">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1680px] flex-col gap-4 lg:min-h-[calc(100vh-2.5rem)] lg:gap-5">
-        <header className="flex flex-col gap-4 border-b border-white/15 pb-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+    <main className={campaignFullscreen ? "min-h-screen bg-[#003E3A] text-white" : "min-h-screen bg-[#003E3A] px-4 py-4 text-white sm:px-6 lg:px-7 lg:py-5"}>
+      <div className={campaignFullscreen ? "min-h-screen" : "mx-auto flex min-h-[calc(100vh-2rem)] max-w-[1680px] flex-col gap-4 lg:min-h-[calc(100vh-2.5rem)] lg:gap-5"}>
+        {!campaignFullscreen && <header className="flex flex-col gap-4 border-b border-white/15 pb-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
           <div className="flex min-w-0 items-center gap-4 lg:gap-7">
             <div className="flex min-w-0 items-center gap-3 sm:gap-4">
               <img src={unigSymbol} alt="" className="h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16" />
@@ -453,7 +515,7 @@ export default function PainelTV() {
               </p>
             </div>
           </div>
-        </header>
+        </header>}
 
         {isLoading && !simulation ? (
           <div className="grid flex-1 gap-5 lg:grid-cols-[1.7fr_1fr]">
@@ -481,24 +543,30 @@ export default function PainelTV() {
               </div>
             )}
             {!isFullscreen && (
-              <div className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/90">
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/20 bg-white/[0.07] px-4 py-3 text-sm font-semibold text-white/90">
                 <Maximize2 className="h-5 w-5 shrink-0 text-[#8DEBDD]" />
-                Para TV ou monitor, clique em “Tela cheia”. Pressione Esc para sair.
+                <span className="mr-auto">Para TV ou monitor, clique em “Tela cheia”. Pressione Esc para sair.</span>
+                {!testActive && publishedCampaigns.length > 1 && <>
+                  <button type="button" onClick={() => setCarouselPaused((paused) => !paused)} className="inline-flex items-center gap-1 rounded-md bg-white/10 px-3 py-1.5 hover:bg-white/20">
+                    {carouselPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}{carouselPaused ? "Continuar" : "Pausar"}
+                  </button>
+                  <button type="button" onClick={showNextCampaign} className="inline-flex items-center gap-1 rounded-md bg-white/10 px-3 py-1.5 hover:bg-white/20"><SkipForward className="h-4 w-4" />Próxima</button>
+                </>}
               </div>
             )}
-            {(forcedCampaign || (showDemoCampaign && !current)) ? (
-              <section className="relative min-h-[390px] overflow-hidden rounded-2xl border border-white/15 bg-[#004e48] shadow-xl">
-                {forcedCampaign?.media_url ? forcedCampaign.media_type === "video" ? <video src={forcedCampaign.media_url} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" /> : <img src={forcedCampaign.media_url} alt={forcedCampaign.title} className="absolute inset-0 h-full w-full object-cover opacity-85" /> : <img src={demoCampaigns[demoCampaignIndex]} alt="Demonstração de campanha institucional da UNIG Clínicas" className="absolute inset-0 h-full w-full object-cover opacity-85" />}
-                <div className="relative flex min-h-[390px] flex-col justify-end bg-gradient-to-t from-[#003f3a]/90 via-transparent p-8 sm:p-10"><span className="mb-3 w-fit rounded-full bg-white/15 px-3 py-1 text-xs font-bold tracking-wider">{forcedCampaign ? "TESTE DE INSERÇÃO" : "INSERÇÃO COMERCIAL · DEMONSTRAÇÃO"}</span>{forcedCampaign && <><h2 className="text-3xl font-black">{forcedCampaign.title}</h2><p className="mt-2 text-white/90">{forcedCampaign.message}</p></>}<p className="mt-3 text-sm text-white/80">A próxima chamada aparece automaticamente ao receber uma senha.</p></div>
+            {isShowingCampaign ? (
+              <section className={`relative overflow-hidden bg-[#004e48] shadow-xl ${campaignFullscreen ? "min-h-[calc(100vh-2rem)] rounded-none border-0 lg:min-h-[calc(100vh-2.5rem)]" : "min-h-[390px] rounded-2xl border border-white/15"}`}>
+                {activeCampaign?.media_url ? activeCampaign.media_type === "video" ? <video src={activeCampaign.media_url} autoPlay muted loop playsInline className={`absolute inset-0 h-full w-full ${mediaFitClass}`} /> : <img src={activeCampaign.media_url} alt={activeCampaign.title} className={`absolute inset-0 h-full w-full opacity-85 ${mediaFitClass}`} /> : <img src={demoCampaigns[campaignIndex % demoCampaigns.length]} alt="Campanha institucional da UNIG Clínicas" className="absolute inset-0 h-full w-full object-cover opacity-85" />}
+                <div className={`relative flex flex-col justify-end bg-gradient-to-t from-[#003f3a]/90 via-transparent ${campaignFullscreen ? "min-h-[calc(100vh-2rem)] p-8 sm:p-12 lg:min-h-[calc(100vh-2.5rem)]" : "min-h-[390px] p-8 sm:p-10"}`}><span className="absolute left-6 top-6 rounded-full bg-[#01413D]/80 px-3 py-1 text-xs font-bold tracking-wider">INSERÇÃO INSTITUCIONAL</span>{campaignFullscreen && <span className="absolute right-6 top-6 text-sm text-white/90">Painel retorna automaticamente em instantes.</span>}<div className={campaignFullscreen ? "max-w-2xl" : ""}>{activeCampaign && <><h2 className="text-3xl font-black sm:text-5xl">{activeCampaign.title}</h2><p className="mt-2 text-white/90 sm:text-xl">{activeCampaign.message}</p></>}<p className="mt-4 text-sm text-white/80">{testActive ? "O teste termina automaticamente." : carouselPaused ? "Carrossel pausado." : "A próxima chamada assume a tela imediatamente."}</p></div></div>
               </section>
             ) : <section className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
-              <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#005D55] to-[#004943] p-6 shadow-xl shadow-black/15 sm:p-8 lg:min-h-[390px] lg:p-10">
+              <div className={`relative overflow-hidden rounded-2xl border bg-gradient-to-br from-[#005D55] to-[#004943] p-6 shadow-xl shadow-black/15 sm:p-8 lg:min-h-[390px] lg:p-10 ${announcementPulse ? "animate-pulse border-amber-200 ring-8 ring-amber-300/60" : "border-white/[0.08]"}`}>
                 <div className="flex items-center gap-3 text-sm font-bold uppercase tracking-[0.32em] text-[#8DEBDD] sm:text-lg">
                   <Megaphone className="h-7 w-7" />
                   Senha atual
                 </div>
                 <div className="flex flex-col items-center justify-center py-7 sm:py-8 lg:py-3 lg:min-h-[275px]">
-                  <p className="text-[clamp(4.5rem,13vw,10.5rem)] font-black leading-none tracking-tight text-white drop-shadow-lg">
+                  <p className={`text-[clamp(4.5rem,13vw,10.5rem)] font-black leading-none tracking-tight text-white drop-shadow-lg ${announcementPulse ? "scale-110 text-amber-100 transition-transform" : ""}`}>
                     {formatTicket(current, selectedClinic)}
                   </p>
                   <p className="mt-3 text-center text-base text-white/70 sm:text-xl">
@@ -528,7 +596,7 @@ export default function PainelTV() {
               </div>
             </section>}
 
-            <section className="grid gap-5 rounded-2xl border border-white/[0.08] bg-gradient-to-r from-[#00564F] to-[#004A45] p-5 shadow-xl shadow-black/15 sm:p-6 lg:grid-cols-[1.35fr_1fr] lg:p-7">
+            {!campaignFullscreen && <section className="grid gap-5 rounded-2xl border border-white/[0.08] bg-gradient-to-r from-[#00564F] to-[#004A45] p-5 shadow-xl shadow-black/15 sm:p-6 lg:grid-cols-[1.35fr_1fr] lg:p-7">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-white/90 sm:text-sm">
                   Demais senhas
@@ -585,11 +653,11 @@ export default function PainelTV() {
                   </div>
                 </div>
               </div>
-            </section>
+            </section>}
           </>
         )}
 
-        <footer className="flex flex-col items-start justify-between gap-3 px-2 pb-1 text-xs text-white/65 sm:flex-row sm:items-center sm:text-sm">
+        {!campaignFullscreen && <footer className="flex flex-col items-start justify-between gap-3 px-2 pb-1 text-xs text-white/65 sm:flex-row sm:items-center sm:text-sm">
           <div className="flex items-center gap-2">
             <Info className="h-5 w-5 text-white" />
             <span>Painel de informações da UNIG Clínicas</span>
@@ -605,7 +673,7 @@ export default function PainelTV() {
           <span className="text-[10px] text-white/40 sm:hidden">
             Atualizado às {updatedLabel}
           </span>
-        </footer>
+        </footer>}
       </div>
     </main>
   );
