@@ -17,7 +17,9 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === 'development' && componentTagger(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Mantém a nova versão pronta, mas deixa o usuário decidir quando
+      // atualizar para não interromper um atendimento em andamento.
+      registerType: 'prompt',
       injectRegister: null,
 
       includeAssets: [

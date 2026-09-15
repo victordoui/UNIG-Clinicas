@@ -40,6 +40,22 @@ export function usePwaUpdate() {
     updateServiceWorker,
   } = useRegisterSW({
     immediate: allowed,
+    onRegisteredSW(swUrl, registration) {
+      if (!registration) return;
+      const intervalMs = 60 * 60 * 1000;
+      window.setInterval(async () => {
+        if (registration.installing || !navigator.onLine) return;
+        try {
+          const response = await fetch(swUrl, {
+            cache: 'no-store',
+            headers: { cache: 'no-store', 'cache-control': 'no-cache' },
+          });
+          if (response.ok) await registration.update();
+        } catch {
+          // A conexão pode estar indisponível; a próxima verificação tentará novamente.
+        }
+      }, intervalMs);
+    },
     onRegisterError(err) {
       // eslint-disable-next-line no-console
       console.warn('[pwa] register error', err);
