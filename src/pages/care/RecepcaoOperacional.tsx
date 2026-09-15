@@ -25,6 +25,7 @@ import { canRecallReceptionTicket, formatQueueTicketCode, formatReceptionClinicL
 
 type Ticket = { id?: string; code: string; patient: string; wait: number; status?: string };
 type QueueStatus = "open" | "paused" | "closing" | "closed" | null;
+const RECEPTION_SERVICE_POINT = "Recepção · PC 05";
 
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
@@ -200,7 +201,7 @@ export default function RecepcaoOperacional() {
       const { error } = await supabase.rpc("transition_queue_ticket", {
         target_ticket_id: next.id,
         target_status: "called",
-        target_service_box: null,
+        target_service_box: RECEPTION_SERVICE_POINT,
       });
       if (error) {
         toast({ title: "Não foi possível chamar a próxima senha", description: error.message, variant: "destructive" });

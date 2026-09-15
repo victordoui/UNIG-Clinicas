@@ -532,7 +532,7 @@ declare
   person_id_value uuid;
   normalized_phone text;
   normalized_document text;
-  contact_fingerprint text;
+  contact_fingerprint_value text;
   next_number integer;
   active_count integer;
   new_ticket_id uuid;
@@ -564,17 +564,17 @@ begin
   for update of session;
   if session_row.id is null then raise exception 'Fila indisponível'; end if;
 
-  contact_fingerprint := md5(session_row.id::text || ':' || normalized_phone);
+  contact_fingerprint_value := md5(session_row.id::text || ':' || normalized_phone);
   if exists (
     select 1 from private.queue_guest_join_attempts attempt
     where attempt.queue_session_id = session_row.id
-      and attempt.contact_fingerprint = contact_fingerprint
+      and attempt.contact_fingerprint = contact_fingerprint_value
       and attempt.attempted_at > now() - interval '30 seconds'
   ) then
     raise exception 'Aguarde alguns segundos antes de tentar novamente';
   end if;
   insert into private.queue_guest_join_attempts(queue_session_id, contact_fingerprint)
-  values (session_row.id, contact_fingerprint);
+  values (session_row.id, contact_fingerprint_value);
 
   select patient.id, person.id into patient_id_value, person_id_value
   from public.persons person

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Loader2, LogIn, QrCode, ShieldCheck, UserPlus } from "lucide-react";
+import { CheckCircle2, Loader2, LogIn, MapPin, QrCode, ShieldCheck, UserPlus, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,29 @@ type PublicQueue = {
   max_capacity: number;
 };
 
+type PublicTicketStatus = {
+  ticket_id: string;
+  ticket_number: number;
+  ticket_code: string;
+  status: string;
+  service_box: string | null;
+  called_at: string | null;
+  people_ahead: number;
+};
+
+const ticketStatusLabel: Record<string, string> = {
+  waiting: "Aguardando chamada",
+  called: "Você foi chamado",
+  checked_in: "Chegada confirmada",
+  in_service: "Em atendimento",
+  waiting_supervision: "Aguardando supervisão",
+  completed: "Atendimento concluído",
+  cancelled: "Senha cancelada",
+  no_show: "Chamada encerrada",
+  transferred: "Encaminhado",
+  paused: "Atendimento pausado",
+};
+
 export default function FilaQR() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
@@ -37,9 +60,11 @@ export default function FilaQR() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [joining, setJoining] = useState(false);
+  const [ticketId, setTicketId] = useState<string | null>(null);
   const [ticketNumber, setTicketNumber] = useState<number | null>(null);
+  const [ticketStatus, setTicketStatus] = useState<PublicTicketStatus | null>(null);
   const [joiningAsGuest, setJoiningAsGuest] = useState(false);
-  const [guest, setGuest] = useState({ fullName: "", phone: "", birthDate: "", email: "" });
+  const [guest, setGuest] = useState({ fullName: "", phone: "", birthDate: "" });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
@@ -57,7 +82,7 @@ export default function FilaQR() {
       if (!active) return;
       if (queryError) setError("Não foi possível consultar esta fila.");
       else if (!data || (Array.isArray(data) && data.length === 0))
-        setError("Esta fila não está aberta ou o QR Code expirou.");
+        setError("Este QR Code não é mais válido ou a fila está fechada. Leia o QR atual exibido na página Fila.");
       else setQueue((Array.isArray(data) ? data[0] : data) as PublicQueue);
       setLoading(false);
     };
@@ -67,9 +92,56 @@ export default function FilaQR() {
     };
   }, [token]);
 
+  useEffect(() => {
+    if (!token) return;
+    try {
+      const saved = window.sessionStorage.getItem(`unig-queue-ticket-${token}`);
+      if (!saved) return;
+      const parsed = JSON.parse(saved) as { ticketId?: string; ticketNumber?: number };
+      if (parsed.ticketId && parsed.ticketNumber) {
+        setTicketId(parsed.ticketId);
+        setTicketNumber(parsed.ticketNumber);
+      }
+    } catch {
+      // Uma sessão antiga ou inválida não impede uma nova entrada na fila.
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!token || !ticketId) return;
+    let active = true;
+    const loadTicketStatus = async () => {
+      const { data, error: statusError } = await supabase.rpc(
+        "get_public_queue_ticket_status" as never,
+        { target_token: token, target_ticket_id: ticketId } as never,
+      );
+      if (!active || statusError) return;
+      const status = (Array.isArray(data) ? data[0] : data) as PublicTicketStatus | undefined;
+      if (status) setTicketStatus({ ...status, people_ahead: Number(status.people_ahead ?? 0) });
+    };
+    void loadTicketStatus();
+    const interval = window.setInterval(loadTicketStatus, 3000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [ticketId, token]);
+
+  const rememberTicket = (issuedTicket: { ticket_number?: number; ticket_id?: string }) => {
+    const issuedNumber = issuedTicket.ticket_number ?? null;
+    const issuedId = issuedTicket.ticket_id ?? null;
+    setTicketNumber(issuedNumber);
+    setTicketId(issuedId);
+    if (token && issuedId && issuedNumber) {
+      window.sessionStorage.setItem(
+        `unig-queue-ticket-${token}`,
+        JSON.stringify({ ticketId: issuedId, ticketNumber: issuedNumber }),
+      );
+    }
+  };
+
   const continueToLogin = () => {
     if (token) window.sessionStorage.setItem("unig-pending-queue-token", token);
-    if (guest.email.trim()) window.sessionStorage.setItem("unig-pending-guest-email", guest.email.trim().toLocaleLowerCase());
     navigate("/auth");
   };
   const joinQueue = async () => {
@@ -81,18 +153,13 @@ export default function FilaQR() {
       { target_token: token } as never,
     );
     if (joinError) setError(joinError.message);
-    else
-      setTicketNumber(
-        (Array.isArray(data)
-          ? data[0]?.ticket_number
-          : (data as { ticket_number?: number })?.ticket_number) ?? null,
-      );
+    else rememberTicket(Array.isArray(data) ? data[0] : (data as { ticket_number?: number; ticket_id?: string }));
     setJoining(false);
   };
   const joinAsGuest = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!token) return;
-    const validationError = validateGuestQueueEntry({ fullName: guest.fullName, phone: guest.phone, email: guest.email, consent: acceptedTerms });
+    const validationError = validateGuestQueueEntry({ fullName: guest.fullName, phone: guest.phone, email: "", consent: acceptedTerms });
     if (validationError) {
       setActionError(validationError);
       return;
@@ -113,11 +180,7 @@ export default function FilaQR() {
     if (joinError) setActionError(joinError.message);
     else {
       const issuedTicket = Array.isArray(data) ? data[0] : (data as { ticket_number?: number; ticket_id?: string });
-      setTicketNumber(issuedTicket?.ticket_number ?? null);
-      if (issuedTicket?.ticket_id && guest.email.trim()) {
-        const { error: emailError } = await (supabase.rpc as any)("attach_guest_email_to_ticket", { target_ticket_id: issuedTicket.ticket_id, guest_email: guest.email.trim() });
-        if (emailError) setActionError("Senha emitida, mas não foi possível preparar o vínculo por e-mail. Procure a recepção.");
-      }
+      rememberTicket(issuedTicket ?? {});
     }
     setJoining(false);
   };
@@ -155,20 +218,37 @@ export default function FilaQR() {
                 )}
                 {ticketNumber ? (
                   <div className="space-y-4">
-                    <div className="rounded-xl border bg-primary/5 p-6 text-center">
+                    <div className={`rounded-xl border p-6 text-center ${ticketStatus?.status === "called" ? "border-amber-400 bg-amber-50" : "bg-primary/5"}`}>
                       <p className="text-sm text-muted-foreground">Sua senha</p>
                       <p className="mt-2 text-6xl font-black tracking-tight text-primary">
-                        {ticketNumber}
+                        {ticketStatus?.ticket_code || String(ticketNumber).padStart(3, "0")}
                       </p>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Acompanhe a chamada no painel da clínica.
+                      <p className={`mt-3 text-lg font-bold ${ticketStatus?.status === "called" ? "text-amber-800" : "text-foreground"}`}>
+                        {ticketStatusLabel[ticketStatus?.status ?? "waiting"] ?? "Acompanhando sua senha"}
                       </p>
+                      {ticketStatus?.status === "waiting" && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {ticketStatus.people_ahead > 0
+                            ? `${ticketStatus.people_ahead} ${ticketStatus.people_ahead === 1 ? "pessoa está" : "pessoas estão"} à sua frente.`
+                            : "Você é o próximo da fila. Aguarde a chamada."}
+                        </p>
+                      )}
+                      {ticketStatus?.status === "called" && (
+                        <div className="mt-4 space-y-2 rounded-lg bg-white p-4 text-left shadow-sm">
+                          <p className="flex items-center gap-2 font-semibold text-amber-900"><Volume2 className="h-5 w-5" />Sua senha está sendo chamada agora</p>
+                          <p className="flex items-center gap-2 text-base"><MapPin className="h-5 w-5 text-primary" />Dirija-se a <strong>{ticketStatus.service_box || "Recepção"}</strong></p>
+                        </div>
+                      )}
+                      {ticketStatus?.status === "completed" && (
+                        <p className="mt-3 flex items-center justify-center gap-2 text-sm text-emerald-700"><CheckCircle2 className="h-5 w-5" />Atendimento finalizado.</p>
+                      )}
+                      {!ticketStatus && <p className="mt-2 text-sm text-muted-foreground">Acompanhando a chamada automaticamente…</p>}
                     </div>
                     {!user && (
                       <div className="rounded-xl border border-primary/20 bg-primary/[0.04] p-4 text-left">
                         <p className="font-semibold">Quer facilitar os próximos atendimentos?</p>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Crie sua conta com o mesmo e-mail para acompanhar agenda, documentos e avisos. Após a confirmação, o cadastro de visitante será vinculado automaticamente.
+                          Crie sua conta para acompanhar agenda, documentos e avisos. A recepção poderá vincular este atendimento ao seu cadastro.
                         </p>
                         <Button className="mt-3 w-full" variant="outline" onClick={continueToLogin}>
                           <UserPlus className="mr-2 h-4 w-4" />Criar minha conta
@@ -243,10 +323,6 @@ export default function FilaQR() {
                         <div className="space-y-1.5">
                           <Label htmlFor="guest-birth-date">Data de nascimento <span className="font-normal text-muted-foreground">(opcional)</span></Label>
                           <Input id="guest-birth-date" type="date" autoComplete="bday" value={guest.birthDate} onChange={(event) => setGuest((value) => ({ ...value, birthDate: event.target.value }))} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="guest-email">E-mail <span className="font-normal text-muted-foreground">(opcional, para criar sua conta depois)</span></Label>
-                          <Input id="guest-email" type="email" inputMode="email" autoComplete="email" value={guest.email} onChange={(event) => setGuest((value) => ({ ...value, email: event.target.value }))} placeholder="voce@exemplo.com" />
                         </div>
                         <label className="flex items-start gap-2 rounded-lg bg-muted/60 p-3 text-sm leading-snug">
                           <input type="checkbox" className="mt-0.5 h-4 w-4" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required />
