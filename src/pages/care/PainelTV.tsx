@@ -165,8 +165,7 @@ export default function PainelTV() {
         supabase
           .from("queue_sessions")
           .select("id,clinic_id,service_date,status,clinic:clinics(name,code)")
-          .eq("service_date", TODAY)
-          .in("status", ["open", "paused"]),
+          .in("status", ["open", "paused", "closing"]),
         supabase
           .from("queue_tickets")
           .select(

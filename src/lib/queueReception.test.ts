@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canRecallReceptionTicket,
+  formatQueueTicketCode,
   formatReceptionClinicLabel,
   getActiveReceptionClinicId,
 } from "./queueReception";
@@ -32,5 +33,12 @@ describe("operação de recepção", () => {
   it("identifica a clínica ativa sem assumir uma especialidade", () => {
     expect(formatReceptionClinicLabel(" vet ")).toBe("Clínica · VET");
     expect(formatReceptionClinicLabel(null)).toBe("Clínica não selecionada");
+  });
+
+  it("exibe a senha com o prefixo da clínica ativa", () => {
+    expect(formatQueueTicketCode("odonto", 1)).toBe("O-001");
+    expect(formatQueueTicketCode("FISIO", 7)).toBe("F-007");
+    expect(formatQueueTicketCode("vet", 21)).toBe("V-021");
+    expect(formatQueueTicketCode("ESTETICA", 4)).toBe("E-004");
   });
 });

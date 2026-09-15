@@ -9,6 +9,13 @@ const RECALLABLE_TICKET_STATUSES = new Set([
   "in_service",
 ]);
 
+const QUEUE_PREFIX_BY_CLINIC: Record<string, string> = {
+  ODONTO: "O",
+  FISIO: "F",
+  VET: "V",
+  ESTETICA: "E",
+};
+
 /** Returns only the scope selected in the application, never an arbitrary clinic. */
 export function getActiveReceptionClinicId(
   scopes: ReceptionScope[] | null | undefined,
@@ -33,4 +40,14 @@ export function canRecallReceptionTicket(status: string | null | undefined) {
 export function formatReceptionClinicLabel(activeClinicCode: string | null | undefined) {
   const code = activeClinicCode?.trim().toUpperCase();
   return code ? `Clínica · ${code}` : "Clínica não selecionada";
+}
+
+/** Formats a ticket only for display; the database ticket number remains authoritative. */
+export function formatQueueTicketCode(
+  activeClinicCode: string | null | undefined,
+  ticketNumber: number,
+) {
+  const clinicCode = activeClinicCode?.trim().toUpperCase() ?? "";
+  const prefix = QUEUE_PREFIX_BY_CLINIC[clinicCode] ?? "S";
+  return `${prefix}-${String(ticketNumber).padStart(3, "0")}`;
 }

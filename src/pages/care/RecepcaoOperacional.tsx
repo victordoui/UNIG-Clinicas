@@ -20,17 +20,9 @@ import { ReceptionAttendanceDrawer, type ReceptionDraft } from "@/components/rec
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
-import { canRecallReceptionTicket, formatReceptionClinicLabel, getActiveReceptionClinicId } from "@/lib/queueReception";
+import { canRecallReceptionTicket, formatQueueTicketCode, formatReceptionClinicLabel, getActiveReceptionClinicId } from "@/lib/queueReception";
 
 type Ticket = { id?: string; code: string; patient: string; wait: number; status?: string };
-
-const initialQueue: Ticket[] = [
-  { code: "O-013", patient: "João Lima", wait: 18 },
-  { code: "O-014", patient: "Carla Menezes", wait: 11 },
-  { code: "O-015", patient: "Rafael Souza", wait: 7 },
-  { code: "O-016", patient: "Beatriz Alves", wait: 4 },
-];
-const SIMULATION_KEY = "unig-recepcao-simulacao";
 
 const formatTime = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
@@ -41,41 +33,20 @@ const formatTime = (seconds: number) => {
 export default function RecepcaoOperacional() {
   const { activeClinicCode, user } = useAuth();
   const clinicLabel = formatReceptionClinicLabel(activeClinicCode);
-  const [queueOpen, setQueueOpen] = useState(true);
-  const [queue, setQueue] = useState(initialQueue);
-  const [current, setCurrent] = useState<Ticket | null>({
-    code: "O-012",
-    patient: "Mariana Costa",
-    wait: 0,
-  });
-  const [serviceStarted, setServiceStarted] = useState(true);
-  const [elapsed, setElapsed] = useState(222);
-  const [serviceStartedAt, setServiceStartedAt] = useState<number | null>(() => Date.now() - 222_000);
-  const [lastCall, setLastCall] = useState("O-012");
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [queue, setQueue] = useState<Ticket[]>([]);
+  const [current, setCurrent] = useState<Ticket | null>(null);
+  const [serviceStarted, setServiceStarted] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [serviceStartedAt, setServiceStartedAt] = useState<number | null>(null);
+  const [lastCall, setLastCall] = useState("");
   const [announcement, setAnnouncement] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [receptionSessionId, setReceptionSessionId] = useState<string | null>(null);
   const [queueSessionId, setQueueSessionId] = useState<string | null>(null);
   const [usingRemoteQueue, setUsingRemoteQueue] = useState(false);
   const [queueConfirmationOpen, setQueueConfirmationOpen] = useState(false);
-  const [history, setHistory] = useState([
-    "08:01  Gisele abriu a fila",
-    "08:07  Senha O-011 chamada",
-    "08:08  Paciente compareceu à recepção",
-    "08:09  Atendimento iniciado por Gisele",
-  ]);
-
-  useEffect(() => {
-    const payload = {
-      active: true,
-      queueOpen,
-      current: current ? Number(current.code.replace(/\D/g, "")) : null,
-      queue: queue.map((item) => Number(item.code.replace(/\D/g, ""))),
-      announced: Number(lastCall.replace(/\D/g, "")),
-      updatedAt: new Date().toISOString(),
-    };
-    window.localStorage.setItem(SIMULATION_KEY, JSON.stringify(payload));
-  }, [current, lastCall, queue, queueOpen]);
+  const [history, setHistory] = useState<string[]>([]);
 
   useEffect(() => {
     if (!serviceStarted || !current) return;
@@ -102,12 +73,13 @@ export default function RecepcaoOperacional() {
     // Uma conta autenticada com escopo válido sempre deve ver o estado remoto,
     // inclusive quando ainda não há sessão de fila nem senhas emitidas.
     setUsingRemoteQueue(true);
-    const today = new Date().toISOString().slice(0, 10);
     const { data: queueSession, error: sessionError } = await supabase
       .from("queue_sessions")
       .select("id,status")
       .eq("clinic_id", clinicId)
-      .eq("service_date", today)
+      .in("status", ["open", "paused", "closing"])
+      .order("opened_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (sessionError) return;
     if (!queueSession) {
@@ -122,14 +94,14 @@ export default function RecepcaoOperacional() {
     }
     const { data: tickets, error: ticketError } = await supabase
       .from("queue_tickets")
-      .select("id,ticket_number,status,created_at,patient:patients(person:persons(full_name))")
+      .select("id,ticket_number,ticket_code,status,created_at,patient:patients(person:persons(full_name))")
       .eq("queue_session_id", queueSession.id)
       .in("status", ["waiting", "called", "checked_in", "in_service"])
       .order("ticket_number");
     if (ticketError) return;
     const mapped = (tickets ?? []).map((ticket: any) => ({
       id: ticket.id,
-      code: `O-${String(ticket.ticket_number).padStart(3, "0")}`,
+      code: ticket.ticket_code ?? formatQueueTicketCode(activeClinicCode, ticket.ticket_number),
       patient: ticket.patient?.person?.full_name ?? "Paciente",
       wait: Math.max(0, Math.round((Date.now() - new Date(ticket.created_at).getTime()) / 60_000)),
       status: ticket.status,
@@ -162,12 +134,28 @@ export default function RecepcaoOperacional() {
   };
 
   useEffect(() => {
-    void loadRemoteQueue();
-    if (!user || !activeClinicCode) return;
-    const channel = supabase.channel(`reception-queue-${activeClinicCode}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "queue_events" }, () => void loadRemoteQueue())
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    void (async () => {
+      await loadRemoteQueue();
+      if (!user || !activeClinicCode || cancelled) return;
+      const { data: scopes } = await supabase
+        .from("user_clinic_scopes")
+        .select("clinic_id,clinic:clinics(code)")
+        .is("revoked_at", null);
+      const clinicId = getActiveReceptionClinicId(scopes, activeClinicCode);
+      if (!clinicId || cancelled) return;
+      channel = supabase.channel(`reception-queue-${clinicId}`)
+        .on("postgres_changes", {
+          event: "INSERT", schema: "public", table: "queue_events",
+          filter: `clinic_id=eq.${clinicId}`,
+        }, () => void loadRemoteQueue())
+        .subscribe();
+    })();
+    return () => {
+      cancelled = true;
+      if (channel) void supabase.removeChannel(channel);
+    };
   }, [user?.id, activeClinicCode]);
 
   const next = queue[0];
@@ -242,15 +230,9 @@ export default function RecepcaoOperacional() {
         toast({ title: "Não foi possível identificar sua clínica", description: "Entre novamente e tente abrir a fila.", variant: "destructive" });
         return;
       }
-      const { data: auth } = await supabase.auth.getUser();
-      const { error: createError } = await supabase.from("queue_sessions").insert({
-        organization_id: organizationId,
-        clinic_id: activeScope.clinic_id,
-        service_date: new Date().toISOString().slice(0, 10),
-        status: "open",
-        created_by: auth.user?.id ?? null,
-        updated_by: auth.user?.id ?? null,
-      });
+      const { error: createError } = await supabase.rpc("open_clinic_queue" as never, {
+        target_clinic_id: activeScope.clinic_id,
+      } as never);
       if (createError) {
         await loadRemoteQueue();
         toast({ title: "Não foi possível abrir a fila", description: createError.message.includes("duplicate") ? "A fila desta clínica já foi aberta por outro acesso." : createError.message, variant: "destructive" });

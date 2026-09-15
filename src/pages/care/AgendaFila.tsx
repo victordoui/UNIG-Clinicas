@@ -390,46 +390,20 @@ export default function AgendaFila() {
         (item) => item.id === clinic,
       );
       if (!c) throw new Error("Selecione a clínica.");
-      const { data: auth } = await supabase.auth.getUser();
-      const payload = {
-        organization_id: c.organization_id,
-        clinic_id: clinic,
-        clinic_service_id: service || null,
-        service_date: new Date().toISOString().slice(0, 10),
-        status: "open",
-        entry_mode: entryMode,
-        max_capacity: Number(maxCapacity),
-        concurrent_capacity: Number(concurrentCapacity),
-        starts_at: startsAt ? new Date(startsAt).toISOString() : null,
-        ends_at: endsAt ? new Date(endsAt).toISOString() : null,
-        created_by: auth.user?.id,
-        updated_by: auth.user?.id,
-      };
-      const existing = sessions.find(
-        (item) =>
-          item.clinic_id === clinic &&
-          item.service_date === payload.service_date,
-      );
-      if (existing?.status === "closed")
-        throw new Error(
-          "A fila de hoje já foi encerrada e não pode ser reaberta.",
-        );
-      if (existing?.status === "paused") {
-        const { error } = await supabase.rpc(
-          "transition_queue_session" as never,
-          { target_session_id: existing.id, target_status: "open" } as never,
-        );
-        if (error) throw error;
-      }
-      const { error } = existing
-        ? await (supabase.from("queue_sessions") as any)
-            .update({
-              ...payload,
-              status: existing.status === "paused" ? "open" : existing.status,
-            })
-            .eq("id", existing.id)
-        : await (supabase.from("queue_sessions") as any).insert(payload);
+      const { data: openedSession, error } = await (supabase.rpc as any)("open_clinic_queue", {
+        target_clinic_id: c.id,
+      });
       if (error) throw error;
+      const { error: configureError } = await (supabase.rpc as any)("configure_queue_session", {
+        target_session_id: openedSession.id,
+        target_clinic_service_id: service || null,
+        target_entry_mode: entryMode,
+        target_max_capacity: Number(maxCapacity),
+        target_concurrent_capacity: Number(concurrentCapacity),
+        target_starts_at: startsAt ? new Date(startsAt).toISOString() : null,
+        target_ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+      });
+      if (configureError) throw configureError;
     },
     onSuccess: () => {
       refresh();
