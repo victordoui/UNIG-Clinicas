@@ -20,10 +20,12 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import unigSymbol from "@/assets/unig-clinicas-symbol.png";
 import campaignDemo from "@/assets/campaign-demo-preventive-care.png";
+import { CampaignArtwork } from "@/components/care/CampaignArtwork";
+import { useTvInsertion } from "@/hooks/useTvInsertion";
 import campaignHealth from "@/assets/campaign-demo-health.png";
 import campaignWelcome from "@/assets/campaign-demo-welcome.png";
 
-type Clinic = { id: string; name: string; code: string };
+type Clinic = { id: string; name: string; code: string; organization_id?: string };
 type QueueSession = {
   id: string;
   clinic_id: string;
@@ -42,6 +44,9 @@ type QueueTicket = {
   created_at: string;
 };
 type Campaign = {
+  organization_id?: string;
+  starts_at?: string | null;
+  ends_at?: string | null;
   id: string;
   title: string;
   message: string;
@@ -137,6 +142,9 @@ export default function PainelTV() {
   const [clinicId, setClinicId] = useState(searchParams.get("clinic") ?? "");
   const [now, setNow] = useState(() => new Date());
   const [campaignIndex, setCampaignIndex] = useState(0);
+  const [campaignVisible, setCampaignVisible] = useState(false);
+  const [forcedCampaignId, setForcedCampaignId] = useState<string | null>(null);
+  const handledInsertion = useRef<string | null>(null);
   const [testActive, setTestActive] = useState(Boolean(searchParams.get("testCampaign")));
   const [simulation, setSimulation] = useState<ReceptionSimulation | null>(
     () => (simulationEnabled ? readSimulation() : null),
@@ -155,7 +163,7 @@ export default function PainelTV() {
       const [clinics, sessions, tickets] = await Promise.all([
         supabase
           .from("clinics")
-          .select("id,name,code")
+          .select("id,name,code,organization_id")
           .eq("is_active", true)
           .order("name"),
         supabase
@@ -182,16 +190,16 @@ export default function PainelTV() {
   });
   const { data: campaignRows = [], isLoading: isCampaignsLoading } = useQuery({
     queryKey: ["tv-campaigns"],
-    refetchInterval: 30000,
+    refetchInterval: 5000,
     queryFn: async () => {
       let result = await (supabase
         .from("tv_campaigns" as any) as any)
-        .select("id,title,message,media_url,media_type,status,display_seconds,priority,display_mode,media_fit")
+        .select("id,organization_id,starts_at,ends_at,title,message,media_url,media_type,status,display_seconds,priority,display_mode,media_fit")
         .order("priority", { ascending: false })
         .order("created_at", { ascending: false });
       if (missingDisplayColumns(result.error)) result = await (supabase
         .from("tv_campaigns" as any) as any)
-        .select("id,title,message,media_url,media_type,status,display_seconds,priority")
+        .select("id,organization_id,starts_at,ends_at,title,message,media_url,media_type,status,display_seconds,priority")
         .order("priority", { ascending: false })
         .order("created_at", { ascending: false });
       if (result.error) throw result.error;
@@ -209,6 +217,7 @@ export default function PainelTV() {
     (clinic) => clinic.id === selectedClinicId,
   );
   const isSimulation = Boolean(simulation && selectedClinicId === DEMO_CLINIC.id);
+  const insertion = useTvInsertion(selectedClinicId);
   const sessions = useMemo(
     () =>
       data?.sessions.filter(
@@ -268,11 +277,14 @@ export default function PainelTV() {
   const queueOpen = isSimulation ? Boolean(simulation?.queueOpen) : sessions.some((session) => session.status === "open");
   const testCampaignId = searchParams.get("testCampaign");
   const testCampaign = campaignRows.find((campaign) => campaign.id === testCampaignId);
-  const publishedCampaigns = campaignRows.filter((campaign) => campaign.status === "published");
+  const publishedCampaigns = campaignRows.filter(campaign => campaign.status === "published"
+    && (!selectedClinic?.organization_id || campaign.organization_id === selectedClinic.organization_id)
+    && (!campaign.starts_at || Date.parse(campaign.starts_at) <= now.getTime())
+    && (!campaign.ends_at || Date.parse(campaign.ends_at) > now.getTime()));
   const activeCampaign = testActive && testCampaign
     ? testCampaign
-    : publishedCampaigns[campaignIndex % publishedCampaigns.length];
-  const isShowingCampaign = !current;
+    : publishedCampaigns.find(campaign => campaign.id === forcedCampaignId) ?? publishedCampaigns[campaignIndex % publishedCampaigns.length];
+  const isShowingCampaign = Boolean(activeCampaign) && (testActive || campaignVisible);
   const campaignFullscreen = isShowingCampaign && (
     searchParams.get("mode") === "fullscreen" ||
     activeCampaign?.display_mode === "fullscreen"
@@ -299,14 +311,33 @@ export default function PainelTV() {
     return () => window.clearTimeout(timeout);
   }, [isCampaignsLoading, testActive, testCampaign]);
   useEffect(() => {
-    if (testActive || current || publishedCampaigns.length < 2) return;
-    const seconds = Math.max(5, activeCampaign?.display_seconds ?? 12);
+    if (testActive || !publishedCampaigns.length) return;
+    const seconds = campaignVisible ? Math.max(5, activeCampaign?.display_seconds ?? 12) : 30;
     const timeout = window.setTimeout(
-      () => setCampaignIndex((index) => (index + 1) % publishedCampaigns.length),
+      () => {
+        if (campaignVisible) { setCampaignIndex(index => (index + 1) % publishedCampaigns.length); setForcedCampaignId(null); }
+        setCampaignVisible(visible => !visible);
+      },
       seconds * 1000,
     );
     return () => window.clearTimeout(timeout);
-  }, [activeCampaign?.display_seconds, current, publishedCampaigns.length, testActive]);
+  }, [activeCampaign?.id, activeCampaign?.display_seconds, campaignVisible, publishedCampaigns.length, testActive, announcementSignal, current?.id, current?.called_at]);
+  useEffect(() => {
+    setCampaignVisible(false);
+    setForcedCampaignId(null);
+  }, [selectedClinicId, current?.id, current?.called_at, announcementSignal]);
+  useEffect(() => {
+    const request = insertion.data;
+    if (!request || handledInsertion.current === request.request_id || Date.parse(request.expires_at) <= Date.now()) return;
+    if (current?.called_at && Date.parse(current.called_at) > Date.parse(request.requested_at)) {
+      handledInsertion.current = request.request_id;
+      return;
+    }
+    if (!publishedCampaigns.some(campaign => campaign.id === request.campaign_id)) return;
+    handledInsertion.current = request.request_id;
+    setForcedCampaignId(request.campaign_id);
+    setCampaignVisible(true);
+  }, [insertion.data, publishedCampaigns, current?.called_at]);
   const ensureAudio = useCallback(async () => {
     const AudioContextConstructor = window.AudioContext;
     const context = audioContextRef.current ?? new AudioContextConstructor();
@@ -392,7 +423,7 @@ export default function PainelTV() {
   }, [announcementSignal, ensureAudio, isSimulation, simulation?.updatedAt]);
   useEffect(() => {
     if (selectedClinicId && selectedClinicId !== searchParams.get("clinic"))
-      setSearchParams({ clinic: selectedClinicId }, { replace: true });
+      setSearchParams(previous => { const next = new URLSearchParams(previous); next.set("clinic", selectedClinicId); return next; }, { replace: true });
   }, [selectedClinicId, searchParams, setSearchParams]);
   useEffect(() => {
     if (!selectedClinicId) return;
@@ -501,8 +532,7 @@ export default function PainelTV() {
             )}
             {isShowingCampaign ? (
               <section key={activeCampaign?.id ?? `demo-${campaignIndex}`} className={`tv-campaign-enter relative flex-1 overflow-hidden bg-[#004e48] shadow-2xl shadow-black/25 ${campaignFullscreen ? "min-h-screen rounded-none border-0" : "min-h-[520px] rounded-2xl border border-white/15"}`}>
-                {activeCampaign?.media_url ? activeCampaign.media_type === "video" ? <video src={activeCampaign.media_url} autoPlay muted loop playsInline className={`absolute inset-0 h-full w-full ${mediaFitClass}`} /> : <img src={activeCampaign.media_url} alt={activeCampaign.title} className={`tv-campaign-media absolute inset-0 h-full w-full opacity-90 ${mediaFitClass}`} /> : <img src={demoCampaigns[campaignIndex % demoCampaigns.length]} alt="Campanha institucional da UNIG Clínicas" className="tv-campaign-media absolute inset-0 h-full w-full object-cover opacity-90" />}
-                <div className={`relative flex min-h-full flex-col justify-end bg-gradient-to-t from-[#002f2c]/95 via-[#003f3a]/20 to-transparent ${campaignFullscreen ? "min-h-screen p-10 sm:p-14 lg:p-20" : "min-h-[520px] p-8 sm:p-12"}`}><span className="absolute left-8 top-8 rounded-full border border-white/20 bg-[#003E3A]/75 px-4 py-2 text-xs font-extrabold tracking-[0.22em] backdrop-blur-md">UNIG CLÍNICAS</span><div className={`tv-campaign-copy ${campaignFullscreen ? "max-w-4xl" : "max-w-3xl"}`}>{activeCampaign && <><h2 className="text-4xl font-black leading-tight drop-shadow-lg sm:text-6xl lg:text-7xl">{activeCampaign.title}</h2><p className="mt-4 max-w-3xl text-xl font-medium leading-relaxed text-white/90 sm:text-2xl lg:text-3xl">{activeCampaign.message}</p></>}</div></div>
+                <CampaignArtwork mediaUrl={activeCampaign ? activeCampaign.media_url : demoCampaigns[campaignIndex % demoCampaigns.length]} mediaType={activeCampaign?.media_type} title={activeCampaign?.title ?? ""} message={activeCampaign?.message ?? ""} fit={activeCampaign?.media_fit ?? "cover"} />
               </section>
             ) : <section className="tv-call-enter tv-call-grid grid flex-1 gap-5 lg:grid-cols-[1.7fr_1fr]">
               <div className="tv-current relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-[#005D55] to-[#004943]">

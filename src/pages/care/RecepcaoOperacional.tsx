@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { ReceptionAttendanceDrawer, type ReceptionDraft } from "@/components/reception/ReceptionAttendanceDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTvInsertion } from "@/hooks/useTvInsertion";
 import { toast } from "@/hooks/use-toast";
 import { canRecallReceptionTicket, formatQueueTicketCode, formatReceptionClinicLabel, getActiveReceptionClinicId } from "@/lib/queueReception";
 
@@ -50,6 +51,27 @@ export default function RecepcaoOperacional() {
   const [receptionSessionId, setReceptionSessionId] = useState<string | null>(null);
   const [usingRemoteQueue, setUsingRemoteQueue] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
+  const [receptionClinicId, setReceptionClinicId] = useState<string | null>(null);
+  const [requestingInsertion, setRequestingInsertion] = useState(false);
+  const [insertionClock, setInsertionClock] = useState(Date.now());
+  const insertion = useTvInsertion(receptionClinicId);
+  const insertionPending = Boolean(insertion.data && Date.parse(insertion.data.expires_at) > insertionClock);
+  useEffect(() => {
+    const timer = window.setInterval(() => setInsertionClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const requestInsertion = async () => {
+    if (!receptionClinicId || requestingInsertion) return;
+    setRequestingInsertion(true);
+    try {
+      const { error } = await (supabase.rpc as any)("request_tv_insertion", { target_clinic_id: receptionClinicId });
+      if (error) throw error;
+      await insertion.refetch();
+      toast({ title: "Inserção solicitada à TV", description: "O painel aberto nesta clínica recebe o pedido em até 5 segundos. Depois, retorna ao automático." });
+    } catch (error: any) {
+      toast({ title: "Não foi possível chamar inserção", description: error.code === "PGRST202" ? "A atualização de inserções ainda precisa ser aplicada ao banco." : error.message, variant: "destructive" });
+    } finally { setRequestingInsertion(false); }
+  };
 
   useEffect(() => {
     if (!serviceStarted || !current) return;
@@ -73,6 +95,7 @@ export default function RecepcaoOperacional() {
       .is("revoked_at", null);
     const clinicId = getActiveReceptionClinicId(scopes, activeClinicCode);
     if (scopeError || !clinicId) return;
+    setReceptionClinicId(clinicId);
     // Uma conta autenticada com escopo válido sempre deve ver o estado remoto,
     // inclusive quando ainda não há sessão de fila nem senhas emitidas.
     setUsingRemoteQueue(true);
@@ -160,6 +183,8 @@ export default function RecepcaoOperacional() {
       if (channel) void supabase.removeChannel(channel);
     };
   }, [user?.id, activeClinicCode]);
+
+  useEffect(() => { setReceptionClinicId(null); }, [activeClinicCode]);
 
   const next = queue[0];
   const calledTotal = 12 - queue.length;
@@ -327,7 +352,11 @@ export default function RecepcaoOperacional() {
               <div className="grid min-h-48 place-items-center rounded-xl bg-slate-50 p-6 text-center text-slate-500"><div><p>Nenhum paciente em atendimento.</p><p className="mt-1 text-sm">{next ? `A senha ${next.code} está pronta para ser chamada.` : "Não há senha aguardando na fila."}</p></div></div>
             )}
             <div className="sticky bottom-0 z-20 -mx-2 mt-4 bg-white/95 px-2 py-3 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:py-0"><Button onClick={() => void callNext()} disabled={!next || !queueOpen || (usingRemoteQueue && Boolean(current))} className="min-h-11 w-full bg-[#006d62] text-base hover:bg-[#00574f] sm:min-h-16"><BellRing className="mr-2 h-5 w-5" />Chamar próximo</Button>{!next && <p className="mt-2 text-center text-sm text-slate-500">Gere uma nova senha na fila para habilitar o chamado.</p>}</div>
-            <p className="mt-4 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800"><Volume2 className="h-4 w-4" />Ao chamar o próximo, o painel anuncia a senha com som e atualiza automaticamente.</p>
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border p-3">
+              <Button variant="outline" onClick={() => void requestInsertion()} disabled={!receptionClinicId || requestingInsertion || insertionPending}><Monitor className="mr-2 h-5 w-5" />{requestingInsertion ? "Solicitando…" : "Chamar inserção"}</Button>
+              <p role="status" className="text-sm text-muted-foreground">{insertion.error ? "Controle manual aguardando atualização do banco" : insertionPending ? "Inserção manual solicitada · retorno automático ao terminar" : "Automático · inserções entre as chamadas"}</p>
+            </div>
+            <p className="mt-4 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-800"><Volume2 className="h-4 w-4" />Novas chamadas de senha têm prioridade sobre as inserções.</p>
           </div>
 
           <aside className={`overflow-hidden rounded-2xl border bg-[#004d48] p-5 text-white shadow-sm transition ${announcement ? "ring-4 ring-amber-300" : ""}`}>
